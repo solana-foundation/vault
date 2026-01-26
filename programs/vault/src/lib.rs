@@ -15,4 +15,8 @@ pub mod vault {
     pub fn create_vault(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> {
         instructions::create_vault::handler(ctx, args)
     }
+
+    pub fn update_vault(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {
+        instructions::update_vault::handler(ctx, args)
+    }
 }
