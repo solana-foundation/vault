@@ -1,9 +1,12 @@
-use litesvm::LiteSVM;
+use litesvm::{
+    types::{FailedTransactionMetadata, TransactionMetadata},
+    LiteSVM,
+};
 use solana_sdk::{
     signature::Keypair, signer::Signer, system_instruction::create_account,
     transaction::Transaction,
 };
-use vault_client::{sdk::IntoSdkInstruction, CreateVaultBuilder, Pubkey};
+use vault_client::{sdk::IntoSdkInstruction, CreateVaultBuilder, FeeType, Pubkey};
 
 use anchor_spl::{
     token::{spl_token, Mint},
@@ -12,13 +15,16 @@ use anchor_spl::{
 
 pub fn create_vault(
     svm: &mut LiteSVM,
-    authority: Keypair,
+    authority: &Keypair,
     payer: Keypair,
     asset_mint: Pubkey,
     share_mint: Pubkey,
     reserve: Pubkey,
     vault: Pubkey,
-) {
+    deposit_fees: FeeType,
+    withdraw_fees: FeeType,
+    vault_asset_cap: u64,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = CreateVaultBuilder::new()
         .authority(authority.pubkey())
         .payer(payer.pubkey())
@@ -26,6 +32,9 @@ pub fn create_vault(
         .share_mint(share_mint)
         .reserve(reserve)
         .vault(vault)
+        .deposit_fees(deposit_fees)
+        .withdraw_fees(withdraw_fees)
+        .vault_asset_cap(vault_asset_cap)
         .instruction()
         .into_sdk_instruction();
 
@@ -37,8 +46,7 @@ pub fn create_vault(
         blockhash,
     );
 
-    svm.send_transaction(tx)
-        .expect("create_vault transaction failed");
+    return svm.send_transaction(tx);
 }
 
 pub fn create_mint(svm: &mut LiteSVM, signer: &Keypair, mint: &Keypair) {

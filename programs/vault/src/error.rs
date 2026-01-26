@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[error_code]
-pub enum SolanaVaultProgramError {
-    #[msg("The provided signer is not allowed to execute this instruction.")]
-    UnauthorizedSigner,
+pub enum VaultProgramError {
+    #[msg("The provided fee should not be 100 percent.")]
+    FeeBPSLimitReached,
 }

@@ -25,13 +25,13 @@ pub struct VaultConfig {
     /// initial price
     pub initial_price: u64,
     /// deposit fees
-    pub deposit_fees: Option<FeeType>,
+    pub deposit_fees: FeeType,
     /// withdraw fees
-    pub withdraw_fees: Option<FeeType>,
+    pub withdraw_fees: FeeType,
     /// paused
     pub paused: bool,
     /// max balance allowed in vault
-    pub vault_asset_cap: Option<u64>,
+    pub vault_asset_cap: u64,
     /// virtual vault asset balance
     pub total_asset_balance: u64,
 }

@@ -9,9 +9,9 @@ use thiserror::Error;
 
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
 pub enum VaultError {
-    /// 6000 - The provided signer is not allowed to execute this instruction.
-    #[error("The provided signer is not allowed to execute this instruction.")]
-    UnauthorizedSigner = 0x1770,
+    /// 6000 - The provided fee should not be 100 percent.
+    #[error("The provided fee should not be 100 percent.")]
+    FeeBPSLimitReached = 0x1770,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {
