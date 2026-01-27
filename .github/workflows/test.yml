@@ -13,6 +13,8 @@ concurrency:
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
+  SOLANA_VERSION: "2.2.20"
+  ANCHOR_VERSION: "0.31.1"
 
 jobs:
   check_format_and_test:
@@ -36,23 +38,29 @@ jobs:
       - name: Install Solana
         uses: exo-tech-xyz/setup-solana@main
         with:
-          solana-cli-version: "2.2.20"
+          solana-cli-version: ${{ env.SOLANA_VERSION }}
 
-      - name: Set up cargo cache
+      - name: Cache Anchor CLI
+        id: cache-anchor
         uses: actions/cache@v4
-        continue-on-error: false
+        with:
+          path: ~/.cargo/bin/anchor
+          key: ${{ runner.os }}-anchor-${{ env.ANCHOR_VERSION }}
+
+      - name: Install Anchor CLI
+        if: steps.cache-anchor.outputs.cache-hit != 'true'
+        run: cargo install --git https://github.com/coral-xyz/anchor --tag v${{ env.ANCHOR_VERSION }} anchor-cli --force
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/bin/
             ~/.cargo/registry/index/
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: ${{ runner.os }}-cargo-
-
-      - name: Install Anchor CLI
-        run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.31.1 anchor-cli
 
       - name: Check formatting
         run: cargo +nightly fmt --all -- --check

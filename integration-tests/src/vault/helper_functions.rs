@@ -76,3 +76,19 @@ pub fn create_mint(svm: &mut LiteSVM, signer: &Keypair, mint: &Keypair) {
     svm.send_transaction(init_tx)
         .expect("create_mint transaction failed");
 }
+
+pub fn assert_error_code(
+    tx_result: &litesvm::types::FailedTransactionMetadata,
+    expected_code: u32,
+    error_name: &str,
+) {
+    let error_string = format!("{:?}", tx_result);
+    assert!(
+        error_string.contains(&format!("Custom({})", expected_code))
+            || error_string.contains(error_name),
+        "Expected error code {} ({}), got: {:?}",
+        expected_code,
+        error_name,
+        error_string
+    );
+}
