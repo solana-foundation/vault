@@ -2,7 +2,10 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
 
-use crate::vault::helper_functions::{assert_error_code, create_mint, create_vault};
+use crate::vault::{
+    constants::{RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    helper_functions::{assert_error_code, create_mint, create_vault},
+};
 use test_case::test_case;
 
 #[test_case(FeeType::NoFee, FeeType::NoFee, 100_000_000,true; "No Fees")]
@@ -32,7 +35,7 @@ fn test_create_vault(
     create_mint(&mut svm, &mint_authority, &share_mint);
     let (reserve_pubkey, _) = Pubkey::find_program_address(
         &[
-            b"reserve",
+            RESERVE_CONFIG_SEED,
             asset_mint.pubkey().as_ref(),
             share_mint.pubkey().as_ref(),
         ],
@@ -40,7 +43,7 @@ fn test_create_vault(
     );
     let (vault_pubkey, _) = Pubkey::find_program_address(
         &[
-            b"vault",
+            VAULT_CONFIG_SEED,
             asset_mint.pubkey().as_ref(),
             share_mint.pubkey().as_ref(),
         ],
