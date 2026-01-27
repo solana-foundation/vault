@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
-use crate::state::{FeeType, VaultConfig, VAULT_CONFIG_SEED};
+use crate::{
+    error::VaultProgramError,
+    state::{FeeType, VaultConfig, VAULT_CONFIG_SEED},
+};
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct UpdateVaultArgs {
@@ -25,6 +28,8 @@ pub struct UpdateVault<'info> {
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
+        mut,
+        constraint = authority.key() == vault.authority @ VaultProgramError::UnauthorizedSigner,
         seeds = [VAULT_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
         bump
     )]
@@ -34,19 +39,22 @@ pub struct UpdateVault<'info> {
 }
 
 pub fn handler<'info>(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {
-    ctx.accounts.vault.set_inner(VaultConfig {
-        asset_mint_address: ctx.accounts.asset_mint.key(),
-        share_mint_address: ctx.accounts.share_mint.key(),
-        vault_token_account: ctx.accounts.reserve.key(),
-        authority: ctx.accounts.authority.key(),
-        initial_price: 0,
-        deposit_fees: args.deposit_fees.unwrap_or(ctx.accounts.vault.deposit_fees),
-        withdraw_fees: args
-            .withdraw_fees
-            .unwrap_or(ctx.accounts.vault.withdraw_fees),
-        paused: args.paused.unwrap_or(ctx.accounts.vault.paused),
-        vault_asset_cap: args.vault_asset_cap.unwrap_or(0),
-        total_asset_balance: 0,
-    });
+    if let Some(FeeType::Percentage { bps }) = args.deposit_fees {
+        require!(bps <= 10_000, VaultProgramError::FeeBPSLimitReached);
+    }
+    if let Some(FeeType::Percentage { bps }) = args.withdraw_fees {
+        require!(bps <= 10_000, VaultProgramError::FeeBPSLimitReached);
+    }
+
+    let current_deposit_fee = ctx.accounts.vault.deposit_fees;
+    let current_withdraw_fee = ctx.accounts.vault.withdraw_fees;
+    let current_vault_asset_cap = ctx.accounts.vault.vault_asset_cap;
+    let current_paused_status = ctx.accounts.vault.paused;
+
+    ctx.accounts.vault.deposit_fees = args.deposit_fees.unwrap_or(current_deposit_fee);
+    ctx.accounts.vault.withdraw_fees = args.withdraw_fees.unwrap_or(current_withdraw_fee);
+    ctx.accounts.vault.vault_asset_cap = args.vault_asset_cap.unwrap_or(current_vault_asset_cap);
+    ctx.accounts.vault.paused = args.paused.unwrap_or(current_paused_status);
+
     Ok(())
 }

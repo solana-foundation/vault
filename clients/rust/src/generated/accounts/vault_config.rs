@@ -35,7 +35,7 @@ pub struct VaultConfig {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub authority: Pubkey,
-    /// initial price
+    /// initial price of shares in asset units (scaled by asset mint decimals)
     pub initial_price: u64,
     /// deposit fees
     pub deposit_fees: FeeType,

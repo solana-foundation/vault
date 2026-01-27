@@ -5,5 +5,6 @@
 //! <https://github.com/codama-idl/codama>
 
 pub(crate) mod r#create_vault;
+pub(crate) mod r#update_vault;
 
-pub use self::r#create_vault::*;
+pub use self::{r#create_vault::*, r#update_vault::*};

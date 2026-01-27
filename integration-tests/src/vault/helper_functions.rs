@@ -6,7 +6,9 @@ use solana_sdk::{
     signature::Keypair, signer::Signer, system_instruction::create_account,
     transaction::Transaction,
 };
-use vault_client::{sdk::IntoSdkInstruction, CreateVaultBuilder, FeeType, Pubkey};
+use vault_client::{
+    sdk::IntoSdkInstruction, CreateVaultBuilder, FeeType, Pubkey, UpdateVaultBuilder,
+};
 
 use anchor_spl::{
     token::{spl_token, Mint},
@@ -16,7 +18,7 @@ use anchor_spl::{
 pub fn create_vault(
     svm: &mut LiteSVM,
     authority: &Keypair,
-    payer: Keypair,
+    payer: &Keypair,
     asset_mint: Pubkey,
     share_mint: Pubkey,
     reserve: Pubkey,
@@ -35,6 +37,42 @@ pub fn create_vault(
         .deposit_fees(deposit_fees)
         .withdraw_fees(withdraw_fees)
         .vault_asset_cap(vault_asset_cap)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&payer.pubkey()),
+        &[&authority, &payer],
+        blockhash,
+    );
+
+    return svm.send_transaction(tx);
+}
+
+pub fn update_vault(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    payer: Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    deposit_fees: FeeType,
+    withdraw_fees: FeeType,
+    vault_asset_cap: u64,
+    paused: bool,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = UpdateVaultBuilder::new()
+        .authority(authority.pubkey())
+        .payer(payer.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .vault(vault)
+        .deposit_fees(deposit_fees)
+        .withdraw_fees(withdraw_fees)
+        .vault_asset_cap(vault_asset_cap)
+        .paused(paused)
         .instruction()
         .into_sdk_instruction();
 

@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 /// The fee types:
 /// FixedAmount: a fixed fee is applied (ex 0.1 asset)
 /// Percentage: the fee is a % of the transfer amount
-#[derive(AnchorDeserialize, AnchorSerialize, Clone, InitSpace)]
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, InitSpace, Copy)]
 pub enum FeeType {
     NoFee,
     FixedAmount { amount: u64 },

@@ -9,8 +9,8 @@ use thiserror::Error;
 
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
 pub enum VaultError {
-    /// 6000 - The provided fee should not be 100 percent.
-    #[error("The provided fee should not be 100 percent.")]
+    /// 6000 - The provided fee must not exceed 100% (10,000 bps).
+    #[error("The provided fee must not exceed 100% (10,000 bps).")]
     FeeBPSLimitReached = 0x1770,
 }
 
