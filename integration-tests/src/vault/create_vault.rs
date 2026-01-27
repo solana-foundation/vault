@@ -5,10 +5,15 @@ use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
 use crate::vault::helper_functions::{assert_error_code, create_mint, create_vault};
 use test_case::test_case;
 
-#[test_case(FeeType::NoFee, FeeType::NoFee, true; "No Fees")]
-#[test_case(FeeType::Percentage { bps: 10_001 }, FeeType::NoFee, false; "Deposit fee limit exceeded")]
-#[test_case(FeeType::Percentage { bps: 9000 }, FeeType::Percentage { bps: 10_001 },false; "Withdraw fee limit exceeded")]
-fn test_create_vault(deposit_fee: FeeType, withdraw_fee: FeeType, should_succeed: bool) {
+#[test_case(FeeType::NoFee, FeeType::NoFee, 100_000_000,true; "No Fees")]
+#[test_case(FeeType::Percentage { bps: 10_001 }, FeeType::NoFee,100_000_000, false; "Deposit fee limit exceeded")]
+#[test_case(FeeType::Percentage { bps: 9000 }, FeeType::Percentage { bps: 10_001 },100_000_000,false; "Withdraw fee limit exceeded")]
+fn test_create_vault(
+    deposit_fee: FeeType,
+    withdraw_fee: FeeType,
+    initial_price: u64,
+    should_succeed: bool,
+) {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
@@ -52,6 +57,7 @@ fn test_create_vault(deposit_fee: FeeType, withdraw_fee: FeeType, should_succeed
         deposit_fee.clone(),
         withdraw_fee.clone(),
         0,
+        initial_price,
     );
     assert_eq!(
         result.is_ok(),
@@ -71,7 +77,7 @@ fn test_create_vault(deposit_fee: FeeType, withdraw_fee: FeeType, should_succeed
         assert_eq!(vault_config.share_mint_address, share_mint.pubkey());
         assert_eq!(vault_config.deposit_fees, deposit_fee);
         assert_eq!(vault_config.withdraw_fees, withdraw_fee);
-        assert_eq!(vault_config.initial_price, 0);
+        assert_eq!(vault_config.initial_price, initial_price);
         assert_eq!(vault_config.paused, true);
         assert_eq!(vault_config.total_asset_balance, 0);
         assert_eq!(vault_config.vault_asset_cap, 0);

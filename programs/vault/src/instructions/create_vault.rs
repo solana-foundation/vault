@@ -8,6 +8,8 @@ use crate::{
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct VaultArgs {
+    authority: Pubkey,
+    initial_price: u64,
     deposit_fees: Option<FeeType>,
     withdraw_fees: Option<FeeType>,
     vault_asset_cap: Option<u64>,
@@ -15,8 +17,6 @@ pub struct VaultArgs {
 
 #[derive(Accounts)]
 pub struct CreateVault<'info> {
-    pub authority: Signer<'info>,
-
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -29,7 +29,7 @@ pub struct CreateVault<'info> {
     #[account(
         init,
         token::mint = asset_mint,
-        token::authority = reserve,
+        token::authority = vault,
         payer = payer,
         seeds = [RESERVE_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
         bump,
@@ -60,8 +60,8 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
         asset_mint_address: ctx.accounts.asset_mint.key(),
         share_mint_address: ctx.accounts.share_mint.key(),
         vault_token_account: ctx.accounts.reserve.key(),
-        authority: ctx.accounts.authority.key(),
-        initial_price: 0,
+        authority: args.authority,
+        initial_price: args.initial_price,
         deposit_fees: args.deposit_fees.unwrap_or(FeeType::NoFee),
         withdraw_fees: args.withdraw_fees.unwrap_or(FeeType::NoFee),
         paused: true,

@@ -26,6 +26,7 @@ pub fn create_vault(
     deposit_fees: FeeType,
     withdraw_fees: FeeType,
     vault_asset_cap: u64,
+    initial_price: u64,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = CreateVaultBuilder::new()
         .authority(authority.pubkey())
@@ -37,16 +38,12 @@ pub fn create_vault(
         .deposit_fees(deposit_fees)
         .withdraw_fees(withdraw_fees)
         .vault_asset_cap(vault_asset_cap)
+        .initial_price(initial_price)
         .instruction()
         .into_sdk_instruction();
 
     let blockhash = svm.latest_blockhash();
-    let tx = Transaction::new_signed_with_payer(
-        &[ix],
-        Some(&payer.pubkey()),
-        &[&authority, &payer],
-        blockhash,
-    );
+    let tx = Transaction::new_signed_with_payer(&[ix], Some(&payer.pubkey()), &[&payer], blockhash);
 
     return svm.send_transaction(tx);
 }
