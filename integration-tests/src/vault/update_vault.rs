@@ -61,6 +61,7 @@ fn test_update_vault(
         deposit_fee.clone(),
         withdraw_fee.clone(),
         0,
+        100_000,
     );
 
     let mut vault_account = svm
@@ -74,7 +75,7 @@ fn test_update_vault(
     assert_eq!(vault_config.share_mint_address, share_mint.pubkey());
     assert_eq!(vault_config.deposit_fees, deposit_fee);
     assert_eq!(vault_config.withdraw_fees, withdraw_fee);
-    assert_eq!(vault_config.initial_price, 0);
+    assert_eq!(vault_config.initial_price, 100_000);
     assert_eq!(vault_config.paused, true);
     assert_eq!(vault_config.total_asset_balance, 0);
     assert_eq!(vault_config.vault_asset_cap, 0);
@@ -112,7 +113,7 @@ fn test_update_vault(
         assert_eq!(vault_config.share_mint_address, share_mint.pubkey());
         assert_eq!(vault_config.deposit_fees, updated_deposit_fee);
         assert_eq!(vault_config.withdraw_fees, updated_withdraw_fee);
-        assert_eq!(vault_config.initial_price, 0);
+        assert_eq!(vault_config.initial_price, 100_000);
         assert_eq!(vault_config.paused, updated_paused_status);
         assert_eq!(vault_config.total_asset_balance, 0);
         assert_eq!(vault_config.vault_asset_cap, updated_vault_asset_cap);
