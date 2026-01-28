@@ -47,6 +47,8 @@ pub struct VaultConfig {
     pub vault_asset_cap: u64,
     /// virtual vault asset balance
     pub total_asset_balance: u64,
+    pub reserve_bump: u8,
+    pub bump: u8,
 }
 
 pub const VAULT_CONFIG_DISCRIMINATOR: [u8; 8] = [99, 86, 43, 216, 184, 102, 119, 77];

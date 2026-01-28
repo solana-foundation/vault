@@ -67,6 +67,8 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
         paused: true,
         vault_asset_cap: args.vault_asset_cap.unwrap_or(0),
         total_asset_balance: 0,
+        reserve_bump: ctx.bumps.reserve,
+        bump: ctx.bumps.vault,
     });
     Ok(())
 }

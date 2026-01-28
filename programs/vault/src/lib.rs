@@ -16,4 +16,9 @@ pub mod vault {
     pub fn create_vault(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> {
         instructions::create_vault::handler(ctx, args)
     }
+
+    /// Closes an atomic vault.
+    pub fn close_vault(ctx: Context<CloseVault>) -> Result<()> {
+        instructions::close_vault::handler(ctx)
+    }
 }

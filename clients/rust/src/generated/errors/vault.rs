@@ -12,6 +12,9 @@ pub enum VaultError {
     /// 6000 - The provided fee must not exceed 100% (10,000 bps).
     #[error("The provided fee must not exceed 100% (10,000 bps).")]
     FeeBPSLimitReached = 0x1770,
+    /// 6001 - The provided signer is not allowed to execute this instruction.
+    #[error("The provided signer is not allowed to execute this instruction.")]
+    UnauthorizedSigner = 0x1771,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

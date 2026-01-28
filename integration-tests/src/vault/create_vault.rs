@@ -52,7 +52,7 @@ fn test_create_vault(
     let result = create_vault(
         &mut svm,
         &authority,
-        payer,
+        &payer,
         asset_mint.pubkey(),
         share_mint.pubkey(),
         reserve_pubkey,
