@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+use crate::error::VaultProgramError;
+
 /// The fee types:
 /// FixedAmount: a fixed fee is applied (ex 0.1 asset)
 /// Percentage: the fee is a % of the transfer amount
@@ -8,6 +10,18 @@ pub enum FeeType {
     NoFee,
     FixedAmount { amount: u64 },
     Percentage { bps: u16 },
+}
+
+impl FeeType {
+    pub fn validate(self) -> Result<()> {
+        match self {
+            FeeType::Percentage { bps } => {
+                require!(bps <= 10_000, VaultProgramError::FeeBPSLimitReached);
+            }
+            FeeType::NoFee | FeeType::FixedAmount { .. } => {}
+        }
+        Ok(())
+    }
 }
 
 /// Core state of the Vault account necessary for common

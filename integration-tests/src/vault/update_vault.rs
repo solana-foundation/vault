@@ -5,10 +5,9 @@ use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
 use crate::vault::helper_functions::{assert_error_code, create_mint, create_vault, update_vault};
 use test_case::test_case;
 
-#[test_case(FeeType::NoFee, FeeType::NoFee, true,  FeeType::Percentage { bps: 10_000 },FeeType::Percentage { bps: 10_000 }, false, 100_000; "No Fees, Change fee percentage, unpause and vault cap")]
-#[test_case(FeeType::NoFee, FeeType::NoFee, true,  FeeType::FixedAmount { amount: 10_000 },FeeType::Percentage { bps: 10_000 }, false, 100_000; "No Fees, Change fee fixed amount, unpause and vault cap")]
-#[test_case(FeeType::NoFee, FeeType::NoFee, false,  FeeType::Percentage { bps: 10_001 },FeeType::Percentage { bps: 10_000 }, false, 100_000; "No Fees, Change fee, Error from exceeded fee")]
-
+#[test_case(FeeType::NoFee, FeeType::NoFee, true,  FeeType::Percentage { bps: 10_000 },FeeType::Percentage { bps: 10_000 }, false, 100_000,Keypair::new().pubkey(); "No Fees, Change fee percentage, unpause and vault cap")]
+#[test_case(FeeType::NoFee, FeeType::NoFee, true,  FeeType::FixedAmount { amount: 10_000 },FeeType::Percentage { bps: 10_000 }, false, 100_000,Keypair::new().pubkey(); "No Fees, Change fee fixed amount, unpause and vault cap")]
+#[test_case(FeeType::NoFee, FeeType::NoFee, false,  FeeType::Percentage { bps: 10_001 },FeeType::Percentage { bps: 10_000 }, false, 100_000,Keypair::new().pubkey(); "No Fees, Change fee, Error from exceeded fee")]
 fn test_update_vault(
     deposit_fee: FeeType,
     withdraw_fee: FeeType,
@@ -17,6 +16,7 @@ fn test_update_vault(
     updated_withdraw_fee: FeeType,
     updated_paused_status: bool,
     updated_vault_asset_cap: u64,
+    updated_authority: Pubkey,
 ) {
     let mut svm = LiteSVM::new();
 
@@ -64,27 +64,9 @@ fn test_update_vault(
         100_000,
     );
 
-    let mut vault_account = svm
-        .get_account(&vault_pubkey)
-        .expect("Vault account should exist");
-    assert!(!vault_account.data.is_empty(), "Vault should have data");
-
-    let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
-    assert_eq!(vault_config.authority, authority.pubkey());
-    assert_eq!(vault_config.asset_mint_address, asset_mint.pubkey());
-    assert_eq!(vault_config.share_mint_address, share_mint.pubkey());
-    assert_eq!(vault_config.deposit_fees, deposit_fee);
-    assert_eq!(vault_config.withdraw_fees, withdraw_fee);
-    assert_eq!(vault_config.initial_price, 100_000);
-    assert_eq!(vault_config.paused, true);
-    assert_eq!(vault_config.total_asset_balance, 0);
-    assert_eq!(vault_config.vault_asset_cap, 0);
-    assert_eq!(vault_config.vault_token_account, reserve_pubkey);
-
     let update_result = update_vault(
         &mut svm,
         &authority,
-        payer,
         asset_mint.pubkey(),
         share_mint.pubkey(),
         vault_pubkey,
@@ -92,6 +74,7 @@ fn test_update_vault(
         updated_withdraw_fee.clone(),
         updated_vault_asset_cap,
         updated_paused_status,
+        updated_authority,
     );
 
     assert_eq!(
@@ -102,13 +85,13 @@ fn test_update_vault(
 
     if should_succeed {
         // Verify vault was updated
-        vault_account = svm
+        let vault_account = svm
             .get_account(&vault_pubkey)
             .expect("Vault account should exist");
         assert!(!vault_account.data.is_empty(), "Vault should have data");
 
         let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
-        assert_eq!(vault_config.authority, authority.pubkey());
+        assert_eq!(vault_config.authority, updated_authority);
         assert_eq!(vault_config.asset_mint_address, asset_mint.pubkey());
         assert_eq!(vault_config.share_mint_address, share_mint.pubkey());
         assert_eq!(vault_config.deposit_fees, updated_deposit_fee);

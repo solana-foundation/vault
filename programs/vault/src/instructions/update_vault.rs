@@ -8,6 +8,7 @@ use crate::{
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct UpdateVaultArgs {
+    new_authority: Option<Pubkey>,
     deposit_fees: Option<FeeType>,
     withdraw_fees: Option<FeeType>,
     vault_asset_cap: Option<u64>,
@@ -18,13 +19,8 @@ pub struct UpdateVaultArgs {
 pub struct UpdateVault<'info> {
     pub authority: Signer<'info>,
 
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account()]
     pub asset_mint: InterfaceAccount<'info, Mint>,
 
-    #[account()]
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
@@ -34,27 +30,30 @@ pub struct UpdateVault<'info> {
         bump
     )]
     pub vault: Account<'info, VaultConfig>,
-
-    pub system_program: Program<'info, System>,
 }
 
 pub fn handler<'info>(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {
-    if let Some(FeeType::Percentage { bps }) = args.deposit_fees {
-        require!(bps <= 10_000, VaultProgramError::FeeBPSLimitReached);
+    if let Some(fee) = args.deposit_fees {
+        fee.validate()?;
     }
-    if let Some(FeeType::Percentage { bps }) = args.withdraw_fees {
-        require!(bps <= 10_000, VaultProgramError::FeeBPSLimitReached);
+    if let Some(fee) = args.withdraw_fees {
+        fee.validate()?;
     }
 
     let current_deposit_fee = ctx.accounts.vault.deposit_fees;
     let current_withdraw_fee = ctx.accounts.vault.withdraw_fees;
     let current_vault_asset_cap = ctx.accounts.vault.vault_asset_cap;
     let current_paused_status = ctx.accounts.vault.paused;
+    let new_authority = args
+        .new_authority
+        .unwrap_or(ctx.accounts.authority.key())
+        .key();
 
     ctx.accounts.vault.deposit_fees = args.deposit_fees.unwrap_or(current_deposit_fee);
     ctx.accounts.vault.withdraw_fees = args.withdraw_fees.unwrap_or(current_withdraw_fee);
     ctx.accounts.vault.vault_asset_cap = args.vault_asset_cap.unwrap_or(current_vault_asset_cap);
     ctx.accounts.vault.paused = args.paused.unwrap_or(current_paused_status);
+    ctx.accounts.vault.authority = new_authority;
 
     Ok(())
 }

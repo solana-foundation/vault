@@ -51,7 +51,6 @@ pub fn create_vault(
 pub fn update_vault(
     svm: &mut LiteSVM,
     authority: &Keypair,
-    payer: Keypair,
     asset_mint: Pubkey,
     share_mint: Pubkey,
     vault: Pubkey,
@@ -59,10 +58,10 @@ pub fn update_vault(
     withdraw_fees: FeeType,
     vault_asset_cap: u64,
     paused: bool,
+    new_authority: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = UpdateVaultBuilder::new()
         .authority(authority.pubkey())
-        .payer(payer.pubkey())
         .asset_mint(asset_mint)
         .share_mint(share_mint)
         .vault(vault)
@@ -70,14 +69,15 @@ pub fn update_vault(
         .withdraw_fees(withdraw_fees)
         .vault_asset_cap(vault_asset_cap)
         .paused(paused)
+        .new_authority(new_authority)
         .instruction()
         .into_sdk_instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
         &[ix],
-        Some(&payer.pubkey()),
-        &[&authority, &payer],
+        Some(&authority.pubkey()),
+        &[&authority],
         blockhash,
     );
 
