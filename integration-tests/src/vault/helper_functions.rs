@@ -7,7 +7,8 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use vault_client::{
-    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, FeeType, Pubkey,
+    sdk::IntoSdkInstruction, sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder,
+    CreateVaultBuilder, FeeType, FeeType, Pubkey, Pubkey, UpdateVaultBuilder,
 };
 
 use anchor_spl::{
@@ -79,6 +80,41 @@ pub fn close_vault(
         &[ix],
         Some(&payer.pubkey()),
         &[&payer, &authority],
+        blockhash,
+    );
+
+    return svm.send_transaction(tx);
+}
+pub fn update_vault(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    deposit_fees: FeeType,
+    withdraw_fees: FeeType,
+    vault_asset_cap: u64,
+    paused: bool,
+    new_authority: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = UpdateVaultBuilder::new()
+        .authority(authority.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .vault(vault)
+        .deposit_fees(deposit_fees)
+        .withdraw_fees(withdraw_fees)
+        .vault_asset_cap(vault_asset_cap)
+        .paused(paused)
+        .new_authority(new_authority)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[&authority],
         blockhash,
     );
 
