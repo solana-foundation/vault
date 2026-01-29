@@ -10,4 +10,7 @@ pub enum VaultProgramError {
 
     #[msg("Something happened while performing an arithmetic operation.")]
     ArithmeticError,
+
+    #[msg("The vault is paused.")]
+    PausedVault,
 }

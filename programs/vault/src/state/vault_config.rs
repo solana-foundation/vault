@@ -32,17 +32,9 @@ impl FeeType {
                     .ok_or(VaultProgramError::ArithmeticError)?
                     .checked_div(10_000)
                     .ok_or(VaultProgramError::ArithmeticError)?;
-                let result = total_amount
-                    .checked_sub(fee)
-                    .ok_or(VaultProgramError::ArithmeticError)?;
-                return Ok(result);
+                return Ok(fee);
             }
-            FeeType::FixedAmount { amount } => {
-                let result = total_amount
-                    .checked_sub(amount)
-                    .ok_or(VaultProgramError::ArithmeticError)?;
-                return Ok(result);
-            }
+            FeeType::FixedAmount { amount } => return Ok(amount),
             FeeType::NoFee => return Ok(0),
         }
     }
@@ -88,13 +80,19 @@ impl VaultConfig {
         share_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
-        let assets_times_total_supply =
-            u128::from(share_mint.supply.checked_add(1).expect("overflow"))
-                .checked_mul(u128::from(share_amount))
-                .ok_or(VaultProgramError::ArithmeticError)?;
+        let assets_times_total_supply = u128::from(
+            share_mint
+                .supply
+                .checked_add(1)
+                .ok_or(VaultProgramError::ArithmeticError)?,
+        )
+        .checked_mul(u128::from(share_amount))
+        .ok_or(VaultProgramError::ArithmeticError)?;
         let result = match rounding {
             Rounding::Up => assets_times_total_supply.div_ceil(u128::from(
-                self.total_assets().checked_add(1).expect("overflow"),
+                self.total_assets()
+                    .checked_add(1)
+                    .ok_or(VaultProgramError::ArithmeticError)?,
             )),
             Rounding::Down => assets_times_total_supply
                 .checked_div(u128::from(self.total_assets() + 1))

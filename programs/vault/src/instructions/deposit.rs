@@ -21,12 +21,14 @@ pub struct Deposit<'info> {
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
+        mut,
         seeds = [RESERVE_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
         bump,
     )]
     pub reserve: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
+        mut,
         seeds = [VAULT_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
         bump
     )]
@@ -86,7 +88,7 @@ impl<'info> Deposit<'info> {
         );
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
-    pub fn mint_new_stable(&mut self, amount: u64) -> Result<()> {
+    pub fn mint(&mut self, amount: u64) -> Result<()> {
         let asset_mint = self.asset_mint.key();
         let share_mint = self.share_mint.key();
         let mint_to_cpi_accounts = MintTo {
@@ -110,8 +112,9 @@ impl<'info> Deposit<'info> {
         mint_to(mint_cpi_ctx, amount)
     }
 }
-
 pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
+    require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
+
     let fee = ctx.accounts.vault.get_deposit_fee(assets)?;
     let remaining_amount = assets
         .checked_sub(fee)
@@ -131,6 +134,6 @@ pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
         .transfer_reserve_token_fee_to_fee_recipient(fee)?;
     ctx.accounts
         .transfer_reserve_token_to_vault(remaining_amount)?;
-    ctx.accounts.mint_new_stable(shares)?;
+    ctx.accounts.mint(shares)?;
     Ok(())
 }
