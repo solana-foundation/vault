@@ -1,6 +1,6 @@
+use crate::{error::VaultProgramError, state::Rounding};
 use anchor_lang::prelude::*;
-
-use crate::error::VaultProgramError;
+use anchor_spl::token_interface::Mint;
 
 /// The fee types:
 /// FixedAmount: a fixed fee is applied (ex 0.1 asset)
@@ -22,11 +22,28 @@ impl FeeType {
         }
         Ok(())
     }
-    pub fn get_fee(self, total_amount: u64) -> u64 {
+    pub fn get_fee(self, total_amount: u64) -> Result<u64> {
         match self {
-            FeeType::Percentage { bps } => return 0,
-            FeeType::FixedAmount { amount } => return total_amount.saturating_sub(amount),
-            FeeType::NoFee => return 0,
+            FeeType::Percentage { bps } => {
+                let fee = total_amount
+                    .checked_mul(bps.into())
+                    .ok_or(VaultProgramError::ArithmeticError)?
+                    .checked_add(9_999)
+                    .ok_or(VaultProgramError::ArithmeticError)?
+                    .checked_div(10_000)
+                    .ok_or(VaultProgramError::ArithmeticError)?;
+                let result = total_amount
+                    .checked_sub(fee)
+                    .ok_or(VaultProgramError::ArithmeticError)?;
+                return Ok(result);
+            }
+            FeeType::FixedAmount { amount } => {
+                let result = total_amount
+                    .checked_sub(amount)
+                    .ok_or(VaultProgramError::ArithmeticError)?;
+                return Ok(result);
+            }
+            FeeType::NoFee => return Ok(0),
         }
     }
 }
@@ -34,7 +51,7 @@ impl FeeType {
 /// Core state of the Vault account necessary for common
 /// logic across configuration types.
 #[account]
-#[derive(InitSpace)]
+#[derive(InitSpace, Copy)]
 pub struct VaultConfig {
     pub asset_mint_address: Pubkey,
     /// share mint address
@@ -55,11 +72,47 @@ pub struct VaultConfig {
     pub vault_asset_cap: u64,
     /// virtual vault asset balance
     pub total_asset_balance: u64,
+    /// pubkey that is required to own the TokenAccount fees are sent to
     pub fee_recipient: Pubkey,
+    pub reserve_bump: u8,
+    pub bump: u8,
 }
 
 impl VaultConfig {
-    pub fn get_deposit_fee(self, deposit_amount: u64) -> u64 {
+    pub fn total_assets(self) -> u64 {
+        return self.total_asset_balance;
+    }
+    pub fn get_shares_from_assets(
+        self,
+        share_mint: &InterfaceAccount<'_, Mint>,
+        share_amount: u64,
+        rounding: Rounding,
+    ) -> Result<u64> {
+        let assets_times_total_supply =
+            u128::from(share_mint.supply.checked_add(1).expect("overflow"))
+                .checked_mul(u128::from(share_amount))
+                .ok_or(VaultProgramError::ArithmeticError)?;
+        let result = match rounding {
+            Rounding::Up => assets_times_total_supply.div_ceil(u128::from(
+                self.total_assets().checked_add(1).expect("overflow"),
+            )),
+            Rounding::Down => assets_times_total_supply
+                .checked_div(u128::from(self.total_assets() + 1))
+                .ok_or(VaultProgramError::ArithmeticError)?,
+        };
+        u64::try_from(result).or(Err(VaultProgramError::ArithmeticError.into()))
+    }
+
+    pub fn increase_asset_supply(&mut self, amount: u64) -> Result<()> {
+        let new_supply = self
+            .total_asset_balance
+            .checked_add(amount)
+            .ok_or(VaultProgramError::ArithmeticError)?;
+        self.total_asset_balance = new_supply;
+        Ok(())
+    }
+
+    pub fn get_deposit_fee(self, deposit_amount: u64) -> Result<u64> {
         self.deposit_fees.get_fee(deposit_amount)
     }
 }

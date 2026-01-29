@@ -5,10 +5,13 @@ use anchor_spl::{
     token_interface::{self, Mint, TokenAccount, TokenInterface},
 };
 
-use crate::state::{VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED};
+use crate::{
+    error::VaultProgramError,
+    state::{Rounding, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+};
 
 #[derive(Accounts)]
-pub struct MintNewStable<'info> {
+pub struct Deposit<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -54,7 +57,7 @@ pub struct MintNewStable<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> MintNewStable<'info> {
+impl<'info> Deposit<'info> {
     pub fn transfer_reserve_token_fee_to_fee_recipient(&mut self, fee: u64) -> Result<()> {
         let fee_recipient_transfer_cpi_accounts = TransferChecked {
             from: self.user_assets_account.to_account_info(),
@@ -84,14 +87,20 @@ impl<'info> MintNewStable<'info> {
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
     pub fn mint_new_stable(&mut self, amount: u64) -> Result<()> {
-        let mint = self.share_mint.key();
+        let asset_mint = self.asset_mint.key();
+        let share_mint = self.share_mint.key();
         let mint_to_cpi_accounts = MintTo {
             mint: self.share_mint.to_account_info(),
             to: self.user_shares_account.to_account_info(),
-            authority: self.mint_authority.to_account_info(),
+            authority: self.vault.to_account_info(),
         };
 
-        // We need the mint authority ... it could be a PDA?
+        let seeds: &[&[&[u8]]] = &[&[
+            VAULT_CONFIG_SEED,
+            asset_mint.as_ref(),
+            share_mint.as_ref(),
+            &[self.vault.bump],
+        ]];
 
         let mint_cpi_ctx = CpiContext::new_with_signer(
             self.token_program.to_account_info(),
@@ -102,13 +111,26 @@ impl<'info> MintNewStable<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<MintNewStable>, shares: u64) -> Result<()> {
-    let assets = 0;
-    let fee = ctx.accounts.vault.get_deposit_fee(assets);
-    ctx.accounts.vault.increase_asset_supply(assets)?;
-    ctx.accounts.transfer_reserve_token_to_vault(assets)?;
+pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
+    let fee = ctx.accounts.vault.get_deposit_fee(assets)?;
+    let remaining_amount = assets
+        .checked_sub(fee)
+        .ok_or(VaultProgramError::ArithmeticError)?;
+
+    let shares = ctx.accounts.vault.get_shares_from_assets(
+        &ctx.accounts.share_mint,
+        remaining_amount,
+        Rounding::Down,
+    )?;
+    if shares < 1 {
+        return Err(VaultProgramError::ArithmeticError.into());
+    }
+
+    ctx.accounts.vault.increase_asset_supply(remaining_amount)?;
     ctx.accounts
         .transfer_reserve_token_fee_to_fee_recipient(fee)?;
+    ctx.accounts
+        .transfer_reserve_token_to_vault(remaining_amount)?;
     ctx.accounts.mint_new_stable(shares)?;
     Ok(())
 }
