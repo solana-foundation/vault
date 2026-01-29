@@ -15,6 +15,8 @@ pub const CREATE_VAULT_DISCRIMINATOR: [u8; 8] = [29, 237, 247, 208, 193, 82, 54,
 pub struct CreateVault {
     pub payer: solana_pubkey::Pubkey,
 
+    pub mint_authority: solana_pubkey::Pubkey,
+
     pub asset_mint: solana_pubkey::Pubkey,
 
     pub share_mint: solana_pubkey::Pubkey,
@@ -40,8 +42,12 @@ impl CreateVault {
         args: CreateVaultInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.payer, true));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.mint_authority,
+            true,
+        ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
             false,
@@ -105,6 +111,7 @@ pub struct CreateVaultInstructionArgs {
     pub deposit_fees: Option<FeeType>,
     pub withdraw_fees: Option<FeeType>,
     pub vault_asset_cap: Option<u64>,
+    pub fee_recipient: Pubkey,
 }
 
 impl CreateVaultInstructionArgs {
@@ -118,15 +125,17 @@ impl CreateVaultInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[writable, signer]` payer
-///   1. `[]` asset_mint
-///   2. `[]` share_mint
-///   3. `[writable]` reserve
-///   4. `[writable]` vault
-///   5. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   1. `[signer]` mint_authority
+///   2. `[]` asset_mint
+///   3. `[]` share_mint
+///   4. `[writable]` reserve
+///   5. `[writable]` vault
+///   6. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct CreateVaultBuilder {
     payer: Option<solana_pubkey::Pubkey>,
+    mint_authority: Option<solana_pubkey::Pubkey>,
     asset_mint: Option<solana_pubkey::Pubkey>,
     share_mint: Option<solana_pubkey::Pubkey>,
     reserve: Option<solana_pubkey::Pubkey>,
@@ -138,6 +147,7 @@ pub struct CreateVaultBuilder {
     deposit_fees: Option<FeeType>,
     withdraw_fees: Option<FeeType>,
     vault_asset_cap: Option<u64>,
+    fee_recipient: Option<Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -149,6 +159,12 @@ impl CreateVaultBuilder {
     #[inline(always)]
     pub fn payer(&mut self, payer: solana_pubkey::Pubkey) -> &mut Self {
         self.payer = Some(payer);
+        self
+    }
+
+    #[inline(always)]
+    pub fn mint_authority(&mut self, mint_authority: solana_pubkey::Pubkey) -> &mut Self {
+        self.mint_authority = Some(mint_authority);
         self
     }
 
@@ -223,6 +239,12 @@ impl CreateVaultBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn fee_recipient(&mut self, fee_recipient: Pubkey) -> &mut Self {
+        self.fee_recipient = Some(fee_recipient);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -244,6 +266,7 @@ impl CreateVaultBuilder {
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let accounts = CreateVault {
             payer: self.payer.expect("payer is not set"),
+            mint_authority: self.mint_authority.expect("mint_authority is not set"),
             asset_mint: self.asset_mint.expect("asset_mint is not set"),
             share_mint: self.share_mint.expect("share_mint is not set"),
             reserve: self.reserve.expect("reserve is not set"),
@@ -264,6 +287,10 @@ impl CreateVaultBuilder {
             deposit_fees: self.deposit_fees.clone(),
             withdraw_fees: self.withdraw_fees.clone(),
             vault_asset_cap: self.vault_asset_cap.clone(),
+            fee_recipient: self
+                .fee_recipient
+                .clone()
+                .expect("fee_recipient is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -273,6 +300,8 @@ impl CreateVaultBuilder {
 /// `create_vault` CPI accounts.
 pub struct CreateVaultCpiAccounts<'a, 'b> {
     pub payer: &'b solana_account_info::AccountInfo<'a>,
+
+    pub mint_authority: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
 
@@ -293,6 +322,8 @@ pub struct CreateVaultCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
     pub payer: &'b solana_account_info::AccountInfo<'a>,
+
+    pub mint_authority: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
 
@@ -318,6 +349,7 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
         Self {
             __program: program,
             payer: accounts.payer,
+            mint_authority: accounts.mint_authority,
             asset_mint: accounts.asset_mint,
             share_mint: accounts.share_mint,
             reserve: accounts.reserve,
@@ -354,8 +386,12 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.payer.key, true));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.mint_authority.key,
+            true,
+        ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
             false,
@@ -393,9 +429,10 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(9 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.payer.clone());
+        account_infos.push(self.mint_authority.clone());
         account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint.clone());
         account_infos.push(self.reserve.clone());
@@ -419,12 +456,13 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[writable, signer]` payer
-///   1. `[]` asset_mint
-///   2. `[]` share_mint
-///   3. `[writable]` reserve
-///   4. `[writable]` vault
-///   5. `[]` token_program
-///   6. `[]` system_program
+///   1. `[signer]` mint_authority
+///   2. `[]` asset_mint
+///   3. `[]` share_mint
+///   4. `[writable]` reserve
+///   5. `[writable]` vault
+///   6. `[]` token_program
+///   7. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct CreateVaultCpiBuilder<'a, 'b> {
     instruction: Box<CreateVaultCpiBuilderInstruction<'a, 'b>>,
@@ -435,6 +473,7 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
         let instruction = Box::new(CreateVaultCpiBuilderInstruction {
             __program: program,
             payer: None,
+            mint_authority: None,
             asset_mint: None,
             share_mint: None,
             reserve: None,
@@ -446,6 +485,7 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
             deposit_fees: None,
             withdraw_fees: None,
             vault_asset_cap: None,
+            fee_recipient: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -454,6 +494,15 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn payer(&mut self, payer: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.payer = Some(payer);
+        self
+    }
+
+    #[inline(always)]
+    pub fn mint_authority(
+        &mut self,
+        mint_authority: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.mint_authority = Some(mint_authority);
         self
     }
 
@@ -538,6 +587,12 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
         self
     }
 
+    #[inline(always)]
+    pub fn fee_recipient(&mut self, fee_recipient: Pubkey) -> &mut Self {
+        self.instruction.fee_recipient = Some(fee_recipient);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -590,11 +645,21 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
             deposit_fees: self.instruction.deposit_fees.clone(),
             withdraw_fees: self.instruction.withdraw_fees.clone(),
             vault_asset_cap: self.instruction.vault_asset_cap.clone(),
+            fee_recipient: self
+                .instruction
+                .fee_recipient
+                .clone()
+                .expect("fee_recipient is not set"),
         };
         let instruction = CreateVaultCpi {
             __program: self.instruction.__program,
 
             payer: self.instruction.payer.expect("payer is not set"),
+
+            mint_authority: self
+                .instruction
+                .mint_authority
+                .expect("mint_authority is not set"),
 
             asset_mint: self.instruction.asset_mint.expect("asset_mint is not set"),
 
@@ -626,6 +691,7 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
 struct CreateVaultCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
     payer: Option<&'b solana_account_info::AccountInfo<'a>>,
+    mint_authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     reserve: Option<&'b solana_account_info::AccountInfo<'a>>,
@@ -637,6 +703,7 @@ struct CreateVaultCpiBuilderInstruction<'a, 'b> {
     deposit_fees: Option<FeeType>,
     withdraw_fees: Option<FeeType>,
     vault_asset_cap: Option<u64>,
+    fee_recipient: Option<Pubkey>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }
