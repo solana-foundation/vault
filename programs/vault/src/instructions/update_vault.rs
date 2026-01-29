@@ -8,6 +8,8 @@ use crate::{
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct UpdateVaultArgs {
+    // "new_authority is intentionally not a signer as this makes it operationally difficult when
+    // attempting to set the authority to a PDA or governance multisig."
     new_authority: Option<Pubkey>,
     deposit_fees: Option<FeeType>,
     withdraw_fees: Option<FeeType>,
