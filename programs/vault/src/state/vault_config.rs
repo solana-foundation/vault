@@ -22,6 +22,13 @@ impl FeeType {
         }
         Ok(())
     }
+    pub fn get_fee(self, total_amount: u64) -> u64 {
+        match self {
+            FeeType::Percentage { bps } => return 0,
+            FeeType::FixedAmount { amount } => return total_amount.saturating_sub(amount),
+            FeeType::NoFee => return 0,
+        }
+    }
 }
 
 /// Core state of the Vault account necessary for common
@@ -48,4 +55,11 @@ pub struct VaultConfig {
     pub vault_asset_cap: u64,
     /// virtual vault asset balance
     pub total_asset_balance: u64,
+    pub fee_recipient: Pubkey,
+}
+
+impl VaultConfig {
+    pub fn get_deposit_fee(self, deposit_amount: u64) -> u64 {
+        self.deposit_fees.get_fee(deposit_amount)
+    }
 }
