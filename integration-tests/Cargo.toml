@@ -9,3 +9,4 @@ litesvm.workspace = true
 solana-sdk.workspace = true
 anchor-spl.workspace = true
 test-case = "3.3.1"
+spl-token = "8.0.0"
