@@ -7,8 +7,8 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use vault_client::{
-    sdk::IntoSdkInstruction, sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder,
-    CreateVaultBuilder, FeeType, FeeType, Pubkey, Pubkey, UpdateVaultBuilder,
+    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, FeeType, Pubkey,
+    UpdateVaultBuilder,
 };
 
 use anchor_spl::{
