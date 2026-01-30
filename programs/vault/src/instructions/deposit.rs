@@ -115,6 +115,17 @@ impl<'info> Deposit<'info> {
 }
 pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
+    let expected_new_total_asset_balance = ctx
+        .accounts
+        .vault
+        .total_asset_balance
+        .checked_add(assets)
+        .ok_or(VaultProgramError::ArithmeticError)?;
+
+    require!(
+        expected_new_total_asset_balance <= ctx.accounts.vault.vault_asset_cap,
+        VaultProgramError::MaxVaultAssetCapExceeded
+    );
 
     let fee = ctx.accounts.vault.get_deposit_fee(assets)?;
     let remaining_amount = assets

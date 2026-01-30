@@ -13,4 +13,7 @@ pub enum VaultProgramError {
 
     #[msg("The vault is paused.")]
     PausedVault,
+
+    #[msg("The vault max asset cap has been exceeded.")]
+    MaxVaultAssetCapExceeded,
 }
