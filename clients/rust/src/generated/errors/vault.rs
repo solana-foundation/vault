@@ -18,6 +18,9 @@ pub enum VaultError {
     /// 6002 - Something happened while performing an arithmetic operation.
     #[error("Something happened while performing an arithmetic operation.")]
     ArithmeticError = 0x1772,
+    /// 6003 - The vault is paused.
+    #[error("The vault is paused.")]
+    PausedVault = 0x1773,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

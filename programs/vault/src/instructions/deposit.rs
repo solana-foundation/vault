@@ -1,8 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_2022::{mint_to, MintTo, TransferChecked},
-    token_interface::{self, Mint, TokenAccount, TokenInterface},
+    token_interface::{self, mint_to, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked},
 };
 
 use crate::{
@@ -74,6 +73,7 @@ impl<'info> Deposit<'info> {
 
         token_interface::transfer_checked(cpi_ctx, fee, self.asset_mint.decimals)
     }
+
     pub fn transfer_reserve_token_to_vault(&mut self, amount: u64) -> Result<()> {
         let vault_transfer_cpi_accounts = TransferChecked {
             from: self.user_assets_account.to_account_info(),
@@ -88,6 +88,7 @@ impl<'info> Deposit<'info> {
         );
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
+
     pub fn mint(&mut self, amount: u64) -> Result<()> {
         let asset_mint = self.asset_mint.key();
         let share_mint = self.share_mint.key();

@@ -4,10 +4,7 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::{
-    error::VaultProgramError,
-    state::{FeeType, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
-};
+use crate::state::{FeeType, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED};
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct VaultArgs {
@@ -26,10 +23,9 @@ pub struct CreateVault<'info> {
 
     pub mint_authority: Signer<'info>,
 
-    #[account()]
     pub asset_mint: InterfaceAccount<'info, Mint>,
 
-    #[account()]
+    #[account(mut)]
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(

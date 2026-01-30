@@ -21,10 +21,12 @@ fn test_close_vault() {
     let mint_authority = Keypair::new();
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();
+    let fee_recipient = Keypair::new();
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
+    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
 
     create_mint(&mut svm, &mint_authority, &asset_mint);
     create_mint(&mut svm, &mint_authority, &share_mint);
@@ -48,6 +50,7 @@ fn test_close_vault() {
         &mut svm,
         &authority,
         &payer,
+        &mint_authority,
         asset_mint.pubkey(),
         share_mint.pubkey(),
         reserve_pubkey,
@@ -56,6 +59,7 @@ fn test_close_vault() {
         FeeType::NoFee,
         0,
         100_000,
+        fee_recipient.pubkey(),
     );
 
     // Verify vault was created

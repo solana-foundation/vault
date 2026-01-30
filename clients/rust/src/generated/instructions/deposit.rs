@@ -4,18 +4,14 @@
 //!
 //! <https://github.com/codama-idl/codama>
 
-use crate::generated::types::FeeType;
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_pubkey::Pubkey;
 
-pub const CREATE_VAULT_DISCRIMINATOR: [u8; 8] = [29, 237, 247, 208, 193, 82, 54, 135];
+pub const DEPOSIT_DISCRIMINATOR: [u8; 8] = [242, 35, 198, 137, 82, 225, 242, 182];
 
 /// Accounts.
 #[derive(Debug)]
-pub struct CreateVault {
-    pub payer: solana_pubkey::Pubkey,
-
-    pub mint_authority: solana_pubkey::Pubkey,
+pub struct Deposit {
+    pub user: solana_pubkey::Pubkey,
 
     pub asset_mint: solana_pubkey::Pubkey,
 
@@ -25,13 +21,23 @@ pub struct CreateVault {
 
     pub vault: solana_pubkey::Pubkey,
 
+    pub fee_recipient: solana_pubkey::Pubkey,
+
+    pub user_assets_account: solana_pubkey::Pubkey,
+
+    pub user_shares_account: solana_pubkey::Pubkey,
+
     pub token_program: solana_pubkey::Pubkey,
+
+    pub reserve_token_program: solana_pubkey::Pubkey,
+
+    pub associated_token_program: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
 }
 
-impl CreateVault {
-    pub fn instruction(&self, args: CreateVaultInstructionArgs) -> solana_instruction::Instruction {
+impl Deposit {
+    pub fn instruction(&self, args: DepositInstructionArgs) -> solana_instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
 
@@ -39,15 +45,11 @@ impl CreateVault {
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: CreateVaultInstructionArgs,
+        args: DepositInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
-        accounts.push(solana_instruction::AccountMeta::new(self.payer, true));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.mint_authority,
-            true,
-        ));
+        let mut accounts = Vec::with_capacity(12 + remaining_accounts.len());
+        accounts.push(solana_instruction::AccountMeta::new(self.user, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
             false,
@@ -55,8 +57,28 @@ impl CreateVault {
         accounts.push(solana_instruction::AccountMeta::new(self.share_mint, false));
         accounts.push(solana_instruction::AccountMeta::new(self.reserve, false));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.fee_recipient,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.user_assets_account,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.user_shares_account,
+            false,
+        ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.token_program,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.reserve_token_program,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.associated_token_program,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -64,7 +86,7 @@ impl CreateVault {
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = CreateVaultInstructionData::new().try_to_vec().unwrap();
+        let mut data = DepositInstructionData::new().try_to_vec().unwrap();
         let mut args = args.try_to_vec().unwrap();
         data.append(&mut args);
 
@@ -78,14 +100,14 @@ impl CreateVault {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct CreateVaultInstructionData {
+pub struct DepositInstructionData {
     discriminator: [u8; 8],
 }
 
-impl CreateVaultInstructionData {
+impl DepositInstructionData {
     pub fn new() -> Self {
         Self {
-            discriminator: [29, 237, 247, 208, 193, 82, 54, 135],
+            discriminator: [242, 35, 198, 137, 82, 225, 242, 182],
         }
     }
 
@@ -94,7 +116,7 @@ impl CreateVaultInstructionData {
     }
 }
 
-impl Default for CreateVaultInstructionData {
+impl Default for DepositInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -102,66 +124,59 @@ impl Default for CreateVaultInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct CreateVaultInstructionArgs {
-    pub authority: Pubkey,
-    pub initial_price: u64,
-    pub deposit_fees: Option<FeeType>,
-    pub withdraw_fees: Option<FeeType>,
-    pub vault_asset_cap: Option<u64>,
-    pub fee_recipient: Pubkey,
+pub struct DepositInstructionArgs {
+    pub assets: u64,
 }
 
-impl CreateVaultInstructionArgs {
+impl DepositInstructionArgs {
     pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error> {
         borsh::to_vec(self)
     }
 }
 
-/// Instruction builder for `CreateVault`.
+/// Instruction builder for `Deposit`.
 ///
 /// ### Accounts:
 ///
-///   0. `[writable, signer]` payer
-///   1. `[signer]` mint_authority
-///   2. `[]` asset_mint
-///   3. `[writable]` share_mint
-///   4. `[writable]` reserve
-///   5. `[writable]` vault
-///   6. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   0. `[writable, signer]` user
+///   1. `[]` asset_mint
+///   2. `[writable]` share_mint
+///   3. `[writable]` reserve
+///   4. `[writable]` vault
+///   5. `[writable]` fee_recipient
+///   6. `[writable]` user_assets_account
+///   7. `[writable]` user_shares_account
+///   8. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+///   9. `[]` reserve_token_program
+///   10. `[optional]` associated_token_program (default to
+///       `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
+///   11. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
-pub struct CreateVaultBuilder {
-    payer: Option<solana_pubkey::Pubkey>,
-    mint_authority: Option<solana_pubkey::Pubkey>,
+pub struct DepositBuilder {
+    user: Option<solana_pubkey::Pubkey>,
     asset_mint: Option<solana_pubkey::Pubkey>,
     share_mint: Option<solana_pubkey::Pubkey>,
     reserve: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
+    fee_recipient: Option<solana_pubkey::Pubkey>,
+    user_assets_account: Option<solana_pubkey::Pubkey>,
+    user_shares_account: Option<solana_pubkey::Pubkey>,
     token_program: Option<solana_pubkey::Pubkey>,
+    reserve_token_program: Option<solana_pubkey::Pubkey>,
+    associated_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
-    authority: Option<Pubkey>,
-    initial_price: Option<u64>,
-    deposit_fees: Option<FeeType>,
-    withdraw_fees: Option<FeeType>,
-    vault_asset_cap: Option<u64>,
-    fee_recipient: Option<Pubkey>,
+    assets: Option<u64>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
-impl CreateVaultBuilder {
+impl DepositBuilder {
     pub fn new() -> Self {
         Self::default()
     }
 
     #[inline(always)]
-    pub fn payer(&mut self, payer: solana_pubkey::Pubkey) -> &mut Self {
-        self.payer = Some(payer);
-        self
-    }
-
-    #[inline(always)]
-    pub fn mint_authority(&mut self, mint_authority: solana_pubkey::Pubkey) -> &mut Self {
-        self.mint_authority = Some(mint_authority);
+    pub fn user(&mut self, user: solana_pubkey::Pubkey) -> &mut Self {
+        self.user = Some(user);
         self
     }
 
@@ -189,10 +204,47 @@ impl CreateVaultBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn fee_recipient(&mut self, fee_recipient: solana_pubkey::Pubkey) -> &mut Self {
+        self.fee_recipient = Some(fee_recipient);
+        self
+    }
+
+    #[inline(always)]
+    pub fn user_assets_account(&mut self, user_assets_account: solana_pubkey::Pubkey) -> &mut Self {
+        self.user_assets_account = Some(user_assets_account);
+        self
+    }
+
+    #[inline(always)]
+    pub fn user_shares_account(&mut self, user_shares_account: solana_pubkey::Pubkey) -> &mut Self {
+        self.user_shares_account = Some(user_shares_account);
+        self
+    }
+
     /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
     #[inline(always)]
     pub fn token_program(&mut self, token_program: solana_pubkey::Pubkey) -> &mut Self {
         self.token_program = Some(token_program);
+        self
+    }
+
+    #[inline(always)]
+    pub fn reserve_token_program(
+        &mut self,
+        reserve_token_program: solana_pubkey::Pubkey,
+    ) -> &mut Self {
+        self.reserve_token_program = Some(reserve_token_program);
+        self
+    }
+
+    /// `[optional account, default to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL']`
+    #[inline(always)]
+    pub fn associated_token_program(
+        &mut self,
+        associated_token_program: solana_pubkey::Pubkey,
+    ) -> &mut Self {
+        self.associated_token_program = Some(associated_token_program);
         self
     }
 
@@ -204,41 +256,8 @@ impl CreateVaultBuilder {
     }
 
     #[inline(always)]
-    pub fn authority(&mut self, authority: Pubkey) -> &mut Self {
-        self.authority = Some(authority);
-        self
-    }
-
-    #[inline(always)]
-    pub fn initial_price(&mut self, initial_price: u64) -> &mut Self {
-        self.initial_price = Some(initial_price);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn deposit_fees(&mut self, deposit_fees: FeeType) -> &mut Self {
-        self.deposit_fees = Some(deposit_fees);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn withdraw_fees(&mut self, withdraw_fees: FeeType) -> &mut Self {
-        self.withdraw_fees = Some(withdraw_fees);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn vault_asset_cap(&mut self, vault_asset_cap: u64) -> &mut Self {
-        self.vault_asset_cap = Some(vault_asset_cap);
-        self
-    }
-
-    #[inline(always)]
-    pub fn fee_recipient(&mut self, fee_recipient: Pubkey) -> &mut Self {
-        self.fee_recipient = Some(fee_recipient);
+    pub fn assets(&mut self, assets: u64) -> &mut Self {
+        self.assets = Some(assets);
         self
     }
 
@@ -261,44 +280,43 @@ impl CreateVaultBuilder {
 
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
-        let accounts = CreateVault {
-            payer: self.payer.expect("payer is not set"),
-            mint_authority: self.mint_authority.expect("mint_authority is not set"),
+        let accounts = Deposit {
+            user: self.user.expect("user is not set"),
             asset_mint: self.asset_mint.expect("asset_mint is not set"),
             share_mint: self.share_mint.expect("share_mint is not set"),
             reserve: self.reserve.expect("reserve is not set"),
             vault: self.vault.expect("vault is not set"),
+            fee_recipient: self.fee_recipient.expect("fee_recipient is not set"),
+            user_assets_account: self
+                .user_assets_account
+                .expect("user_assets_account is not set"),
+            user_shares_account: self
+                .user_shares_account
+                .expect("user_shares_account is not set"),
             token_program: self.token_program.unwrap_or(solana_pubkey::pubkey!(
                 "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
             )),
+            reserve_token_program: self
+                .reserve_token_program
+                .expect("reserve_token_program is not set"),
+            associated_token_program: self.associated_token_program.unwrap_or(
+                solana_pubkey::pubkey!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
+            ),
             system_program: self
                 .system_program
                 .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
         };
-        let args = CreateVaultInstructionArgs {
-            authority: self.authority.clone().expect("authority is not set"),
-            initial_price: self
-                .initial_price
-                .clone()
-                .expect("initial_price is not set"),
-            deposit_fees: self.deposit_fees.clone(),
-            withdraw_fees: self.withdraw_fees.clone(),
-            vault_asset_cap: self.vault_asset_cap.clone(),
-            fee_recipient: self
-                .fee_recipient
-                .clone()
-                .expect("fee_recipient is not set"),
+        let args = DepositInstructionArgs {
+            assets: self.assets.clone().expect("assets is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
     }
 }
 
-/// `create_vault` CPI accounts.
-pub struct CreateVaultCpiAccounts<'a, 'b> {
-    pub payer: &'b solana_account_info::AccountInfo<'a>,
-
-    pub mint_authority: &'b solana_account_info::AccountInfo<'a>,
+/// `deposit` CPI accounts.
+pub struct DepositCpiAccounts<'a, 'b> {
+    pub user: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
 
@@ -308,19 +326,27 @@ pub struct CreateVaultCpiAccounts<'a, 'b> {
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
+    pub fee_recipient: &'b solana_account_info::AccountInfo<'a>,
+
+    pub user_assets_account: &'b solana_account_info::AccountInfo<'a>,
+
+    pub user_shares_account: &'b solana_account_info::AccountInfo<'a>,
+
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
+
+    pub reserve_token_program: &'b solana_account_info::AccountInfo<'a>,
+
+    pub associated_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
-/// `create_vault` CPI instruction.
-pub struct CreateVaultCpi<'a, 'b> {
+/// `deposit` CPI instruction.
+pub struct DepositCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
-    pub payer: &'b solana_account_info::AccountInfo<'a>,
-
-    pub mint_authority: &'b solana_account_info::AccountInfo<'a>,
+    pub user: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
 
@@ -330,28 +356,42 @@ pub struct CreateVaultCpi<'a, 'b> {
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
+    pub fee_recipient: &'b solana_account_info::AccountInfo<'a>,
+
+    pub user_assets_account: &'b solana_account_info::AccountInfo<'a>,
+
+    pub user_shares_account: &'b solana_account_info::AccountInfo<'a>,
+
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
+
+    pub reserve_token_program: &'b solana_account_info::AccountInfo<'a>,
+
+    pub associated_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: CreateVaultInstructionArgs,
+    pub __args: DepositInstructionArgs,
 }
 
-impl<'a, 'b> CreateVaultCpi<'a, 'b> {
+impl<'a, 'b> DepositCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_account_info::AccountInfo<'a>,
-        accounts: CreateVaultCpiAccounts<'a, 'b>,
-        args: CreateVaultInstructionArgs,
+        accounts: DepositCpiAccounts<'a, 'b>,
+        args: DepositInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
-            payer: accounts.payer,
-            mint_authority: accounts.mint_authority,
+            user: accounts.user,
             asset_mint: accounts.asset_mint,
             share_mint: accounts.share_mint,
             reserve: accounts.reserve,
             vault: accounts.vault,
+            fee_recipient: accounts.fee_recipient,
+            user_assets_account: accounts.user_assets_account,
+            user_shares_account: accounts.user_shares_account,
             token_program: accounts.token_program,
+            reserve_token_program: accounts.reserve_token_program,
+            associated_token_program: accounts.associated_token_program,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -383,12 +423,8 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
-        accounts.push(solana_instruction::AccountMeta::new(*self.payer.key, true));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.mint_authority.key,
-            true,
-        ));
+        let mut accounts = Vec::with_capacity(12 + remaining_accounts.len());
+        accounts.push(solana_instruction::AccountMeta::new(*self.user.key, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
             false,
@@ -402,8 +438,28 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.fee_recipient.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.user_assets_account.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.user_shares_account.key,
+            false,
+        ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.token_program.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.reserve_token_program.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.associated_token_program.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -417,7 +473,7 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = CreateVaultInstructionData::new().try_to_vec().unwrap();
+        let mut data = DepositInstructionData::new().try_to_vec().unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
         data.append(&mut args);
 
@@ -426,15 +482,19 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(13 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.payer.clone());
-        account_infos.push(self.mint_authority.clone());
+        account_infos.push(self.user.clone());
         account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint.clone());
         account_infos.push(self.reserve.clone());
         account_infos.push(self.vault.clone());
+        account_infos.push(self.fee_recipient.clone());
+        account_infos.push(self.user_assets_account.clone());
+        account_infos.push(self.user_shares_account.clone());
         account_infos.push(self.token_program.clone());
+        account_infos.push(self.reserve_token_program.clone());
+        account_infos.push(self.associated_token_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -448,58 +508,52 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `CreateVault` via CPI.
+/// Instruction builder for `Deposit` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[writable, signer]` payer
-///   1. `[signer]` mint_authority
-///   2. `[]` asset_mint
-///   3. `[writable]` share_mint
-///   4. `[writable]` reserve
-///   5. `[writable]` vault
-///   6. `[]` token_program
-///   7. `[]` system_program
+///   0. `[writable, signer]` user
+///   1. `[]` asset_mint
+///   2. `[writable]` share_mint
+///   3. `[writable]` reserve
+///   4. `[writable]` vault
+///   5. `[writable]` fee_recipient
+///   6. `[writable]` user_assets_account
+///   7. `[writable]` user_shares_account
+///   8. `[]` token_program
+///   9. `[]` reserve_token_program
+///   10. `[]` associated_token_program
+///   11. `[]` system_program
 #[derive(Clone, Debug)]
-pub struct CreateVaultCpiBuilder<'a, 'b> {
-    instruction: Box<CreateVaultCpiBuilderInstruction<'a, 'b>>,
+pub struct DepositCpiBuilder<'a, 'b> {
+    instruction: Box<DepositCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
+impl<'a, 'b> DepositCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(CreateVaultCpiBuilderInstruction {
+        let instruction = Box::new(DepositCpiBuilderInstruction {
             __program: program,
-            payer: None,
-            mint_authority: None,
+            user: None,
             asset_mint: None,
             share_mint: None,
             reserve: None,
             vault: None,
-            token_program: None,
-            system_program: None,
-            authority: None,
-            initial_price: None,
-            deposit_fees: None,
-            withdraw_fees: None,
-            vault_asset_cap: None,
             fee_recipient: None,
+            user_assets_account: None,
+            user_shares_account: None,
+            token_program: None,
+            reserve_token_program: None,
+            associated_token_program: None,
+            system_program: None,
+            assets: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
     }
 
     #[inline(always)]
-    pub fn payer(&mut self, payer: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.payer = Some(payer);
-        self
-    }
-
-    #[inline(always)]
-    pub fn mint_authority(
-        &mut self,
-        mint_authority: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.mint_authority = Some(mint_authority);
+    pub fn user(&mut self, user: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.user = Some(user);
         self
     }
 
@@ -534,11 +588,56 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
+    pub fn fee_recipient(
+        &mut self,
+        fee_recipient: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.fee_recipient = Some(fee_recipient);
+        self
+    }
+
+    #[inline(always)]
+    pub fn user_assets_account(
+        &mut self,
+        user_assets_account: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.user_assets_account = Some(user_assets_account);
+        self
+    }
+
+    #[inline(always)]
+    pub fn user_shares_account(
+        &mut self,
+        user_shares_account: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.user_shares_account = Some(user_shares_account);
+        self
+    }
+
+    #[inline(always)]
     pub fn token_program(
         &mut self,
         token_program: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.token_program = Some(token_program);
+        self
+    }
+
+    #[inline(always)]
+    pub fn reserve_token_program(
+        &mut self,
+        reserve_token_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.reserve_token_program = Some(reserve_token_program);
+        self
+    }
+
+    #[inline(always)]
+    pub fn associated_token_program(
+        &mut self,
+        associated_token_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.associated_token_program = Some(associated_token_program);
         self
     }
 
@@ -552,41 +651,8 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
-    pub fn authority(&mut self, authority: Pubkey) -> &mut Self {
-        self.instruction.authority = Some(authority);
-        self
-    }
-
-    #[inline(always)]
-    pub fn initial_price(&mut self, initial_price: u64) -> &mut Self {
-        self.instruction.initial_price = Some(initial_price);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn deposit_fees(&mut self, deposit_fees: FeeType) -> &mut Self {
-        self.instruction.deposit_fees = Some(deposit_fees);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn withdraw_fees(&mut self, withdraw_fees: FeeType) -> &mut Self {
-        self.instruction.withdraw_fees = Some(withdraw_fees);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn vault_asset_cap(&mut self, vault_asset_cap: u64) -> &mut Self {
-        self.instruction.vault_asset_cap = Some(vault_asset_cap);
-        self
-    }
-
-    #[inline(always)]
-    pub fn fee_recipient(&mut self, fee_recipient: Pubkey) -> &mut Self {
-        self.instruction.fee_recipient = Some(fee_recipient);
+    pub fn assets(&mut self, assets: u64) -> &mut Self {
+        self.instruction.assets = Some(assets);
         self
     }
 
@@ -628,35 +694,13 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
     #[allow(clippy::clone_on_copy)]
     #[allow(clippy::vec_init_then_push)]
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
-        let args = CreateVaultInstructionArgs {
-            authority: self
-                .instruction
-                .authority
-                .clone()
-                .expect("authority is not set"),
-            initial_price: self
-                .instruction
-                .initial_price
-                .clone()
-                .expect("initial_price is not set"),
-            deposit_fees: self.instruction.deposit_fees.clone(),
-            withdraw_fees: self.instruction.withdraw_fees.clone(),
-            vault_asset_cap: self.instruction.vault_asset_cap.clone(),
-            fee_recipient: self
-                .instruction
-                .fee_recipient
-                .clone()
-                .expect("fee_recipient is not set"),
+        let args = DepositInstructionArgs {
+            assets: self.instruction.assets.clone().expect("assets is not set"),
         };
-        let instruction = CreateVaultCpi {
+        let instruction = DepositCpi {
             __program: self.instruction.__program,
 
-            payer: self.instruction.payer.expect("payer is not set"),
-
-            mint_authority: self
-                .instruction
-                .mint_authority
-                .expect("mint_authority is not set"),
+            user: self.instruction.user.expect("user is not set"),
 
             asset_mint: self.instruction.asset_mint.expect("asset_mint is not set"),
 
@@ -666,10 +710,35 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
 
             vault: self.instruction.vault.expect("vault is not set"),
 
+            fee_recipient: self
+                .instruction
+                .fee_recipient
+                .expect("fee_recipient is not set"),
+
+            user_assets_account: self
+                .instruction
+                .user_assets_account
+                .expect("user_assets_account is not set"),
+
+            user_shares_account: self
+                .instruction
+                .user_shares_account
+                .expect("user_shares_account is not set"),
+
             token_program: self
                 .instruction
                 .token_program
                 .expect("token_program is not set"),
+
+            reserve_token_program: self
+                .instruction
+                .reserve_token_program
+                .expect("reserve_token_program is not set"),
+
+            associated_token_program: self
+                .instruction
+                .associated_token_program
+                .expect("associated_token_program is not set"),
 
             system_program: self
                 .instruction
@@ -685,22 +754,21 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct CreateVaultCpiBuilderInstruction<'a, 'b> {
+struct DepositCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
-    payer: Option<&'b solana_account_info::AccountInfo<'a>>,
-    mint_authority: Option<&'b solana_account_info::AccountInfo<'a>>,
+    user: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     reserve: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    fee_recipient: Option<&'b solana_account_info::AccountInfo<'a>>,
+    user_assets_account: Option<&'b solana_account_info::AccountInfo<'a>>,
+    user_shares_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
+    reserve_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
+    associated_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
-    authority: Option<Pubkey>,
-    initial_price: Option<u64>,
-    deposit_fees: Option<FeeType>,
-    withdraw_fees: Option<FeeType>,
-    vault_asset_cap: Option<u64>,
-    fee_recipient: Option<Pubkey>,
+    assets: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

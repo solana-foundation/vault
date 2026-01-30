@@ -1,5 +1,5 @@
 use litesvm::LiteSVM;
-use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
+use solana_sdk::{account::ReadableAccount, msg, signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
 
 use crate::vault::{
@@ -26,10 +26,12 @@ fn test_create_vault(
     let mint_authority = Keypair::new();
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();
+    let fee_recipient = Keypair::new();
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
+    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
 
     create_mint(&mut svm, &mint_authority, &asset_mint);
     create_mint(&mut svm, &mint_authority, &share_mint);
@@ -53,6 +55,7 @@ fn test_create_vault(
         &mut svm,
         &authority,
         &payer,
+        &mint_authority,
         asset_mint.pubkey(),
         share_mint.pubkey(),
         reserve_pubkey,
@@ -61,6 +64,7 @@ fn test_create_vault(
         withdraw_fee.clone(),
         0,
         initial_price,
+        fee_recipient.pubkey(),
     );
     assert_eq!(
         result.is_ok(),

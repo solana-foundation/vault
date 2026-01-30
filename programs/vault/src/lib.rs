@@ -26,4 +26,9 @@ pub mod vault {
     pub fn update_vault(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {
         instructions::update_vault::handler(ctx, args)
     }
+
+    /// Deposit to the atomic vault.
+    pub fn deposit(ctx: Context<Deposit>, assets: u64) -> Result<()> {
+        instructions::deposit::handler(ctx, assets)
+    }
 }

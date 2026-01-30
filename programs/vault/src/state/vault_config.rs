@@ -22,6 +22,7 @@ impl FeeType {
         }
         Ok(())
     }
+
     pub fn get_fee(self, total_amount: u64) -> Result<u64> {
         match self {
             FeeType::Percentage { bps } => {
@@ -74,6 +75,7 @@ impl VaultConfig {
     pub fn total_assets(self) -> u64 {
         return self.total_asset_balance;
     }
+
     pub fn get_shares_from_assets(
         self,
         share_mint: &InterfaceAccount<'_, Mint>,
