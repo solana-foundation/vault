@@ -8,7 +8,7 @@ use solana_sdk::{
 };
 use vault_client::{
     sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
-    Pubkey, UpdateVaultBuilder,
+    MintBuilder, Pubkey, UpdateVaultBuilder,
 };
 
 use anchor_spl::{
@@ -152,6 +152,38 @@ pub fn deposit(
         .user_assets_account(user_assets_account)
         .user_shares_account(user_shares_account)
         .assets(assets_amount)
+        .reserve_token_program(token::ID)
+        .token_program(token::ID)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
+    return svm.send_transaction(tx);
+}
+
+pub fn mint(
+    svm: &mut LiteSVM,
+    user: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    reserve: Pubkey,
+    vault: Pubkey,
+    fee_recipient: Pubkey,
+    user_assets_account: Pubkey,
+    user_shares_account: Pubkey,
+    shares_amount: u64,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = MintBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .reserve(reserve)
+        .vault(vault)
+        .fee_recipient(fee_recipient)
+        .user_assets_account(user_assets_account)
+        .user_shares_account(user_shares_account)
+        .shares(shares_amount)
         .reserve_token_program(token::ID)
         .token_program(token::ID)
         .instruction()

@@ -1,4 +1,7 @@
-use crate::{error::VaultProgramError, state::Rounding};
+use crate::{
+    error::VaultProgramError,
+    state::{Rounding, MAX_BPS},
+};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
 
@@ -16,7 +19,7 @@ impl FeeType {
     pub fn validate(self) -> Result<()> {
         match self {
             FeeType::Percentage { bps } => {
-                require!(bps <= 10_000, VaultProgramError::FeeBPSLimitReached);
+                require!(bps <= MAX_BPS, VaultProgramError::FeeBPSLimitReached);
             }
             FeeType::NoFee | FeeType::FixedAmount { .. } => {}
         }
@@ -36,6 +39,29 @@ impl FeeType {
                 return Ok(fee);
             }
             FeeType::FixedAmount { amount } => return Ok(amount),
+            FeeType::NoFee => return Ok(0),
+        }
+    }
+
+    pub fn get_deposit_fee_when_minting(&self, net_assets: u64) -> Result<u64> {
+        match self {
+            FeeType::Percentage { bps } => {
+                let gross = u128::from(net_assets)
+                    .checked_mul(MAX_BPS.into())
+                    .ok_or(VaultProgramError::ArithmeticError)?
+                    .checked_div(
+                        MAX_BPS
+                            .checked_sub(*bps)
+                            .ok_or(VaultProgramError::ArithmeticError)?
+                            .into(),
+                    )
+                    .ok_or(VaultProgramError::ArithmeticError)?;
+                let fee = gross
+                    .checked_sub(u128::from(net_assets))
+                    .ok_or(VaultProgramError::ArithmeticError)?;
+                Ok(u64::try_from(fee)?)
+            }
+            FeeType::FixedAmount { amount } => return Ok(*amount),
             FeeType::NoFee => return Ok(0),
         }
     }
@@ -76,6 +102,37 @@ impl VaultConfig {
         return self.total_asset_balance;
     }
 
+    pub fn get_assets_from_shares(
+        self,
+        share_mint: &InterfaceAccount<'_, Mint>,
+        share_amount: u64,
+        rounding: Rounding,
+    ) -> Result<u64> {
+        let assets_times_total_supply = u128::from(
+            share_mint
+                .supply
+                .checked_add(1)
+                .ok_or(VaultProgramError::ArithmeticError)?,
+        )
+        .checked_mul(u128::from(share_amount))
+        .ok_or(VaultProgramError::ArithmeticError)?;
+        let result = match rounding {
+            Rounding::Up => assets_times_total_supply.div_ceil(u128::from(
+                self.total_assets()
+                    .checked_add(1)
+                    .ok_or(VaultProgramError::ArithmeticError)?,
+            )),
+            Rounding::Down => assets_times_total_supply
+                .checked_div(u128::from(
+                    self.total_assets()
+                        .checked_add(1)
+                        .ok_or(VaultProgramError::ArithmeticError)?,
+                ))
+                .ok_or(VaultProgramError::ArithmeticError)?,
+        };
+        u64::try_from(result).or(Err(VaultProgramError::ArithmeticError.into()))
+    }
+
     pub fn get_shares_from_assets(
         self,
         share_mint: &InterfaceAccount<'_, Mint>,
@@ -97,7 +154,11 @@ impl VaultConfig {
                     .ok_or(VaultProgramError::ArithmeticError)?,
             )),
             Rounding::Down => assets_times_total_supply
-                .checked_div(u128::from(self.total_assets() + 1))
+                .checked_div(u128::from(
+                    self.total_assets()
+                        .checked_add(1)
+                        .ok_or(VaultProgramError::ArithmeticError)?,
+                ))
                 .ok_or(VaultProgramError::ArithmeticError)?,
         };
         u64::try_from(result).or(Err(VaultProgramError::ArithmeticError.into()))
@@ -110,6 +171,10 @@ impl VaultConfig {
             .ok_or(VaultProgramError::ArithmeticError)?;
         self.total_asset_balance = new_supply;
         Ok(())
+    }
+
+    pub fn get_deposit_fee_when_minting(self, assets: u64) -> Result<u64> {
+        self.deposit_fees.get_deposit_fee_when_minting(assets)
     }
 
     pub fn get_deposit_fee(self, deposit_amount: u64) -> Result<u64> {
