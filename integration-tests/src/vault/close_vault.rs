@@ -1,8 +1,5 @@
 use litesvm::LiteSVM;
-use solana_sdk::{
-    account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
-};
-use spl_token::state::Account as TokenAccount;
+use solana_sdk::{signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, FeeType, Pubkey};
 
 use crate::vault::{
