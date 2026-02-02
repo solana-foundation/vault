@@ -6,7 +6,7 @@ use spl_token::state::Account as TokenAccount;
 use vault_client::{sdk::program_id, FeeType, Pubkey};
 
 use crate::vault::helper_functions::{
-    create_ata, create_mint, create_vault, deposit, get_fee, helper_mint_to, update_vault,
+    create_ata, create_mint, create_vault, get_fee, helper_mint_to, mint, update_vault,
 };
 use test_case::test_case;
 
@@ -122,7 +122,7 @@ fn test_mint_vault(
         .amount;
     assert_eq!(user_share_balance_before, 0);
     let deposit_amount = 500_000;
-    let result = deposit(
+    let result = mint(
         &mut svm,
         &user,
         asset_mint.pubkey(),
@@ -143,7 +143,7 @@ fn test_mint_vault(
     let fee_recipient_balance_after = TokenAccount::unpack(fee_recipient_ata_account.data())
         .unwrap()
         .amount;
-    let fee = get_fee(updated_deposit_fee, deposit_amount);
+    let fee = 0;
     assert_eq!(fee_recipient_balance_after, fee);
 
     user_asset_ata_account = svm

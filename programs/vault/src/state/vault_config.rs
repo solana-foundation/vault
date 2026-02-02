@@ -136,7 +136,7 @@ impl VaultConfig {
     pub fn get_shares_from_assets(
         self,
         share_mint: &InterfaceAccount<'_, Mint>,
-        share_amount: u64,
+        asset_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
         let assets_times_total_supply = u128::from(
@@ -145,7 +145,7 @@ impl VaultConfig {
                 .checked_add(1)
                 .ok_or(VaultProgramError::ArithmeticError)?,
         )
-        .checked_mul(u128::from(share_amount))
+        .checked_mul(u128::from(asset_amount))
         .ok_or(VaultProgramError::ArithmeticError)?;
         let result = match rounding {
             Rounding::Up => assets_times_total_supply.div_ceil(u128::from(
