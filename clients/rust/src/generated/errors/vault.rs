@@ -18,6 +18,12 @@ pub enum VaultError {
     /// 6002 - The vault is paused.
     #[error("The vault is paused.")]
     PausedVault = 0x1772,
+    /// 6003 - The provided share supply should be zero.
+    #[error("The provided share supply should be zero.")]
+    ShareSupplyShouldBeZero = 0x1773,
+    /// 6004 - The provided vault reserve should be empty in order to close it.
+    #[error("The provided vault reserve should be empty in order to close it.")]
+    VaultShouldBeEmpty = 0x1774,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

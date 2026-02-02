@@ -7,10 +7,15 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use vault_client::{
-    sdk::IntoSdkInstruction, CreateVaultBuilder, FeeType, Pubkey, UpdateVaultBuilder,
+    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, FeeType, Pubkey,
+    UpdateVaultBuilder,
 };
 
 use anchor_spl::{
+    associated_token::{
+        get_associated_token_address_with_program_id,
+        spl_associated_token_account::instruction::create_associated_token_account,
+    },
     token::{spl_token, Mint},
     token_2022::spl_token_2022::{self},
 };
@@ -48,6 +53,36 @@ pub fn create_vault(
     return svm.send_transaction(tx);
 }
 
+pub fn close_vault(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    payer: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    reserve: Pubkey,
+    vault: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = CloseVaultBuilder::new()
+        .authority(authority.pubkey())
+        .payer(payer.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .reserve(reserve)
+        .vault(vault)
+        .rent_destination(payer.pubkey())
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&payer.pubkey()),
+        &[&payer, &authority],
+        blockhash,
+    );
+
+    return svm.send_transaction(tx);
+}
 pub fn update_vault(
     svm: &mut LiteSVM,
     authority: &Keypair,
@@ -110,6 +145,50 @@ pub fn create_mint(svm: &mut LiteSVM, signer: &Keypair, mint: &Keypair) {
     );
     svm.send_transaction(init_tx)
         .expect("create_mint transaction failed");
+}
+
+pub fn create_ata(svm: &mut LiteSVM, owner: &Keypair, mint: &Pubkey) -> Pubkey {
+    let ata = get_associated_token_address_with_program_id(&owner.pubkey(), &mint, &spl_token::ID);
+
+    let ata_init_ix =
+        create_associated_token_account(&owner.pubkey(), &owner.pubkey(), &mint, &spl_token::ID);
+    let init_tx = Transaction::new_signed_with_payer(
+        &[ata_init_ix],
+        Some(&owner.pubkey()),
+        &[&owner],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(init_tx).unwrap();
+    return ata;
+}
+
+pub fn helper_mint_to(
+    svm: &mut LiteSVM,
+    mint: &Pubkey,
+    account: &Pubkey,
+    authority: &Keypair,
+    amount: u64,
+) {
+    // Create mint_to instruction
+    let mint_to_ix = spl_token::instruction::mint_to(
+        &spl_token::id(),
+        mint,
+        account,
+        &authority.pubkey(),
+        &[],
+        amount,
+    )
+    .unwrap();
+
+    // Send transaction
+    let tx = Transaction::new_signed_with_payer(
+        &[mint_to_ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+
+    svm.send_transaction(tx).expect("Failed to mint tokens");
 }
 
 pub fn assert_error_code(
