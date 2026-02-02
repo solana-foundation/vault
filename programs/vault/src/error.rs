@@ -16,4 +16,10 @@ pub enum VaultProgramError {
 
     #[msg("The vault max asset cap has been exceeded.")]
     MaxVaultAssetCapExceeded,
+
+    #[msg("The provided mint supply should be zero.")]
+    MintSupplyShouldBeZero,
+
+    #[msg("The provided vault reserve should be empty in order to close it.")]
+    VaultShouldBeEmpty,
 }
