@@ -61,7 +61,6 @@ pub fn close_vault(
     share_mint: Pubkey,
     reserve: Pubkey,
     vault: Pubkey,
-    assets_destination: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = CloseVaultBuilder::new()
         .authority(authority.pubkey())
@@ -71,7 +70,6 @@ pub fn close_vault(
         .reserve(reserve)
         .vault(vault)
         .rent_destination(payer.pubkey())
-        .assets_destination(assets_destination)
         .instruction()
         .into_sdk_instruction();
 

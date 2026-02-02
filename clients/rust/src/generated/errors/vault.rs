@@ -15,6 +15,12 @@ pub enum VaultError {
     /// 6001 - The provided signer is not allowed to execute this instruction.
     #[error("The provided signer is not allowed to execute this instruction.")]
     UnauthorizedSigner = 0x1771,
+    /// 6002 - The provided mint supply should be zero.
+    #[error("The provided mint supply should be zero.")]
+    MintSupplyShouldBeZero = 0x1772,
+    /// 6003 - The provided vault reserve should be empty in order to close it.
+    #[error("The provided vault reserve should be empty in order to close it.")]
+    VaultShouldBeEmpty = 0x1773,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {
