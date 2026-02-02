@@ -7,4 +7,7 @@ pub enum VaultProgramError {
 
     #[msg("The provided signer is not allowed to execute this instruction.")]
     UnauthorizedSigner,
+
+    #[msg("The vault is paused.")]
+    PausedVault,
 }

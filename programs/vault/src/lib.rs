@@ -20,4 +20,12 @@ pub mod vault {
     pub fn update_vault(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {
         instructions::update_vault::handler(ctx, args)
     }
+    /// Donate assets into the vault.
+    /// Transfers the specified amount of asset tokens to the vault's reserve account.
+    ///
+    /// # Arguments
+    /// * `assets` - The amount of asset tokens to deposit into the vault
+    pub fn donate_assets(ctx: Context<DonateAssets>, assets: u64) -> Result<()> {
+        instructions::donate_assets::handler(ctx, assets)
+    }
 }

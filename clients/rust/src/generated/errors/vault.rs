@@ -15,6 +15,9 @@ pub enum VaultError {
     /// 6001 - The provided signer is not allowed to execute this instruction.
     #[error("The provided signer is not allowed to execute this instruction.")]
     UnauthorizedSigner = 0x1771,
+    /// 6002 - The vault is paused.
+    #[error("The vault is paused.")]
+    PausedVault = 0x1772,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {
