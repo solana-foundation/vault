@@ -97,7 +97,11 @@ impl VaultConfig {
                     .ok_or(VaultProgramError::ArithmeticError)?,
             )),
             Rounding::Down => assets_times_total_supply
-                .checked_div(u128::from(self.total_assets() + 1))
+                .checked_div(u128::from(
+                    self.total_assets()
+                        .checked_add(1)
+                        .ok_or(VaultProgramError::ArithmeticError)?,
+                ))
                 .ok_or(VaultProgramError::ArithmeticError)?,
         };
         u64::try_from(result).or(Err(VaultProgramError::ArithmeticError.into()))

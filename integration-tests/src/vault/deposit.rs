@@ -10,7 +10,7 @@ use crate::vault::helper_functions::{
 };
 use test_case::test_case;
 
-#[test_case(FeeType::NoFee, FeeType::NoFee,  FeeType::Percentage { bps: 100 },FeeType::Percentage { bps: 0 }, false, 100_000; "No Fees, Change fee percentage, unpause and vault cap")]
+#[test_case(FeeType::NoFee, FeeType::NoFee,  FeeType::Percentage { bps: 100 },FeeType::Percentage { bps: 0 }, false, 100_000_000; "Deposit successfully")]
 fn test_deposit_vault(
     deposit_fee: FeeType,
     withdraw_fee: FeeType,

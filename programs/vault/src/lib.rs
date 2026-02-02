@@ -40,7 +40,8 @@ pub mod vault {
     /// Only the current vault authority can perform updates.
     ///
     /// # Arguments
-    /// * `new_authority` - Optional new authority pubkey (can be PDA or multisig, doesn't need to sign)
+    /// * `new_authority` - Optional new authority pubkey (can be PDA or multisig, doesn't need to
+    ///   sign)
     /// * `deposit_fees` - Optional updated fee configuration for deposits
     /// * `withdraw_fees` - Optional updated fee configuration for withdrawals
     /// * `vault_asset_cap` - Optional updated maximum asset capacity

@@ -1,5 +1,5 @@
 use litesvm::LiteSVM;
-use solana_sdk::{account::ReadableAccount, msg, signature::Keypair, signer::Signer};
+use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
 
 use crate::vault::{
