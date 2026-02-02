@@ -74,11 +74,11 @@ impl<'info> CloseVault<'info> {
 
 pub fn handler<'info>(ctx: Context<CloseVault>) -> Result<()> {
     require!(
-        ctx.accounts.share_mint.supply < 1,
-        VaultProgramError::MintSupplyShouldBeZero
+        ctx.accounts.share_mint.supply == 0,
+        VaultProgramError::ShareSupplyShouldBeZero
     );
     require!(
-        ctx.accounts.reserve.amount < 1,
+        ctx.accounts.reserve.amount == 0,
         VaultProgramError::VaultShouldBeEmpty
     );
     ctx.accounts.close_reserve_account()?;

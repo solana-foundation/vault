@@ -27,9 +27,12 @@ pub enum VaultError {
     /// 6005 - The provided mint supply should be zero.
     #[error("The provided mint supply should be zero.")]
     MintSupplyShouldBeZero = 0x1775,
-    /// 6006 - The provided vault reserve should be empty in order to close it.
+    /// 6006 - The provided share supply should be zero.
+    #[error("The provided share supply should be zero.")]
+    ShareSupplyShouldBeZero = 0x1776,
+    /// 6007 - The provided vault reserve should be empty in order to close it.
     #[error("The provided vault reserve should be empty in order to close it.")]
-    VaultShouldBeEmpty = 0x1776,
+    VaultShouldBeEmpty = 0x1777,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

@@ -24,6 +24,7 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();
     let fee_recipient = Keypair::new();
+
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
@@ -117,7 +118,11 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
     } else {
         let err_result = &result.unwrap_err();
         if !supply_is_zero {
-            assert_error_code(err_result, 6002, "The provided mint supply should be zero.");
+            assert_error_code(
+                err_result,
+                6002,
+                "The provided share supply should be zero.",
+            );
         }
         if !reserve_is_empty {
             assert_error_code(

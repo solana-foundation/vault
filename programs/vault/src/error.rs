@@ -20,6 +20,9 @@ pub enum VaultProgramError {
     #[msg("The provided mint supply should be zero.")]
     MintSupplyShouldBeZero,
 
+    #[msg("The provided share supply should be zero.")]
+    ShareSupplyShouldBeZero,
+
     #[msg("The provided vault reserve should be empty in order to close it.")]
     VaultShouldBeEmpty,
 }
