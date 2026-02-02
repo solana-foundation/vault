@@ -6,11 +6,11 @@ use spl_token::state::Account as TokenAccount;
 use vault_client::{sdk::program_id, FeeType, Pubkey};
 
 use crate::vault::helper_functions::{
-    create_ata, create_mint, create_vault, get_fee, helper_mint_to, mint, update_vault,
+    create_ata, create_mint, create_vault, helper_mint_to, mint, update_vault,
 };
 use test_case::test_case;
 
-#[test_case(FeeType::NoFee, FeeType::NoFee,  FeeType::Percentage { bps: 100 },FeeType::Percentage { bps: 0 }, false, 100_000; "No Fees, Change fee percentage, unpause and vault cap")]
+#[test_case(FeeType::NoFee, FeeType::NoFee,  FeeType::Percentage { bps: 100 },FeeType::Percentage { bps: 0 }, false, 100_000; "Mint successfully")]
 fn test_mint_vault(
     deposit_fee: FeeType,
     withdraw_fee: FeeType,
@@ -121,7 +121,7 @@ fn test_mint_vault(
         .unwrap()
         .amount;
     assert_eq!(user_share_balance_before, 0);
-    let deposit_amount = 500_000;
+    let mint_amount = 500_000;
     let result = mint(
         &mut svm,
         &user,
@@ -132,7 +132,7 @@ fn test_mint_vault(
         fee_recipient_ata,
         user_asset_ata,
         user_share_ata,
-        deposit_amount,
+        mint_amount,
     );
     assert_eq!(result.is_ok(), true, "Unexpected result for test case");
 
@@ -143,7 +143,7 @@ fn test_mint_vault(
     let fee_recipient_balance_after = TokenAccount::unpack(fee_recipient_ata_account.data())
         .unwrap()
         .amount;
-    let fee = 0;
+    let fee = 5050;
     assert_eq!(fee_recipient_balance_after, fee);
 
     user_asset_ata_account = svm
@@ -157,7 +157,9 @@ fn test_mint_vault(
     assert_eq!(
         user_asset_balance_after,
         user_asset_amount
-            .checked_sub(deposit_amount)
+            .checked_sub(mint_amount)
+            .expect("overflow")
+            .checked_sub(fee)
             .expect("overflow")
     );
 
@@ -168,8 +170,5 @@ fn test_mint_vault(
     let user_share_balance_after = TokenAccount::unpack(user_share_ata_account.data())
         .unwrap()
         .amount;
-    assert_eq!(
-        user_share_balance_after,
-        deposit_amount.checked_sub(fee).expect("overflow")
-    );
+    assert_eq!(user_share_balance_after, mint_amount);
 }
