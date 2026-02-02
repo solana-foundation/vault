@@ -113,7 +113,11 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
     } else {
         let err_result = &result.unwrap_err();
         if !supply_is_zero {
-            assert_error_code(err_result, 6002, "The provided mint supply should be zero.");
+            assert_error_code(
+                err_result,
+                6002,
+                "The provided share supply should be zero.",
+            );
         }
         if !reserve_is_empty {
             assert_error_code(
