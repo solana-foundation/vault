@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{
-    self, close_account, CloseAccount, Mint, TokenAccount, TokenInterface, TransferChecked,
+    close_account, CloseAccount, Mint, TokenAccount, TokenInterface,
 };
 
 use crate::{
