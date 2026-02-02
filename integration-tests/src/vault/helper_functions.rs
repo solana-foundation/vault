@@ -7,8 +7,8 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use vault_client::{
-    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, FeeType, Pubkey,
-    UpdateVaultBuilder,
+    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DonateAssetsBuilder, FeeType,
+    Pubkey, UpdateVaultBuilder,
 };
 
 use anchor_spl::{
@@ -16,7 +16,7 @@ use anchor_spl::{
         get_associated_token_address_with_program_id,
         spl_associated_token_account::instruction::create_associated_token_account,
     },
-    token::{spl_token, Mint},
+    token::{self, spl_token, Mint},
     token_2022::spl_token_2022::{self},
 };
 
@@ -145,6 +145,33 @@ pub fn create_mint(svm: &mut LiteSVM, signer: &Keypair, mint: &Keypair) {
     );
     svm.send_transaction(init_tx)
         .expect("create_mint transaction failed");
+}
+
+pub fn donate_assets(
+    svm: &mut LiteSVM,
+    user: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    reserve: Pubkey,
+    vault: Pubkey,
+    authority_assets_account: Pubkey,
+    assets_amount: u64,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = DonateAssetsBuilder::new()
+        .authority(user.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .reserve(reserve)
+        .vault(vault)
+        .authority_assets_account(authority_assets_account)
+        .assets(assets_amount)
+        .token_program(token::ID)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
+    return svm.send_transaction(tx);
 }
 
 pub fn create_ata(svm: &mut LiteSVM, owner: &Keypair, mint: &Pubkey) -> Pubkey {

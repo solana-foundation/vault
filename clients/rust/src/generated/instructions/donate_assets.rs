@@ -25,10 +25,6 @@ pub struct DonateAssets {
 
     pub token_program: solana_pubkey::Pubkey,
 
-    pub reserve_token_program: solana_pubkey::Pubkey,
-
-    pub associated_token_program: solana_pubkey::Pubkey,
-
     pub system_program: solana_pubkey::Pubkey,
 }
 
@@ -47,7 +43,7 @@ impl DonateAssets {
         args: DonateAssetsInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.authority,
             true,
@@ -67,14 +63,6 @@ impl DonateAssets {
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.token_program,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.reserve_token_program,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.associated_token_program,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -141,10 +129,7 @@ impl DonateAssetsInstructionArgs {
 ///   4. `[]` vault
 ///   5. `[writable]` authority_assets_account
 ///   6. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   7. `[]` reserve_token_program
-///   8. `[optional]` associated_token_program (default to
-///      `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
-///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct DonateAssetsBuilder {
     authority: Option<solana_pubkey::Pubkey>,
@@ -154,8 +139,6 @@ pub struct DonateAssetsBuilder {
     vault: Option<solana_pubkey::Pubkey>,
     authority_assets_account: Option<solana_pubkey::Pubkey>,
     token_program: Option<solana_pubkey::Pubkey>,
-    reserve_token_program: Option<solana_pubkey::Pubkey>,
-    associated_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     assets: Option<u64>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
@@ -212,25 +195,6 @@ impl DonateAssetsBuilder {
         self
     }
 
-    #[inline(always)]
-    pub fn reserve_token_program(
-        &mut self,
-        reserve_token_program: solana_pubkey::Pubkey,
-    ) -> &mut Self {
-        self.reserve_token_program = Some(reserve_token_program);
-        self
-    }
-
-    /// `[optional account, default to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL']`
-    #[inline(always)]
-    pub fn associated_token_program(
-        &mut self,
-        associated_token_program: solana_pubkey::Pubkey,
-    ) -> &mut Self {
-        self.associated_token_program = Some(associated_token_program);
-        self
-    }
-
     /// `[optional account, default to '11111111111111111111111111111111']`
     #[inline(always)]
     pub fn system_program(&mut self, system_program: solana_pubkey::Pubkey) -> &mut Self {
@@ -275,12 +239,6 @@ impl DonateAssetsBuilder {
             token_program: self.token_program.unwrap_or(solana_pubkey::pubkey!(
                 "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
             )),
-            reserve_token_program: self
-                .reserve_token_program
-                .expect("reserve_token_program is not set"),
-            associated_token_program: self.associated_token_program.unwrap_or(
-                solana_pubkey::pubkey!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
-            ),
             system_program: self
                 .system_program
                 .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
@@ -309,10 +267,6 @@ pub struct DonateAssetsCpiAccounts<'a, 'b> {
 
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
 
-    pub reserve_token_program: &'b solana_account_info::AccountInfo<'a>,
-
-    pub associated_token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -335,10 +289,6 @@ pub struct DonateAssetsCpi<'a, 'b> {
 
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
 
-    pub reserve_token_program: &'b solana_account_info::AccountInfo<'a>,
-
-    pub associated_token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: DonateAssetsInstructionArgs,
@@ -359,8 +309,6 @@ impl<'a, 'b> DonateAssetsCpi<'a, 'b> {
             vault: accounts.vault,
             authority_assets_account: accounts.authority_assets_account,
             token_program: accounts.token_program,
-            reserve_token_program: accounts.reserve_token_program,
-            associated_token_program: accounts.associated_token_program,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -392,7 +340,7 @@ impl<'a, 'b> DonateAssetsCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.authority.key,
             true,
@@ -422,14 +370,6 @@ impl<'a, 'b> DonateAssetsCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.reserve_token_program.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.associated_token_program.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.system_program.key,
             false,
         ));
@@ -449,7 +389,7 @@ impl<'a, 'b> DonateAssetsCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(11 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(9 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.authority.clone());
         account_infos.push(self.asset_mint.clone());
@@ -458,8 +398,6 @@ impl<'a, 'b> DonateAssetsCpi<'a, 'b> {
         account_infos.push(self.vault.clone());
         account_infos.push(self.authority_assets_account.clone());
         account_infos.push(self.token_program.clone());
-        account_infos.push(self.reserve_token_program.clone());
-        account_infos.push(self.associated_token_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -484,9 +422,7 @@ impl<'a, 'b> DonateAssetsCpi<'a, 'b> {
 ///   4. `[]` vault
 ///   5. `[writable]` authority_assets_account
 ///   6. `[]` token_program
-///   7. `[]` reserve_token_program
-///   8. `[]` associated_token_program
-///   9. `[]` system_program
+///   7. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct DonateAssetsCpiBuilder<'a, 'b> {
     instruction: Box<DonateAssetsCpiBuilderInstruction<'a, 'b>>,
@@ -503,8 +439,6 @@ impl<'a, 'b> DonateAssetsCpiBuilder<'a, 'b> {
             vault: None,
             authority_assets_account: None,
             token_program: None,
-            reserve_token_program: None,
-            associated_token_program: None,
             system_program: None,
             assets: None,
             __remaining_accounts: Vec::new(),
@@ -563,24 +497,6 @@ impl<'a, 'b> DonateAssetsCpiBuilder<'a, 'b> {
         token_program: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.token_program = Some(token_program);
-        self
-    }
-
-    #[inline(always)]
-    pub fn reserve_token_program(
-        &mut self,
-        reserve_token_program: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.reserve_token_program = Some(reserve_token_program);
-        self
-    }
-
-    #[inline(always)]
-    pub fn associated_token_program(
-        &mut self,
-        associated_token_program: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.associated_token_program = Some(associated_token_program);
         self
     }
 
@@ -663,16 +579,6 @@ impl<'a, 'b> DonateAssetsCpiBuilder<'a, 'b> {
                 .token_program
                 .expect("token_program is not set"),
 
-            reserve_token_program: self
-                .instruction
-                .reserve_token_program
-                .expect("reserve_token_program is not set"),
-
-            associated_token_program: self
-                .instruction
-                .associated_token_program
-                .expect("associated_token_program is not set"),
-
             system_program: self
                 .instruction
                 .system_program
@@ -696,8 +602,6 @@ struct DonateAssetsCpiBuilderInstruction<'a, 'b> {
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     authority_assets_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
-    reserve_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
-    associated_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     assets: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

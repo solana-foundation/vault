@@ -1,8 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked},
-};
+use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 
 use crate::{
     error::VaultProgramError,
@@ -39,8 +36,6 @@ pub struct DonateAssets<'info> {
     pub authority_assets_account: InterfaceAccount<'info, TokenAccount>,
 
     pub token_program: Interface<'info, TokenInterface>,
-    pub reserve_token_program: Interface<'info, TokenInterface>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
@@ -54,7 +49,7 @@ impl<'info> DonateAssets<'info> {
         };
 
         let cpi_ctx = CpiContext::new(
-            self.reserve_token_program.to_account_info(),
+            self.token_program.to_account_info(),
             vault_transfer_cpi_accounts,
         );
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
