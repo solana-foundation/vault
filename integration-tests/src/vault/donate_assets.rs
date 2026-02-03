@@ -1,6 +1,6 @@
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, msg, program_pack::Pack, signature::Keypair, signer::Signer,
+    account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
 };
 use spl_token::state::Account as TokenAccount;
 use vault_client::{sdk::program_id, FeeType, Pubkey};
@@ -29,10 +29,12 @@ fn test_donate_assets_to_vault(
     let mint_authority = Keypair::new();
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();
+    let fee_recipient = Keypair::new();
 
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&user.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
 
@@ -93,29 +95,31 @@ fn test_donate_assets_to_vault(
         &mint_authority,
         authority_asset_amount,
     );
-    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey());
+
+    let mut reserve_ata_account = svm
+        .get_account(&reserve_pubkey)
+        .expect("Vault account should exist");
+
+    let mut reserve_ata_balance_before = TokenAccount::unpack(reserve_ata_account.data())
+        .unwrap()
+        .amount;
+    assert_eq!(reserve_ata_balance_before, 0);
 
     let mut authority_asset_ata_account = svm
         .get_account(&authority_asset_ata)
         .expect("Vault account should exist");
 
-    let user_asset_balance_before = TokenAccount::unpack(authority_asset_ata_account.data())
-        .unwrap()
-        .amount;
-    assert_eq!(user_asset_balance_before, authority_asset_amount);
+    let mut authority_asset_balance_before =
+        TokenAccount::unpack(authority_asset_ata_account.data())
+            .unwrap()
+            .amount;
+    assert_eq!(authority_asset_balance_before, authority_asset_amount);
 
-    let mut user_share_ata_account = svm
-        .get_account(&user_share_ata)
-        .expect("Vault account should exist");
-
-    let user_share_balance_before = TokenAccount::unpack(user_share_ata_account.data())
-        .unwrap()
-        .amount;
-    assert_eq!(user_share_balance_before, 0);
     let deposit_amount = 500_000;
+
     let result = donate_assets(
         &mut svm,
-        &user,
+        &authority,
         asset_mint.pubkey(),
         share_mint.pubkey(),
         reserve_pubkey,
@@ -124,4 +128,12 @@ fn test_donate_assets_to_vault(
         deposit_amount,
     );
     assert_eq!(result.is_ok(), true, "Unexpected result for test case");
+    reserve_ata_account = svm
+        .get_account(&reserve_pubkey)
+        .expect("Vault account should exist");
+
+    reserve_ata_balance_before = TokenAccount::unpack(reserve_ata_account.data())
+        .unwrap()
+        .amount;
+    assert_eq!(reserve_ata_balance_before, deposit_amount);
 }
