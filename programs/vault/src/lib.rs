@@ -13,8 +13,8 @@ pub mod vault {
     use super::*;
 
     /// Initialize a new tokenized vault with configurable fees and asset cap.
-    /// Creates a vault config account, share token mint, and reserve token account.
-    /// It also sets the vault as the mint authority
+    /// Creates the vault config account and reserve token account.
+    /// Sets the vault as mint authority for the provided share mint.
     ///
     /// # Arguments
     /// * `authority` - The pubkey that will control vault operations and updates
@@ -27,10 +27,8 @@ pub mod vault {
         instructions::create_vault::handler(ctx, args)
     }
 
-    /// Closes a vault and transfers all remaining assets to a specified destination.
-    /// Transfers any remaining reserve assets to the provided destination token account,
-    /// closes the reserve token account, and closes the vault config account.
-    /// Only the vault authority can close the vault.
+    /// Closes a vault after reserves are emptied and share supply is zero.
+    /// Closes the reserve token account and the vault config account.
     pub fn close_vault(ctx: Context<CloseVault>) -> Result<()> {
         instructions::close_vault::handler(ctx)
     }
