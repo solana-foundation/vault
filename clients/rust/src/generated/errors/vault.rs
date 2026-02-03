@@ -21,6 +21,21 @@ pub enum VaultError {
     /// 6003 - The vault is paused.
     #[error("The vault is paused.")]
     PausedVault = 0x1773,
+    /// 6004 - The vault max asset cap has been exceeded.
+    #[error("The vault max asset cap has been exceeded.")]
+    MaxVaultAssetCapExceeded = 0x1774,
+    /// 6005 - The provided mint supply should be zero.
+    #[error("The provided mint supply should be zero.")]
+    MintSupplyShouldBeZero = 0x1775,
+    /// 6006 - The provided share supply should be zero.
+    #[error("The provided share supply should be zero.")]
+    ShareSupplyShouldBeZero = 0x1776,
+    /// 6007 - The provided vault reserve should be empty in order to close it.
+    #[error("The provided vault reserve should be empty in order to close it.")]
+    VaultShouldBeEmpty = 0x1777,
+    /// 6008 - Deposit amount too small to mint shares
+    #[error("Deposit amount too small to mint shares")]
+    InsufficientDepositAmount = 0x1778,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

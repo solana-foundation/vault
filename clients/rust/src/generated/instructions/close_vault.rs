@@ -25,8 +25,6 @@ pub struct CloseVault {
 
     pub vault: solana_pubkey::Pubkey,
 
-    pub assets_destination: solana_pubkey::Pubkey,
-
     pub token_program: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
@@ -43,7 +41,7 @@ impl CloseVault {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.authority,
             true,
@@ -60,10 +58,6 @@ impl CloseVault {
         accounts.push(solana_instruction::AccountMeta::new(self.share_mint, false));
         accounts.push(solana_instruction::AccountMeta::new(self.reserve, false));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
-        accounts.push(solana_instruction::AccountMeta::new(
-            self.assets_destination,
-            false,
-        ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.token_program,
             false,
@@ -118,9 +112,8 @@ impl Default for CloseVaultInstructionData {
 ///   4. `[writable]` share_mint
 ///   5. `[writable]` reserve
 ///   6. `[writable]` vault
-///   7. `[writable]` assets_destination
-///   8. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   7. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct CloseVaultBuilder {
     authority: Option<solana_pubkey::Pubkey>,
@@ -130,7 +123,6 @@ pub struct CloseVaultBuilder {
     share_mint: Option<solana_pubkey::Pubkey>,
     reserve: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
-    assets_destination: Option<solana_pubkey::Pubkey>,
     token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
@@ -183,12 +175,6 @@ impl CloseVaultBuilder {
         self
     }
 
-    #[inline(always)]
-    pub fn assets_destination(&mut self, assets_destination: solana_pubkey::Pubkey) -> &mut Self {
-        self.assets_destination = Some(assets_destination);
-        self
-    }
-
     /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
     #[inline(always)]
     pub fn token_program(&mut self, token_program: solana_pubkey::Pubkey) -> &mut Self {
@@ -230,9 +216,6 @@ impl CloseVaultBuilder {
             share_mint: self.share_mint.expect("share_mint is not set"),
             reserve: self.reserve.expect("reserve is not set"),
             vault: self.vault.expect("vault is not set"),
-            assets_destination: self
-                .assets_destination
-                .expect("assets_destination is not set"),
             token_program: self.token_program.unwrap_or(solana_pubkey::pubkey!(
                 "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
             )),
@@ -261,8 +244,6 @@ pub struct CloseVaultCpiAccounts<'a, 'b> {
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
-    pub assets_destination: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
@@ -287,8 +268,6 @@ pub struct CloseVaultCpi<'a, 'b> {
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
-    pub assets_destination: &'b solana_account_info::AccountInfo<'a>,
-
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
@@ -308,7 +287,6 @@ impl<'a, 'b> CloseVaultCpi<'a, 'b> {
             share_mint: accounts.share_mint,
             reserve: accounts.reserve,
             vault: accounts.vault,
-            assets_destination: accounts.assets_destination,
             token_program: accounts.token_program,
             system_program: accounts.system_program,
         }
@@ -340,7 +318,7 @@ impl<'a, 'b> CloseVaultCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.authority.key,
             true,
@@ -363,10 +341,6 @@ impl<'a, 'b> CloseVaultCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
-        accounts.push(solana_instruction::AccountMeta::new(
-            *self.assets_destination.key,
-            false,
-        ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.token_program.key,
             false,
@@ -389,7 +363,7 @@ impl<'a, 'b> CloseVaultCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(11 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(10 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.authority.clone());
         account_infos.push(self.payer.clone());
@@ -398,7 +372,6 @@ impl<'a, 'b> CloseVaultCpi<'a, 'b> {
         account_infos.push(self.share_mint.clone());
         account_infos.push(self.reserve.clone());
         account_infos.push(self.vault.clone());
-        account_infos.push(self.assets_destination.clone());
         account_infos.push(self.token_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
@@ -424,9 +397,8 @@ impl<'a, 'b> CloseVaultCpi<'a, 'b> {
 ///   4. `[writable]` share_mint
 ///   5. `[writable]` reserve
 ///   6. `[writable]` vault
-///   7. `[writable]` assets_destination
-///   8. `[]` token_program
-///   9. `[]` system_program
+///   7. `[]` token_program
+///   8. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct CloseVaultCpiBuilder<'a, 'b> {
     instruction: Box<CloseVaultCpiBuilderInstruction<'a, 'b>>,
@@ -443,7 +415,6 @@ impl<'a, 'b> CloseVaultCpiBuilder<'a, 'b> {
             share_mint: None,
             reserve: None,
             vault: None,
-            assets_destination: None,
             token_program: None,
             system_program: None,
             __remaining_accounts: Vec::new(),
@@ -499,15 +470,6 @@ impl<'a, 'b> CloseVaultCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.vault = Some(vault);
-        self
-    }
-
-    #[inline(always)]
-    pub fn assets_destination(
-        &mut self,
-        assets_destination: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.assets_destination = Some(assets_destination);
         self
     }
 
@@ -587,11 +549,6 @@ impl<'a, 'b> CloseVaultCpiBuilder<'a, 'b> {
 
             vault: self.instruction.vault.expect("vault is not set"),
 
-            assets_destination: self
-                .instruction
-                .assets_destination
-                .expect("assets_destination is not set"),
-
             token_program: self
                 .instruction
                 .token_program
@@ -619,7 +576,6 @@ struct CloseVaultCpiBuilderInstruction<'a, 'b> {
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     reserve: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-    assets_destination: Option<&'b solana_account_info::AccountInfo<'a>>,
     token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

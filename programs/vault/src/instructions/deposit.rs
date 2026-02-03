@@ -37,18 +37,23 @@ pub struct Deposit<'info> {
         mut,
         associated_token::authority = vault.fee_recipient,
         associated_token::mint = asset_mint,
+        associated_token::token_program = reserve_token_program,
     )]
     pub fee_recipient: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
-        token::mint = asset_mint,
+        associated_token::authority = user,
+        associated_token::mint = asset_mint,
+        associated_token::token_program = reserve_token_program,
     )]
     pub user_assets_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
-        token::mint = share_mint,
+        associated_token::authority = user,
+        associated_token::mint = share_mint,
+        associated_token::token_program = token_program,
     )]
     pub user_shares_account: InterfaceAccount<'info, TokenAccount>,
 
@@ -115,8 +120,21 @@ impl<'info> Deposit<'info> {
 }
 pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
-
     let fee = ctx.accounts.vault.get_deposit_fee(assets)?;
+    let expected_new_total_asset_balance = ctx
+        .accounts
+        .vault
+        .total_asset_balance
+        .checked_add(assets)
+        .ok_or(VaultProgramError::ArithmeticError)?
+        .checked_sub(fee)
+        .ok_or(VaultProgramError::ArithmeticError)?;
+
+    require!(
+        expected_new_total_asset_balance <= ctx.accounts.vault.vault_asset_cap,
+        VaultProgramError::MaxVaultAssetCapExceeded
+    );
+
     let remaining_amount = assets
         .checked_sub(fee)
         .ok_or(VaultProgramError::ArithmeticError)?;
@@ -126,8 +144,9 @@ pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
         remaining_amount,
         Rounding::Down,
     )?;
-    if shares < 1 {
-        return Err(VaultProgramError::ArithmeticError.into());
+
+    if shares == 0 {
+        return Err(VaultProgramError::InsufficientDepositAmount.into());
     }
 
     ctx.accounts.vault.increase_asset_supply(remaining_amount)?;
