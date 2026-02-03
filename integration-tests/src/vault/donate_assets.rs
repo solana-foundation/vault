@@ -1,6 +1,6 @@
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
+    account::ReadableAccount, msg, program_pack::Pack, signature::Keypair, signer::Signer,
 };
 use spl_token::state::Account as TokenAccount;
 use vault_client::{sdk::program_id, FeeType, Pubkey};
@@ -54,10 +54,12 @@ fn test_donate_assets_to_vault(
         ],
         &vault_client::sdk::program_id(),
     );
+
     let _ = create_vault(
         &mut svm,
         &authority,
         &payer,
+        &mint_authority,
         asset_mint.pubkey(),
         share_mint.pubkey(),
         reserve_pubkey,
@@ -66,6 +68,7 @@ fn test_donate_assets_to_vault(
         withdraw_fee.clone(),
         0,
         100_000,
+        fee_recipient.pubkey(),
     );
 
     let _ = update_vault(
