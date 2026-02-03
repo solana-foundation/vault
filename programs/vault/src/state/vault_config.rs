@@ -116,7 +116,22 @@ impl VaultConfig {
         Ok(())
     }
 
+    pub fn decrease_asset_supply(&mut self, amount: u64) -> Result<()> {
+        let new_supply = self
+            .total_asset_balance
+            .checked_sub(amount)
+            .ok_or(VaultProgramError::ArithmeticError)?;
+
+        self.total_asset_balance = new_supply;
+
+        Ok(())
+    }
+
     pub fn get_deposit_fee(self, deposit_amount: u64) -> Result<u64> {
         self.deposit_fees.get_fee(deposit_amount)
+    }
+
+    pub fn get_withdraw_fee(self, withdraw_amount: u64) -> Result<u64> {
+        self.withdraw_fees.get_fee(withdraw_amount)
     }
 }

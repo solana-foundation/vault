@@ -58,4 +58,16 @@ pub mod vault {
     pub fn deposit(ctx: Context<Deposit>, assets: u64) -> Result<()> {
         instructions::deposit::handler(ctx, assets)
     }
+
+    /// Withdraws assets from the vault by burning the required amount of shares.
+    /// Burns shares from the user's shares Token account and transfers the requested amount of
+    /// asset tokens from the vault's reserve account to the user's assets ATA.
+    /// The number of shares to burn is computed using the vault's current price and
+    /// rounded up to ensure the user burns enough shares to cover the withdrawal.
+    ///
+    /// # Arguments
+    /// * `assets` - The amount of asset tokens to withdraw from the vault
+    pub fn withdraw(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
+        instructions::withdraw::handler(ctx, assets)
+    }
 }
