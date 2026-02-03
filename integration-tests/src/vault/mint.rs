@@ -66,8 +66,8 @@ fn test_mint_vault(
         vault_pubkey,
         deposit_fee.clone(),
         withdraw_fee.clone(),
-        0,
         100_000,
+        1,
         fee_recipient.pubkey(),
     );
 
@@ -134,6 +134,7 @@ fn test_mint_vault(
         user_share_ata,
         mint_amount,
     );
+
     assert_eq!(result.is_ok(), true, "Unexpected result for test case");
 
     fee_recipient_ata_account = svm
