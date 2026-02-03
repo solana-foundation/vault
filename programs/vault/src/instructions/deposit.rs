@@ -46,7 +46,6 @@ pub struct Deposit<'info> {
         associated_token::authority = user,
         associated_token::mint = asset_mint,
         associated_token::token_program = reserve_token_program,
-        
     )]
     pub user_assets_account: InterfaceAccount<'info, TokenAccount>,
 

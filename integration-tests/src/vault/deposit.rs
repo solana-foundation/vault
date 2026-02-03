@@ -66,8 +66,8 @@ fn test_deposit_vault(
         vault_pubkey,
         deposit_fee.clone(),
         withdraw_fee.clone(),
-        0,
         100_000,
+        1,
         fee_recipient.pubkey(),
     );
 
@@ -168,6 +168,7 @@ fn test_deposit_vault(
     let user_share_balance_after = TokenAccount::unpack(user_share_ata_account.data())
         .unwrap()
         .amount;
+
     assert_eq!(
         user_share_balance_after,
         deposit_amount.checked_sub(fee).expect("overflow")
