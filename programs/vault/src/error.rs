@@ -25,4 +25,7 @@ pub enum VaultProgramError {
 
     #[msg("The provided vault reserve should be empty in order to close it.")]
     VaultShouldBeEmpty,
+
+    #[msg("Deposit amount too small to mint shares")]
+    InsufficientDepositAmount,
 }

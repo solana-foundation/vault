@@ -33,6 +33,9 @@ pub enum VaultError {
     /// 6007 - The provided vault reserve should be empty in order to close it.
     #[error("The provided vault reserve should be empty in order to close it.")]
     VaultShouldBeEmpty = 0x1777,
+    /// 6008 - Deposit amount too small to mint shares
+    #[error("Deposit amount too small to mint shares")]
+    InsufficientDepositAmount = 0x1778,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

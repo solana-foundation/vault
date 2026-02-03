@@ -141,7 +141,7 @@ pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
     )?;
 
     if shares == 0 {
-        return Err(VaultProgramError::ArithmeticError.into());
+        return Err(VaultProgramError::InsufficientDepositAmount.into());
     }
 
     ctx.accounts.vault.increase_asset_supply(remaining_amount)?;
