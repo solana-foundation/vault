@@ -37,18 +37,24 @@ pub struct Deposit<'info> {
         mut,
         associated_token::authority = vault.fee_recipient,
         associated_token::mint = asset_mint,
+        associated_token::token_program = reserve_token_program,
     )]
     pub fee_recipient: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
-        token::mint = asset_mint,
+        associated_token::authority = user,
+        associated_token::mint = asset_mint,
+        associated_token::token_program = reserve_token_program,
+        
     )]
     pub user_assets_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
-        token::mint = share_mint,
+        associated_token::authority = user,
+        associated_token::mint = share_mint,
+        associated_token::token_program = token_program,
     )]
     pub user_shares_account: InterfaceAccount<'info, TokenAccount>,
 
