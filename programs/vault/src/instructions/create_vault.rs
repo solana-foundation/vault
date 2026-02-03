@@ -1,10 +1,10 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenAccount, TokenInterface};
-
-use crate::{
-    error::VaultProgramError,
-    state::{FeeType, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+use anchor_spl::{
+    token_2022::{set_authority, spl_token_2022::instruction::AuthorityType, SetAuthority},
+    token_interface::{Mint, TokenAccount, TokenInterface},
 };
+
+use crate::state::{FeeType, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED};
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct VaultArgs {
@@ -13,6 +13,7 @@ pub struct VaultArgs {
     deposit_fees: Option<FeeType>,
     withdraw_fees: Option<FeeType>,
     vault_asset_cap: Option<u64>,
+    fee_recipient: Pubkey,
 }
 
 #[derive(Accounts)]
@@ -20,10 +21,11 @@ pub struct CreateVault<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
-    #[account()]
+    pub mint_authority: Signer<'info>,
+
     pub asset_mint: InterfaceAccount<'info, Mint>,
 
-    #[account()]
+    #[account(mut)]
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
@@ -49,6 +51,21 @@ pub struct CreateVault<'info> {
     pub system_program: Program<'info, System>,
 }
 
+impl<'info> CreateVault<'info> {
+    pub fn set_new_authority(&mut self, new_authority: Pubkey) -> Result<()> {
+        let set_authority_cpi_accounts = SetAuthority {
+            current_authority: self.mint_authority.to_account_info(),
+            account_or_mint: self.share_mint.to_account_info(),
+        };
+
+        let cpi_ctx = CpiContext::new(
+            self.token_program.to_account_info(),
+            set_authority_cpi_accounts,
+        );
+        set_authority(cpi_ctx, AuthorityType::MintTokens, Some(new_authority))
+    }
+}
+
 pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> {
     if let Some(fee) = args.deposit_fees {
         fee.validate()?;
@@ -56,6 +73,7 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
     if let Some(fee) = args.withdraw_fees {
         fee.validate()?;
     }
+    ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
     ctx.accounts.vault.set_inner(VaultConfig {
         asset_mint_address: ctx.accounts.asset_mint.key(),
         share_mint_address: ctx.accounts.share_mint.key(),
@@ -67,6 +85,8 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
         paused: true,
         vault_asset_cap: args.vault_asset_cap.unwrap_or(0),
         total_asset_balance: 0,
+        fee_recipient: args.fee_recipient,
+
         reserve_bump: ctx.bumps.reserve,
         bump: ctx.bumps.vault,
     });

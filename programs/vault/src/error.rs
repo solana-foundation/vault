@@ -11,6 +11,15 @@ pub enum VaultProgramError {
     #[msg("The vault is paused.")]
     PausedVault,
 
+    #[msg("Something happened while performing an arithmetic operation.")]
+    ArithmeticError,
+
+    #[msg("The vault max asset cap has been exceeded.")]
+    MaxVaultAssetCapExceeded,
+
+    #[msg("The provided mint supply should be zero.")]
+    MintSupplyShouldBeZero,
+
     #[msg("The provided share supply should be zero.")]
     ShareSupplyShouldBeZero,
 

@@ -6,7 +6,10 @@
 
 pub(crate) mod r#close_vault;
 pub(crate) mod r#create_vault;
+pub(crate) mod r#deposit;
 pub(crate) mod r#donate_assets;
 pub(crate) mod r#update_vault;
 
-pub use self::{r#close_vault::*, r#create_vault::*, r#donate_assets::*, r#update_vault::*};
+pub use self::{
+    r#close_vault::*, r#create_vault::*, r#deposit::*, r#donate_assets::*, r#update_vault::*,
+};

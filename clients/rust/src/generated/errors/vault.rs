@@ -18,12 +18,21 @@ pub enum VaultError {
     /// 6002 - The vault is paused.
     #[error("The vault is paused.")]
     PausedVault = 0x1772,
-    /// 6003 - The provided share supply should be zero.
+    /// 6003 - Something happened while performing an arithmetic operation.
+    #[error("Something happened while performing an arithmetic operation.")]
+    ArithmeticError = 0x1773,
+    /// 6004 - The vault max asset cap has been exceeded.
+    #[error("The vault max asset cap has been exceeded.")]
+    MaxVaultAssetCapExceeded = 0x1774,
+    /// 6005 - The provided mint supply should be zero.
+    #[error("The provided mint supply should be zero.")]
+    MintSupplyShouldBeZero = 0x1775,
+    /// 6006 - The provided share supply should be zero.
     #[error("The provided share supply should be zero.")]
-    ShareSupplyShouldBeZero = 0x1773,
-    /// 6004 - The provided vault reserve should be empty in order to close it.
+    ShareSupplyShouldBeZero = 0x1776,
+    /// 6007 - The provided vault reserve should be empty in order to close it.
     #[error("The provided vault reserve should be empty in order to close it.")]
-    VaultShouldBeEmpty = 0x1774,
+    VaultShouldBeEmpty = 0x1777,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

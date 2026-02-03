@@ -7,7 +7,7 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use vault_client::{
-    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DonateAssetsBuilder, FeeType,
+    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
     Pubkey, UpdateVaultBuilder,
 };
 
@@ -24,6 +24,7 @@ pub fn create_vault(
     svm: &mut LiteSVM,
     authority: &Keypair,
     payer: &Keypair,
+    mint_authority: &Keypair,
     asset_mint: Pubkey,
     share_mint: Pubkey,
     reserve: Pubkey,
@@ -32,9 +33,11 @@ pub fn create_vault(
     withdraw_fees: FeeType,
     vault_asset_cap: u64,
     initial_price: u64,
+    fee_recipient: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = CreateVaultBuilder::new()
         .authority(authority.pubkey())
+        .mint_authority(mint_authority.pubkey())
         .payer(payer.pubkey())
         .asset_mint(asset_mint)
         .share_mint(share_mint)
@@ -44,11 +47,17 @@ pub fn create_vault(
         .withdraw_fees(withdraw_fees)
         .vault_asset_cap(vault_asset_cap)
         .initial_price(initial_price)
+        .fee_recipient(fee_recipient)
         .instruction()
         .into_sdk_instruction();
 
     let blockhash = svm.latest_blockhash();
-    let tx = Transaction::new_signed_with_payer(&[ix], Some(&payer.pubkey()), &[&payer], blockhash);
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&payer.pubkey()),
+        &[payer, mint_authority],
+        blockhash,
+    );
 
     return svm.send_transaction(tx);
 }
@@ -116,6 +125,38 @@ pub fn update_vault(
         blockhash,
     );
 
+    return svm.send_transaction(tx);
+}
+
+pub fn deposit(
+    svm: &mut LiteSVM,
+    user: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    reserve: Pubkey,
+    vault: Pubkey,
+    fee_recipient: Pubkey,
+    user_assets_account: Pubkey,
+    user_shares_account: Pubkey,
+    assets_amount: u64,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = DepositBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .reserve(reserve)
+        .vault(vault)
+        .fee_recipient(fee_recipient)
+        .user_assets_account(user_assets_account)
+        .user_shares_account(user_shares_account)
+        .assets(assets_amount)
+        .reserve_token_program(token::ID)
+        .token_program(token::ID)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
     return svm.send_transaction(tx);
 }
 
@@ -232,4 +273,21 @@ pub fn assert_error_code(
         error_name,
         error_string
     );
+}
+
+pub fn get_fee(fee: FeeType, total_amount: u64) -> u64 {
+    match fee {
+        FeeType::Percentage { bps } => {
+            let fee = total_amount
+                .checked_mul(bps.into())
+                .expect("overflow")
+                .checked_add(9_999)
+                .expect("overflow")
+                .checked_div(10_000)
+                .expect("overflow");
+            return fee;
+        }
+        FeeType::FixedAmount { amount } => return amount,
+        FeeType::NoFee => return 0,
+    }
 }
