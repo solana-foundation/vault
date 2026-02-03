@@ -27,9 +27,9 @@ pub mod vault {
         instructions::create_vault::handler(ctx, args)
     }
 
-    /// Closes a vault and transfers all remaining assets to a specified destination.
-    /// Transfers any remaining reserve assets to the provided destination token account,
-    /// closes the reserve token account, and closes the vault config account.
+    /// Closes a vault and returns rent to the specified destination.
+    /// Requires the share mint supply to be zero and the reserve to be empty.
+    /// Closes the reserve token account and the vault config account.
     /// Only the vault authority can close the vault.
     pub fn close_vault(ctx: Context<CloseVault>) -> Result<()> {
         instructions::close_vault::handler(ctx)
