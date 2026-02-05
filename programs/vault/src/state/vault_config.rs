@@ -127,3 +127,98 @@ impl VaultConfig {
         self.deposit_fees.get_fee(deposit_amount)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_no_fee() {
+        let fee_type = FeeType::NoFee;
+        assert_eq!(fee_type.get_fee(1000).unwrap(), 0);
+        assert_eq!(fee_type.get_fee(0).unwrap(), 0);
+        assert_eq!(fee_type.get_fee(u64::MAX).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_fixed_amount() {
+        let fee_type = FeeType::FixedAmount { amount: 100 };
+        assert_eq!(fee_type.get_fee(1000).unwrap(), 100);
+        assert_eq!(fee_type.get_fee(0).unwrap(), 100);
+        assert_eq!(fee_type.get_fee(u64::MAX).unwrap(), 100);
+    }
+
+    #[test]
+    fn test_percentage_zero_bps() {
+        let fee_type = FeeType::Percentage { bps: 0 };
+        assert_eq!(fee_type.get_fee(1000).unwrap(), 0);
+        assert_eq!(fee_type.get_fee(100_000).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_percentage_standard_cases() {
+        let fee_type = FeeType::Percentage { bps: 100 };
+        assert_eq!(fee_type.get_fee(10_000).unwrap(), 100);
+        assert_eq!(fee_type.get_fee(50_000).unwrap(), 500);
+
+        let fee_type = FeeType::Percentage { bps: 1000 };
+        assert_eq!(fee_type.get_fee(10_000).unwrap(), 1000);
+
+        let fee_type = FeeType::Percentage { bps: 50 };
+        assert_eq!(fee_type.get_fee(100_000).unwrap(), 500);
+    }
+
+    #[test]
+    fn test_percentage_rounding_up() {
+        let fee_type = FeeType::Percentage { bps: 100 };
+
+        assert_eq!(fee_type.get_fee(99).unwrap(), 1);
+
+        assert_eq!(fee_type.get_fee(1).unwrap(), 1);
+
+        assert_eq!(fee_type.get_fee(9_999).unwrap(), 100);
+    }
+
+    #[test]
+    fn test_percentage_zero_amount() {
+        let fee_type = FeeType::Percentage { bps: 100 };
+        assert_eq!(fee_type.get_fee(0).unwrap(), 0);
+    }
+
+    #[test]
+    fn test_percentage_max_bps() {
+        let fee_type = FeeType::Percentage { bps: 10_000 };
+        assert_eq!(fee_type.get_fee(10_000).unwrap(), 10_000);
+        assert_eq!(fee_type.get_fee(5_000).unwrap(), 5_000);
+    }
+
+    #[test]
+    fn test_percentage_overflow_on_multiply() {
+        let fee_type = FeeType::Percentage { bps: 10_000 };
+        let result = fee_type.get_fee(u64::MAX);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_percentage_overflow_on_add() {
+        let fee_type = FeeType::Percentage { bps: 1 };
+        let large_amount = u64::MAX - 5000;
+        let result = fee_type.get_fee(large_amount);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_percentage_various_precision() {
+        let fee_type = FeeType::Percentage { bps: 1 };
+        assert_eq!(fee_type.get_fee(1_000_000).unwrap(), 100);
+        assert_eq!(fee_type.get_fee(10_000).unwrap(), 1);
+    }
+
+    #[test]
+    fn test_percentage_edge_case_large_values() {
+        let fee_type = FeeType::Percentage { bps: 1 };
+        let safe_large = 1_000_000_000_000u64;
+        let fee = fee_type.get_fee(safe_large).unwrap();
+        assert_eq!(fee, 100_000_000);
+    }
+}
