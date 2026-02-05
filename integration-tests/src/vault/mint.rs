@@ -1,3 +1,4 @@
+use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
@@ -69,6 +70,8 @@ fn test_mint_vault(
         100_000,
         1,
         fee_recipient.pubkey(),
+        token::ID,
+        token::ID,
     );
 
     let _ = update_vault(
@@ -83,8 +86,8 @@ fn test_mint_vault(
         updated_paused_status,
         authority.pubkey(),
     );
-    let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey());
-    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey());
+    let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
+    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
     let user_asset_amount = 100_000_000;
     helper_mint_to(
         &mut svm,
@@ -92,8 +95,9 @@ fn test_mint_vault(
         &user_asset_ata,
         &mint_authority,
         user_asset_amount,
+        &token::ID,
     );
-    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey());
+    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &token::ID);
 
     let mut fee_recipient_ata_account = svm
         .get_account(&fee_recipient_ata)
@@ -133,6 +137,8 @@ fn test_mint_vault(
         user_asset_ata,
         user_share_ata,
         mint_amount,
+        token::ID,
+        token::ID,
     );
 
     assert_eq!(result.is_ok(), true, "Unexpected result for test case");
@@ -144,7 +150,7 @@ fn test_mint_vault(
     let fee_recipient_balance_after = TokenAccount::unpack(fee_recipient_ata_account.data())
         .unwrap()
         .amount;
-    let fee = 5050;
+    let fee = 4999;
     assert_eq!(fee_recipient_balance_after, fee);
 
     user_asset_ata_account = svm

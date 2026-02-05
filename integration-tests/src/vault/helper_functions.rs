@@ -181,6 +181,8 @@ pub fn mint(
     user_assets_account: Pubkey,
     user_shares_account: Pubkey,
     shares_amount: u64,
+    asset_token_program: Pubkey,
+    share_token_program: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = MintBuilder::new()
         .user(user.pubkey())
@@ -192,8 +194,8 @@ pub fn mint(
         .user_assets_account(user_assets_account)
         .user_shares_account(user_shares_account)
         .shares(shares_amount)
-        .reserve_token_program(token::ID)
-        .token_program(token::ID)
+        .asset_token_program(asset_token_program)
+        .share_token_program(share_token_program)
         .instruction()
         .into_sdk_instruction();
 

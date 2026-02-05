@@ -3,7 +3,6 @@ use crate::{
     state::{Rounding, MAX_BPS},
 };
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
 
 /// The fee types:
 /// FixedAmount: a fixed fee is applied (ex 0.1 asset)
@@ -104,7 +103,7 @@ impl VaultConfig {
         return self.total_asset_balance;
     }
 
-    pub fn get_assets_from_shares(
+    pub fn get_shares_from_assets(
         self,
         supply: u64,
         asset_amount: u64,
@@ -141,7 +140,7 @@ impl VaultConfig {
         u64::try_from(result).or(Err(VaultProgramError::ArithmeticError.into()))
     }
 
-    pub fn get_shares_from_assets(
+    pub fn get_assets_from_shares(
         self,
         supply: u64,
         asset_amount: u64,
@@ -397,5 +396,173 @@ mod tests {
             .get_shares_from_assets(0, 1_000_000, Rounding::Down)
             .unwrap();
         assert_eq!(shares_low, 1_000_000);
+    }
+
+    #[test]
+    fn test_basic_calculation_rounding_down() {
+        let vault = create_vault_config(1000, 1);
+        let result = vault.get_assets_from_shares(500, 100, Rounding::Down);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 50);
+    }
+
+    #[test]
+    fn test_basic_calculation_rounding_up() {
+        let vault = create_vault_config(1000, 1);
+        let result = vault.get_assets_from_shares(500, 100, Rounding::Up);
+
+        assert!(result.is_ok());
+        // (500 + 1) * 100 / (1000 + 1) = 50100 / 1001 = 51 (rounded up)
+        assert_eq!(result.unwrap(), 51);
+    }
+
+    #[test]
+    fn test_rounding_difference() {
+        let vault_down = create_vault_config(1000, 1);
+        let vault_up = create_vault_config(1000, 1);
+
+        let result_down = vault_down
+            .get_assets_from_shares(333, 100, Rounding::Down)
+            .unwrap();
+        let result_up = vault_up
+            .get_assets_from_shares(333, 100, Rounding::Up)
+            .unwrap();
+
+        // Verify that rounding up gives a higher or equal value
+        assert!(result_up >= result_down);
+    }
+
+    #[test]
+    fn test_zero_supply() {
+        let vault = create_vault_config(1000, 1);
+        let result = vault.get_assets_from_shares(0, 100, Rounding::Down);
+
+        assert!(result.is_ok());
+        // (0 + 1) * 100 / (1000 + 1) = 100 / 1001 = 0
+        assert_eq!(result.unwrap(), 0);
+    }
+
+    #[test]
+    fn test_zero_assets() {
+        let vault = create_vault_config(1000, 1);
+        let result = vault.get_assets_from_shares(500, 0, Rounding::Down);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0);
+    }
+
+    #[test]
+    fn test_zero_total_assets() {
+        let vault = create_vault_config(0, 1);
+        let result = vault.get_assets_from_shares(500, 100, Rounding::Down);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 50100);
+    }
+
+    #[test]
+    fn test_all_zeros() {
+        let vault = create_vault_config(0, 1);
+        let result = vault.get_assets_from_shares(0, 0, Rounding::Down);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 0);
+    }
+
+    #[test]
+    fn test_equal_supply_and_total_assets() {
+        let vault = create_vault_config(1000, 1);
+        let result = vault.get_assets_from_shares(1000, 500, Rounding::Down);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 500);
+    }
+
+    #[test]
+    fn test_max_u64_supply_overflow() {
+        let vault = create_vault_config(1000, 1);
+        let result = vault.get_assets_from_shares(u64::MAX, 100, Rounding::Down);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_max_u64_total_assets_overflow() {
+        let vault = create_vault_config(u64::MAX, 1);
+        let result = vault.get_assets_from_shares(100, 100, Rounding::Down);
+
+        // total_assets.checked_add(1) should overflow
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_multiplication_overflow() {
+        let vault = create_vault_config(1, 1);
+        // Choose values that will overflow when multiplied as u128
+        let result = vault.get_assets_from_shares(u64::MAX - 1, u64::MAX - 1, Rounding::Down);
+
+        // (u64::MAX) * (u64::MAX - 1) might overflow u128
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_mint_result_exceeds_u64_max() {
+        let vault = create_vault_config(1, 1);
+        let result = vault.get_assets_from_shares(u64::MAX / 2, u64::MAX / 2, Rounding::Down);
+
+        // Result might exceed u64::MAX
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_large_values_within_bounds() {
+        let vault = create_vault_config(1_000_000_000, 1);
+        let result = vault.get_assets_from_shares(1_000_000_000, 1_000_000, Rounding::Down);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_precision_loss_rounding_down() {
+        let vault = create_vault_config(3, 1);
+        let result = vault.get_assets_from_shares(10, 1, Rounding::Down);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 2);
+    }
+
+    #[test]
+    fn test_precision_loss_rounding_up() {
+        let vault = create_vault_config(3, 1);
+        let result = vault.get_assets_from_shares(10, 1, Rounding::Up);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 3);
+    }
+
+    #[test]
+    fn test_exact_division() {
+        let vault_down = create_vault_config(99, 1);
+        let result_down = vault_down
+            .get_assets_from_shares(99, 100, Rounding::Down)
+            .unwrap();
+
+        let vault_up = create_vault_config(99, 1);
+        let result_up = vault_up
+            .get_assets_from_shares(99, 100, Rounding::Up)
+            .unwrap();
+
+        assert_eq!(result_down, 100);
+        assert_eq!(result_up, 100);
+    }
+
+    #[test]
+    fn test_single_unit() {
+        let vault = create_vault_config(1, 1);
+        let result = vault.get_assets_from_shares(1, 1, Rounding::Down);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 1);
     }
 }
