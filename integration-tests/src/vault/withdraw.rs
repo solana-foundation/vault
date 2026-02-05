@@ -2,7 +2,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
 };
-use spl_token::state::Account as TokenAccount;
+use spl_token::state::{Account as TokenAccount, Mint as TokenMint};
 use vault_client::{sdk::program_id, FeeType, Pubkey};
 
 use crate::vault::helper_functions::{
@@ -139,6 +139,13 @@ fn test_withdraw_vault(
     // newly created reserve ATA should have 0 assets
     assert_eq!(reserve_balance_before, 0);
 
+    let share_supply_before_deposit = TokenMint::unpack(
+        svm.get_account(&share_mint.pubkey()).unwrap().data(),
+    )
+    .unwrap()
+    .supply;
+    assert_eq!(share_supply_before_deposit, 0);
+
     // -------------------- deposit --------------------
     let deposit_amount = 500_000;
 
@@ -192,20 +199,22 @@ fn test_withdraw_vault(
     .amount;
     assert_eq!(user_shares_after_deposit, deposit_net);
 
+    let share_supply_after_deposit = TokenMint::unpack(
+        svm.get_account(&share_mint.pubkey()).unwrap().data(),
+    )
+    .unwrap()
+    .supply;
+    assert_eq!(share_supply_after_deposit, deposit_net);
+
     // -------------------- withdraw --------------------
     // `assets_out` is NET to user. Vault additionally pays `withdraw_fee(assets_out)` out of reserve.
     // shares burned should cover gross = assets_out + fee.
     
-    // Choose assets_out small enough so gross <= user_shares_after_deposit.
+    // assets_out small enough so gross <= user_shares_after_deposit.
     let assets_out: u64 = 100_000;
 
     let withdraw_fee_amount = get_fee(updated_withdraw_fee.clone(), assets_out);
-    let gross = assets_out.checked_add(withdraw_fee_amount).expect("overflow");
-
-    assert!(
-        gross <= user_shares_after_deposit,
-        "test config invalid: gross withdrawal exceeds user shares"
-    );
+    let gross_amount = assets_out.checked_add(withdraw_fee_amount).expect("overflow");
 
     let result = withdraw(
         &mut svm,
@@ -250,7 +259,7 @@ fn test_withdraw_vault(
     )
     .unwrap()
     .amount;
-    assert_eq!(reserve_after_withdraw, deposit_net - gross);
+    assert_eq!(reserve_after_withdraw, deposit_net - gross_amount);
 
     // user shares: +deposit_net - gross
     let user_shares_after_withdraw = TokenAccount::unpack(
@@ -258,5 +267,14 @@ fn test_withdraw_vault(
     )
     .unwrap()
     .amount;
-    assert_eq!(user_shares_after_withdraw, deposit_net - gross);
+    assert_eq!(user_shares_after_withdraw, deposit_net - gross_amount);
+
+    // share supply: deposit_net - gross
+    let share_supply_after_withdraw = TokenMint::unpack(
+        svm.get_account(&share_mint.pubkey()).unwrap().data(),
+    )
+    .unwrap()
+    .supply;
+    assert_eq!(share_supply_after_withdraw, deposit_net - gross_amount);
+    
 }

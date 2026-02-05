@@ -11,14 +11,18 @@ use crate::{
 
 #[derive(Accounts)]
 pub struct Withdraw<'info> {
+    /// `User` that is withdrawing assets from `Vault`
     #[account(mut)]
     pub user: Signer<'info>,
 
+    /// Mint of the underlying asset
     pub asset_mint: InterfaceAccount<'info, Mint>,
 
+    /// Share mint
     #[account(mut)]
     pub share_mint: InterfaceAccount<'info, Mint>,
 
+    /// Vault reserve token account holding underlying assets
     #[account(
         mut,
         seeds = [RESERVE_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
@@ -26,6 +30,7 @@ pub struct Withdraw<'info> {
     )]
     pub reserve: InterfaceAccount<'info, TokenAccount>,
 
+    /// Vault configuration account (PDA)
     #[account(
         mut,
         seeds = [VAULT_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
@@ -33,39 +38,42 @@ pub struct Withdraw<'info> {
     )]
     pub vault: Account<'info, VaultConfig>,
 
+    /// Fee recipient token account
     #[account(
         mut,
         associated_token::authority = vault.fee_recipient,
         associated_token::mint = asset_mint,
-        associated_token::token_program = reserve_token_program,
+        associated_token::token_program = asset_token_program,
     )]
     pub fee_recipient: InterfaceAccount<'info, TokenAccount>,
 
+    /// User's asset token account
     #[account(
         mut,
         associated_token::authority = user,
         associated_token::mint = asset_mint,
-        associated_token::token_program = reserve_token_program,
+        associated_token::token_program = asset_token_program,
         
     )]
     pub user_assets_account: InterfaceAccount<'info, TokenAccount>,
 
+    /// User's share token account
     #[account(
         mut,
         associated_token::authority = user,
         associated_token::mint = share_mint,
-        associated_token::token_program = token_program,
+        associated_token::token_program = share_token_program,
     )]
     pub user_shares_account: InterfaceAccount<'info, TokenAccount>,
 
-    pub token_program: Interface<'info, TokenInterface>,
-    pub reserve_token_program: Interface<'info, TokenInterface>,
+    pub share_token_program: Interface<'info, TokenInterface>,
+    pub asset_token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 
 impl <'info> Withdraw<'info> {
-    pub fn transfer_reserve_token_fee_to_fee_recipient(&mut self, fee: u64) -> Result<()> {
+    pub fn transfer_assets_to_fee_recipient(&mut self, fee: u64) -> Result<()> {
         let asset_mint = self.asset_mint.key();
         let share_mint = self.share_mint.key();
         
@@ -84,7 +92,7 @@ impl <'info> Withdraw<'info> {
         ]];
 
         let cpi_ctx = CpiContext::new_with_signer(
-            self.reserve_token_program.to_account_info(),
+            self.asset_token_program.to_account_info(),
             cpi_accounts,
             seeds
         );
@@ -93,7 +101,7 @@ impl <'info> Withdraw<'info> {
     }
 
     /// Transfers `asset_amount` tokens to the user token account
-    pub fn transfer_reserve_token_to_user(&mut self, asset_amount: u64) -> Result<()> {
+    pub fn transfer_assets_to_user(&mut self, asset_amount: u64) -> Result<()> {
         let asset_mint = self.asset_mint.key();
         let share_mint = self.share_mint.key();
 
@@ -112,7 +120,7 @@ impl <'info> Withdraw<'info> {
         ]];
 
         let cpi_ctx = CpiContext::new_with_signer(
-            self.reserve_token_program.to_account_info(), 
+            self.asset_token_program.to_account_info(), 
             cpi_accounts, 
             seeds
         );
@@ -129,7 +137,7 @@ impl <'info> Withdraw<'info> {
         };
 
         let cpi_ctx = CpiContext::new(
-            self.token_program.to_account_info(), 
+            self.share_token_program.to_account_info(), 
             cpi_accounts
         );
 
@@ -144,23 +152,26 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
     // `expected_new_total_asset_balance <= ctx.accounts.vault.vault_asset_cap`
 
     // assets is NET to receiver/user.
-    let assets_out = assets;
+    let amount_assets_out = assets;
 
     // fee computed on the net amount
-    let fee = ctx.accounts.vault.get_withdraw_fee(assets_out)?;
+    let fee = ctx.accounts.vault.get_withdraw_fee(amount_assets_out)?;
 
     // total assets leaving the vault reserve
-    let gross_amount = assets_out
+    // including the fees
+    let amount_with_fee = amount_assets_out
         .checked_add(fee)
         .ok_or(VaultProgramError::ArithmeticError)?;
 
     let shares_to_burn = ctx.accounts.vault.get_shares_from_assets(
         &ctx.accounts.share_mint, 
-        gross_amount, 
+        amount_with_fee, 
         // This ensures the user provides (burns) enough shares
         Rounding::Up
     )?;
 
+    // no need to check if user has enough shares
+    // since burn would fail in that case
     if shares_to_burn == 0 {
         return Err(VaultProgramError::InsufficientWithdrawAmount.into());
     }
@@ -170,14 +181,14 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
 
     // pay fee from vault reserve -> fee recipient (if fee > 0)
     if fee > 0 {
-        ctx.accounts.transfer_reserve_token_fee_to_fee_recipient(fee)?;
+        ctx.accounts.transfer_assets_to_fee_recipient(fee)?;
     }
 
     // transfer from vault to user
-    ctx.accounts.transfer_reserve_token_to_user(assets_out)?;
+    ctx.accounts.transfer_assets_to_user(amount_assets_out)?;
 
     // decrease vault assets 
-    ctx.accounts.vault.decrease_asset_supply(gross_amount)?;
+    ctx.accounts.vault.decrease_asset_supply(amount_with_fee)?;
 
     Ok(())
 }
