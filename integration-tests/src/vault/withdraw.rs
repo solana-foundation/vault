@@ -1,7 +1,7 @@
-use anchor_spl::token;
+use anchor_spl::token::{self, spl_token::error::TokenError};
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
+    account::ReadableAccount, instruction::InstructionError, program_pack::Pack, signature::Keypair, signer::Signer, transaction::TransactionError
 };
 use spl_token::state::{Account as TokenAccount, Mint as TokenMint};
 use vault_client::{sdk::program_id, FeeType};
@@ -241,4 +241,29 @@ fn test_withdraw_vault(
     .supply;
     assert_eq!(share_supply_after_withdraw, deposit_net - gross_amount);
     
+    // ---------- withdraw fails (not enough shares) ------------
+    let failing_assets_out = user_asset_amount * 2; // amount the user has not deposited
+    let result = withdraw(
+        &mut svm,
+        &user,
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        vault_pubkey,
+        fee_recipient_ata,
+        user_asset_ata,
+        user_share_ata,
+        failing_assets_out,
+    );
+    
+    let Err(error) = result else {
+        panic!("withdraw should have failed");
+    };
+
+    // Extract the SPL token custom error code
+    let error_code = match error.err {
+        TransactionError::InstructionError(_, InstructionError::Custom(code)) => code,
+        other => panic!("unexpected tx error (not Custom): {:?}", other),
+    };
+    assert_eq!(error_code, TokenError::InsufficientFunds as u32);
 }
