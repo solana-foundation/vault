@@ -318,6 +318,8 @@ pub fn set_up_vault(
     share_mint: &Keypair,
     asset_token_program: Pubkey,
     share_token_program: Pubkey,
+    deposit_fees: &FeeType,
+    withdraw_fees: &FeeType
 ) -> (Keypair, Keypair, Keypair, Keypair, Keypair, Pubkey, Pubkey) {
     let authority = Keypair::new();
     let user = Keypair::new();
@@ -354,8 +356,8 @@ pub fn set_up_vault(
         share_mint.pubkey(),
         reserve_pubkey,
         vault_pubkey,
-        FeeType::Percentage { bps: 100 },
-        FeeType::NoFee,
+        deposit_fees.clone(),
+        withdraw_fees.clone(),
         100_000_000,
         1,
         fee_recipient.pubkey(),

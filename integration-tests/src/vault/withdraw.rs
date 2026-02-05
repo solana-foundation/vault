@@ -1,106 +1,65 @@
+use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
 };
 use spl_token::state::{Account as TokenAccount, Mint as TokenMint};
-use vault_client::{sdk::program_id, FeeType, Pubkey};
+use vault_client::{sdk::program_id, FeeType};
 
 use crate::vault::helper_functions::{
-    create_ata, create_mint, create_vault, deposit, withdraw, get_fee, helper_mint_to, update_vault,
+    create_ata, create_mint, deposit, get_fee, helper_mint_to, set_up_vault, withdraw
 };
 use test_case::test_case;
 
 #[test_case(
-    FeeType::NoFee,
-    FeeType::NoFee,
     FeeType::Percentage { bps: 100 },  // 1% deposit fee
-    FeeType::Percentage { bps: 50 },   // 0.5% withdraw fee
-    false,
-    100_000_000;
+    FeeType::Percentage { bps: 50 };   // 0.5% withdraw fee
     "Withdraw successfully (percentage fees)"
 )]
 #[test_case(
     FeeType::NoFee,
-    FeeType::NoFee,
-    FeeType::NoFee,
-    FeeType::NoFee,
-    false,
-    100_000_000;
+    FeeType::NoFee;
     "Withdraw successfully (no fees)"
 )]
 fn test_withdraw_vault(
     deposit_fee: FeeType,
     withdraw_fee: FeeType,
-    updated_deposit_fee: FeeType,
-    updated_withdraw_fee: FeeType,
-    updated_paused_status: bool,
-    updated_vault_asset_cap: u64,
 ) {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
     svm.add_program(program_id(), program_bytes);
 
-    let authority = Keypair::new();
-    let user = Keypair::new();
-    let payer = Keypair::new();
-    let mint_authority = Keypair::new();
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();
-    let fee_recipient = Keypair::new();
-
-    svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
-    svm.airdrop(&user.pubkey(), 1_000_000_000).unwrap();
-    svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
+    let mint_authority = Keypair::new();
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000).unwrap();
-    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
 
     create_mint(&mut svm, &mint_authority, &asset_mint);
     create_mint(&mut svm, &mint_authority, &share_mint);
 
-    let (reserve_pubkey, _) = Pubkey::find_program_address(
-        &[b"reserve", asset_mint.pubkey().as_ref(), share_mint.pubkey().as_ref()],
-        &vault_client::sdk::program_id(),
-    );
-    let (vault_pubkey, _) = Pubkey::find_program_address(
-        &[b"vault", asset_mint.pubkey().as_ref(), share_mint.pubkey().as_ref()],
-        &vault_client::sdk::program_id(),
-    );
-
-    create_vault(
+    let (
+        _, 
+        user,
+        _, 
+        mint_authority, 
+        fee_recipient, 
+        reserve_pubkey, 
+        vault_pubkey
+    ) = set_up_vault(
         &mut svm,
-        &authority,
-        &payer,
-        &mint_authority,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        reserve_pubkey,
-        vault_pubkey,
-        deposit_fee.clone(),
-        withdraw_fee.clone(),
-        0,
-        100_000,
-        fee_recipient.pubkey(),
-    )
-    .expect("create_vault failed");
+        mint_authority,
+        &asset_mint,
+        &share_mint,
+        token::ID,
+        token::ID,
+        &deposit_fee,
+        &withdraw_fee,
+    );
 
-    update_vault(
-        &mut svm,
-        &authority,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        updated_deposit_fee.clone(),
-        updated_withdraw_fee.clone(),
-        updated_vault_asset_cap,
-        updated_paused_status,
-        authority.pubkey(),
-    )
-    .expect("update_vault failed");
-
-    let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey());
-    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey());
-    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey());
+    let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
+    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
+    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(),  &token::ID);
 
     let user_asset_amount = 100_000_000;
     helper_mint_to(
@@ -109,6 +68,7 @@ fn test_withdraw_vault(
         &user_asset_ata,
         &mint_authority,
         user_asset_amount,
+        &token::ID
     );
 
     // -------------------- balances before deposit --------------------
@@ -162,10 +122,12 @@ fn test_withdraw_vault(
         user_asset_ata,
         user_share_ata,
         deposit_amount,
+        token::ID,
+        token::ID,
     );
     assert!(result.is_ok(), "deposit failed unexpectedly");
 
-    let deposit_fee_amount = get_fee(updated_deposit_fee.clone(), deposit_amount);
+    let deposit_fee_amount = get_fee(deposit_fee.clone(), deposit_amount);
     let deposit_net = deposit_amount.checked_sub(deposit_fee_amount).expect("overflow");
 
     // After deposit:
@@ -215,7 +177,7 @@ fn test_withdraw_vault(
     // assets_out small enough so gross <= user_shares_after_deposit.
     let assets_out: u64 = 100_000;
 
-    let withdraw_fee_amount = get_fee(updated_withdraw_fee.clone(), assets_out);
+    let withdraw_fee_amount = get_fee(withdraw_fee.clone(), assets_out);
     let gross_amount = assets_out.checked_add(withdraw_fee_amount).expect("overflow");
 
     let result = withdraw(

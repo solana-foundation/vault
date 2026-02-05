@@ -1,6 +1,5 @@
 use crate::{error::VaultProgramError, state::Rounding};
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
 
 /// The fee types:
 /// FixedAmount: a fixed fee is applied (ex 0.1 asset)
@@ -82,7 +81,7 @@ impl VaultConfig {
         asset_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
-        let mut assets_times_total_supply: u128;
+        let assets_times_total_supply: u128;
         if supply == 0 {
             assets_times_total_supply = u128::from(self.initial_price)
                 .checked_mul(u128::from(asset_amount))

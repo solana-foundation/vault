@@ -147,9 +147,6 @@ impl <'info> Withdraw<'info> {
 
 pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
-    
-    // since the user is withdrawing, we skip the check 
-    // `expected_new_total_asset_balance <= ctx.accounts.vault.vault_asset_cap`
 
     // assets is NET to receiver/user.
     let amount_assets_out = assets;
@@ -164,7 +161,7 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
         .ok_or(VaultProgramError::ArithmeticError)?;
 
     let shares_to_burn = ctx.accounts.vault.get_shares_from_assets(
-        &ctx.accounts.share_mint, 
+        ctx.accounts.share_mint.supply, 
         amount_with_fee, 
         // This ensures the user provides (burns) enough shares
         Rounding::Up
