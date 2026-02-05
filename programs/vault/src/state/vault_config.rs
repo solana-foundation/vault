@@ -82,14 +82,21 @@ impl VaultConfig {
         asset_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
-        let assets_times_total_supply = u128::from(
-            share_mint
-                .supply
-                .checked_add(1)
-                .ok_or(VaultProgramError::ArithmeticError)?,
-        )
-        .checked_mul(u128::from(asset_amount))
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        let mut assets_times_total_supply: u128;
+        if self.total_asset_balance == 0 && share_mint.supply == 0 {
+            assets_times_total_supply = u128::from(self.initial_price)
+                .checked_mul(u128::from(asset_amount))
+                .ok_or(VaultProgramError::ArithmeticError)?;
+        } else {
+            assets_times_total_supply = u128::from(
+                share_mint
+                    .supply
+                    .checked_add(1)
+                    .ok_or(VaultProgramError::ArithmeticError)?,
+            )
+            .checked_mul(u128::from(asset_amount))
+            .ok_or(VaultProgramError::ArithmeticError)?;
+        }
         let result = match rounding {
             Rounding::Up => assets_times_total_supply.div_ceil(u128::from(
                 self.total_assets()
