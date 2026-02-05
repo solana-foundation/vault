@@ -1,3 +1,4 @@
+use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
@@ -66,6 +67,8 @@ fn test_update_vault(
         0,
         100_000,
         fee_recipient.pubkey(),
+        token::ID,
+        token::ID,
     );
 
     let update_result = update_vault(

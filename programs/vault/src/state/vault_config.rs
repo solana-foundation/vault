@@ -104,23 +104,22 @@ impl VaultConfig {
 
     pub fn get_assets_from_shares(
         self,
-        share_mint: &InterfaceAccount<'_, Mint>,
-        share_amount: u64,
+        supply: u64,
+        asset_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
         let mut assets_times_total_supply: u128;
-        if self.total_asset_balance == 0 && share_mint.supply == 0 {
+        if supply == 0 {
             assets_times_total_supply = u128::from(self.initial_price)
-                .checked_mul(u128::from(share_amount))
+                .checked_mul(u128::from(asset_amount))
                 .ok_or(VaultProgramError::ArithmeticError)?;
         } else {
             assets_times_total_supply = u128::from(
-                share_mint
-                    .supply
+                supply
                     .checked_add(1)
                     .ok_or(VaultProgramError::ArithmeticError)?,
             )
-            .checked_mul(u128::from(share_amount))
+            .checked_mul(u128::from(asset_amount))
             .ok_or(VaultProgramError::ArithmeticError)?;
         }
         let result = match rounding {
@@ -186,5 +185,216 @@ impl VaultConfig {
 
     pub fn get_deposit_fee(self, deposit_amount: u64) -> Result<u64> {
         self.deposit_fees.get_fee(deposit_amount)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_vault_config(total_asset_balance: u64, initial_price: u64) -> VaultConfig {
+        VaultConfig {
+            asset_mint_address: Pubkey::new_unique(),
+            share_mint_address: Pubkey::new_unique(),
+            vault_token_account: Pubkey::new_unique(),
+            authority: Pubkey::new_unique(),
+            initial_price,
+            deposit_fees: FeeType::NoFee,
+            withdraw_fees: FeeType::NoFee,
+            paused: false,
+            vault_asset_cap: u64::MAX,
+            total_asset_balance,
+            fee_recipient: Pubkey::new_unique(),
+            reserve_bump: 255,
+            bump: 254,
+        }
+    }
+
+    #[test]
+    fn test_initial_deposit_zero_supply_zero_balance() {
+        let vault = create_vault_config(0, 1_000_000);
+        let shares = vault
+            .get_shares_from_assets(0, 100, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 100_000_000);
+
+        let shares_up = vault.get_shares_from_assets(0, 100, Rounding::Up).unwrap();
+        assert_eq!(shares_up, 100_000_000);
+    }
+
+    #[test]
+    fn test_supply_positive_balance_zero() {
+        let vault = create_vault_config(0, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(1000, 100, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 100_100);
+    }
+
+    #[test]
+    fn test_supply_zero_balance_positive() {
+        let vault = create_vault_config(5000, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(0, 100, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 19_996);
+
+        let shares_up = vault.get_shares_from_assets(0, 100, Rounding::Up).unwrap();
+        assert_eq!(shares_up, 19_997);
+    }
+
+    #[test]
+    fn test_supply_positive_balance_positive() {
+        let vault = create_vault_config(10_000, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(10_000, 100, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 100);
+
+        let vault2 = create_vault_config(20_000, 1_000_000);
+
+        let shares2 = vault2
+            .get_shares_from_assets(10_000, 100, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares2, 50);
+    }
+
+    #[test]
+    fn test_rounding_down_vs_up() {
+        let vault2 = create_vault_config(10_000, 1_000_000);
+
+        let shares_down = vault2
+            .get_shares_from_assets(9_999, 100, Rounding::Down)
+            .unwrap();
+        let shares_up = vault2
+            .get_shares_from_assets(9_999, 100, Rounding::Up)
+            .unwrap();
+
+        assert_eq!(shares_down, 99);
+        assert_eq!(shares_up, 100);
+    }
+
+    #[test]
+    fn test_max_supply() {
+        let vault = create_vault_config(1_000_000, 1_000_000);
+
+        let result = vault.get_shares_from_assets(u64::MAX, 100, Rounding::Down);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_max_total_assets() {
+        let vault = create_vault_config(u64::MAX, 1_000_000);
+
+        let result = vault.get_shares_from_assets(1_000_000, 100, Rounding::Down);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_zero_asset_amount() {
+        let vault = create_vault_config(10_000, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(10_000, 0, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 0);
+    }
+
+    #[test]
+    fn test_multiplication_overflow_initial_price() {
+        let vault = create_vault_config(0, u64::MAX);
+
+        let result = vault.get_shares_from_assets(0, u64::MAX, Rounding::Down);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_multiplication_overflow_supply() {
+        let vault = create_vault_config(1, 1_000_000);
+
+        let result = vault.get_shares_from_assets(u64::MAX - 1, u64::MAX, Rounding::Down);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_result_exceeds_u64_max() {
+        let vault = create_vault_config(1, 1_000_000);
+
+        let result = vault.get_shares_from_assets(u64::MAX / 2, u64::MAX, Rounding::Down);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_div_by_zero_prevention() {
+        let vault = create_vault_config(0, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(100, 50, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 5_050);
+    }
+
+    #[test]
+    fn test_large_values_no_overflow() {
+        let vault = create_vault_config(1_000_000_000, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(1_000_000_000, 1_000_000, Rounding::Down)
+            .unwrap();
+
+        assert_eq!(shares, 1_000_000);
+    }
+
+    #[test]
+    fn test_precision_with_small_amounts() {
+        let vault = create_vault_config(1_000_000, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(1_000_000, 1, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 1);
+
+        let shares_up = vault
+            .get_shares_from_assets(1_000_000, 1, Rounding::Up)
+            .unwrap();
+        assert_eq!(shares_up, 1);
+    }
+
+    #[test]
+    fn test_asymmetric_supply_vs_assets() {
+        let vault = create_vault_config(100, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(1_000_000_000, 10, Rounding::Down)
+            .unwrap();
+
+        assert_eq!(shares, 99_009_901);
+
+        let vault2 = create_vault_config(1_000_000_000, 1_000_000);
+
+        let shares2 = vault2
+            .get_shares_from_assets(100, 10_000, Rounding::Down)
+            .unwrap();
+
+        assert_eq!(shares2, 0);
+    }
+
+    #[test]
+    fn test_initial_price_variations() {
+        let vault_high = create_vault_config(0, 1_000_000_000);
+
+        let shares = vault_high
+            .get_shares_from_assets(0, 1, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 1_000_000_000);
+
+        let vault_low = create_vault_config(0, 1);
+        let shares_low = vault_low
+            .get_shares_from_assets(0, 1_000_000, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares_low, 1_000_000);
     }
 }
