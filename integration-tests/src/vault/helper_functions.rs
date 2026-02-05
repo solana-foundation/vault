@@ -3,8 +3,8 @@ use litesvm::{
     LiteSVM,
 };
 use solana_sdk::{
-    signature::Keypair, signer::Signer, system_instruction::create_account,
-    transaction::Transaction,
+    msg, program_pack::Pack, signature::Keypair, signer::Signer,
+    system_instruction::create_account, transaction::Transaction,
 };
 use vault_client::{
     CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType, Pubkey, UpdateVaultBuilder, WithdrawBuilder, sdk::IntoSdkInstruction
@@ -15,8 +15,12 @@ use anchor_spl::{
         get_associated_token_address_with_program_id,
         spl_associated_token_account::instruction::create_associated_token_account,
     },
-    token::{self, spl_token, Mint},
-    token_2022::spl_token_2022::{self},
+    token::{self, spl_token},
+    token_2022::spl_token_2022::{
+        self,
+        extension::{transfer_fee::instruction::initialize_transfer_fee_config, ExtensionType},
+        state::Mint,
+    },
 };
 
 pub fn create_vault(
@@ -33,6 +37,8 @@ pub fn create_vault(
     vault_asset_cap: u64,
     initial_price: u64,
     fee_recipient: Pubkey,
+    asset_token_program: Pubkey,
+    share_token_program: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = CreateVaultBuilder::new()
         .authority(authority.pubkey())
@@ -47,6 +53,8 @@ pub fn create_vault(
         .vault_asset_cap(vault_asset_cap)
         .initial_price(initial_price)
         .fee_recipient(fee_recipient)
+        .asset_token_program(asset_token_program)
+        .share_token_program(share_token_program)
         .instruction()
         .into_sdk_instruction();
 
@@ -138,6 +146,8 @@ pub fn deposit(
     user_assets_account: Pubkey,
     user_shares_account: Pubkey,
     assets_amount: u64,
+    asset_token_program: Pubkey,
+    share_token_program: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = DepositBuilder::new()
         .user(user.pubkey())
@@ -149,8 +159,8 @@ pub fn deposit(
         .user_assets_account(user_assets_account)
         .user_shares_account(user_shares_account)
         .assets(assets_amount)
-        .reserve_token_program(token::ID)
-        .token_program(token::ID)
+        .asset_token_program(asset_token_program)
+        .share_token_program(share_token_program)
         .instruction()
         .into_sdk_instruction();
 
@@ -219,11 +229,17 @@ pub fn create_mint(svm: &mut LiteSVM, signer: &Keypair, mint: &Keypair) {
         .expect("create_mint transaction failed");
 }
 
-pub fn create_ata(svm: &mut LiteSVM, owner: &Keypair, mint: &Pubkey) -> Pubkey {
-    let ata = get_associated_token_address_with_program_id(&owner.pubkey(), &mint, &spl_token::ID);
+pub fn create_ata(
+    svm: &mut LiteSVM,
+    owner: &Keypair,
+    mint: &Pubkey,
+    token_program: &Pubkey,
+) -> Pubkey {
+    let ata = get_associated_token_address_with_program_id(&owner.pubkey(), &mint, token_program);
 
     let ata_init_ix =
-        create_associated_token_account(&owner.pubkey(), &owner.pubkey(), &mint, &spl_token::ID);
+        create_associated_token_account(&owner.pubkey(), &owner.pubkey(), &mint, token_program);
+
     let init_tx = Transaction::new_signed_with_payer(
         &[ata_init_ix],
         Some(&owner.pubkey()),
@@ -231,7 +247,7 @@ pub fn create_ata(svm: &mut LiteSVM, owner: &Keypair, mint: &Pubkey) -> Pubkey {
         svm.latest_blockhash(),
     );
     svm.send_transaction(init_tx).unwrap();
-    return ata;
+    ata
 }
 
 pub fn helper_mint_to(
@@ -240,10 +256,10 @@ pub fn helper_mint_to(
     account: &Pubkey,
     authority: &Keypair,
     amount: u64,
+    token_program: &Pubkey,
 ) {
-    // Create mint_to instruction
-    let mint_to_ix = spl_token::instruction::mint_to(
-        &spl_token::id(),
+    let mint_to_ix = spl_token_2022::instruction::mint_to(
+        token_program,
         mint,
         account,
         &authority.pubkey(),
@@ -252,7 +268,6 @@ pub fn helper_mint_to(
     )
     .unwrap();
 
-    // Send transaction
     let tx = Transaction::new_signed_with_payer(
         &[mint_to_ix],
         Some(&authority.pubkey()),
@@ -294,4 +309,134 @@ pub fn get_fee(fee: FeeType, total_amount: u64) -> u64 {
         FeeType::FixedAmount { amount } => return amount,
         FeeType::NoFee => return 0,
     }
+}
+
+pub fn set_up_vault(
+    svm: &mut LiteSVM,
+    mint_authority: Keypair,
+    asset_mint: &Keypair,
+    share_mint: &Keypair,
+    asset_token_program: Pubkey,
+    share_token_program: Pubkey,
+) -> (Keypair, Keypair, Keypair, Keypair, Keypair, Pubkey, Pubkey) {
+    let authority = Keypair::new();
+    let user = Keypair::new();
+    let payer = Keypair::new();
+
+    let fee_recipient = Keypair::new();
+    svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&user.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
+
+    let (reserve_pubkey, _) = Pubkey::find_program_address(
+        &[
+            b"reserve",
+            asset_mint.pubkey().as_ref(),
+            share_mint.pubkey().as_ref(),
+        ],
+        &vault_client::sdk::program_id(),
+    );
+    let (vault_pubkey, _) = Pubkey::find_program_address(
+        &[
+            b"vault",
+            asset_mint.pubkey().as_ref(),
+            share_mint.pubkey().as_ref(),
+        ],
+        &vault_client::sdk::program_id(),
+    );
+    let result = create_vault(
+        svm,
+        &authority,
+        &payer,
+        &mint_authority,
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        vault_pubkey,
+        FeeType::Percentage { bps: 100 },
+        FeeType::NoFee,
+        100_000_000,
+        1,
+        fee_recipient.pubkey(),
+        asset_token_program,
+        share_token_program,
+    );
+    msg!("Logs: {:?}", result.unwrap().logs);
+    let _ = update_vault(
+        svm,
+        &authority,
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        vault_pubkey,
+        FeeType::Percentage { bps: 100 },
+        FeeType::NoFee,
+        100_000_000,
+        false,
+        authority.pubkey(),
+    );
+    return (
+        authority,
+        user,
+        payer,
+        mint_authority,
+        fee_recipient,
+        reserve_pubkey,
+        vault_pubkey,
+    );
+}
+
+pub fn create_mint_with_transfer_fee(
+    svm: &mut LiteSVM,
+    signer: &Keypair,
+    mint: &Keypair,
+    transfer_fee_basis_points: u16,
+    maximum_fee: u64,
+) {
+    // Calculate space needed for mint + transfer fee extension
+    let space =
+        ExtensionType::try_calculate_account_len::<Mint>(&[ExtensionType::TransferFeeConfig])
+            .unwrap();
+
+    let rent = svm.minimum_balance_for_rent_exemption(space);
+
+    // Create account with proper space
+    let create_account_ix = create_account(
+        &signer.pubkey(),
+        &mint.pubkey(),
+        rent,
+        space as u64,
+        &spl_token_2022::id(),
+    );
+
+    // Initialize transfer fee extension BEFORE initializing mint
+    let init_transfer_fee_ix = initialize_transfer_fee_config(
+        &spl_token_2022::id(),
+        &mint.pubkey(),
+        Some(&signer.pubkey()), // transfer_fee_config_authority
+        Some(&signer.pubkey()), // withdraw_withheld_authority
+        transfer_fee_basis_points,
+        maximum_fee,
+    )
+    .unwrap();
+
+    // Initialize the mint (this must come AFTER extension initialization)
+    let init_mint_ix = spl_token_2022::instruction::initialize_mint(
+        &spl_token_2022::id(),
+        &mint.pubkey(),
+        &signer.pubkey(),
+        None,
+        9,
+    )
+    .unwrap();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[create_account_ix, init_transfer_fee_ix, init_mint_ix],
+        Some(&signer.pubkey()),
+        &[&mint, &signer],
+        svm.latest_blockhash(),
+    );
+
+    svm.send_transaction(tx)
+        .expect("create_mint_with_transfer_fee transaction failed");
 }

@@ -25,7 +25,9 @@ pub struct CreateVault {
 
     pub vault: solana_pubkey::Pubkey,
 
-    pub token_program: solana_pubkey::Pubkey,
+    pub asset_token_program: solana_pubkey::Pubkey,
+
+    pub share_token_program: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
 }
@@ -42,7 +44,7 @@ impl CreateVault {
         args: CreateVaultInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.payer, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.mint_authority,
@@ -56,7 +58,11 @@ impl CreateVault {
         accounts.push(solana_instruction::AccountMeta::new(self.reserve, false));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.token_program,
+            self.asset_token_program,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.share_token_program,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -127,8 +133,9 @@ impl CreateVaultInstructionArgs {
 ///   3. `[writable]` share_mint
 ///   4. `[writable]` reserve
 ///   5. `[writable]` vault
-///   6. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   6. `[]` asset_token_program
+///   7. `[]` share_token_program
+///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct CreateVaultBuilder {
     payer: Option<solana_pubkey::Pubkey>,
@@ -137,7 +144,8 @@ pub struct CreateVaultBuilder {
     share_mint: Option<solana_pubkey::Pubkey>,
     reserve: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
-    token_program: Option<solana_pubkey::Pubkey>,
+    asset_token_program: Option<solana_pubkey::Pubkey>,
+    share_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     authority: Option<Pubkey>,
     initial_price: Option<u64>,
@@ -189,10 +197,15 @@ impl CreateVaultBuilder {
         self
     }
 
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
     #[inline(always)]
-    pub fn token_program(&mut self, token_program: solana_pubkey::Pubkey) -> &mut Self {
-        self.token_program = Some(token_program);
+    pub fn asset_token_program(&mut self, asset_token_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.asset_token_program = Some(asset_token_program);
+        self
+    }
+
+    #[inline(always)]
+    pub fn share_token_program(&mut self, share_token_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.share_token_program = Some(share_token_program);
         self
     }
 
@@ -268,9 +281,12 @@ impl CreateVaultBuilder {
             share_mint: self.share_mint.expect("share_mint is not set"),
             reserve: self.reserve.expect("reserve is not set"),
             vault: self.vault.expect("vault is not set"),
-            token_program: self.token_program.unwrap_or(solana_pubkey::pubkey!(
-                "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-            )),
+            asset_token_program: self
+                .asset_token_program
+                .expect("asset_token_program is not set"),
+            share_token_program: self
+                .share_token_program
+                .expect("share_token_program is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
@@ -308,7 +324,9 @@ pub struct CreateVaultCpiAccounts<'a, 'b> {
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
-    pub token_program: &'b solana_account_info::AccountInfo<'a>,
+    pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
+
+    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
@@ -330,7 +348,9 @@ pub struct CreateVaultCpi<'a, 'b> {
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
-    pub token_program: &'b solana_account_info::AccountInfo<'a>,
+    pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
+
+    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -351,7 +371,8 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
             share_mint: accounts.share_mint,
             reserve: accounts.reserve,
             vault: accounts.vault,
-            token_program: accounts.token_program,
+            asset_token_program: accounts.asset_token_program,
+            share_token_program: accounts.share_token_program,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -383,7 +404,7 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.payer.key, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.mint_authority.key,
@@ -403,7 +424,11 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
         ));
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.token_program.key,
+            *self.asset_token_program.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.share_token_program.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -426,7 +451,7 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(10 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.payer.clone());
         account_infos.push(self.mint_authority.clone());
@@ -434,7 +459,8 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
         account_infos.push(self.share_mint.clone());
         account_infos.push(self.reserve.clone());
         account_infos.push(self.vault.clone());
-        account_infos.push(self.token_program.clone());
+        account_infos.push(self.asset_token_program.clone());
+        account_infos.push(self.share_token_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -458,8 +484,9 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
 ///   3. `[writable]` share_mint
 ///   4. `[writable]` reserve
 ///   5. `[writable]` vault
-///   6. `[]` token_program
-///   7. `[]` system_program
+///   6. `[]` asset_token_program
+///   7. `[]` share_token_program
+///   8. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct CreateVaultCpiBuilder<'a, 'b> {
     instruction: Box<CreateVaultCpiBuilderInstruction<'a, 'b>>,
@@ -475,7 +502,8 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
             share_mint: None,
             reserve: None,
             vault: None,
-            token_program: None,
+            asset_token_program: None,
+            share_token_program: None,
             system_program: None,
             authority: None,
             initial_price: None,
@@ -534,11 +562,20 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
-    pub fn token_program(
+    pub fn asset_token_program(
         &mut self,
-        token_program: &'b solana_account_info::AccountInfo<'a>,
+        asset_token_program: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.token_program = Some(token_program);
+        self.instruction.asset_token_program = Some(asset_token_program);
+        self
+    }
+
+    #[inline(always)]
+    pub fn share_token_program(
+        &mut self,
+        share_token_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.share_token_program = Some(share_token_program);
         self
     }
 
@@ -666,10 +703,15 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
 
             vault: self.instruction.vault.expect("vault is not set"),
 
-            token_program: self
+            asset_token_program: self
                 .instruction
-                .token_program
-                .expect("token_program is not set"),
+                .asset_token_program
+                .expect("asset_token_program is not set"),
+
+            share_token_program: self
+                .instruction
+                .share_token_program
+                .expect("share_token_program is not set"),
 
             system_program: self
                 .instruction
@@ -693,7 +735,8 @@ struct CreateVaultCpiBuilderInstruction<'a, 'b> {
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     reserve: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-    token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
+    asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
+    share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     authority: Option<Pubkey>,
     initial_price: Option<u64>,

@@ -30,8 +30,9 @@ pub struct CreateVault<'info> {
 
     #[account(
         init,
-        token::mint = asset_mint,
         token::authority = vault,
+        token::mint = asset_mint,
+        token::token_program = asset_token_program,
         payer = payer,
         seeds = [RESERVE_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
         bump,
@@ -47,7 +48,8 @@ pub struct CreateVault<'info> {
     )]
     pub vault: Account<'info, VaultConfig>,
 
-    pub token_program: Interface<'info, TokenInterface>,
+    pub asset_token_program: Interface<'info, TokenInterface>,
+    pub share_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
@@ -59,7 +61,7 @@ impl<'info> CreateVault<'info> {
         };
 
         let cpi_ctx = CpiContext::new(
-            self.token_program.to_account_info(),
+            self.share_token_program.to_account_info(),
             set_authority_cpi_accounts,
         );
         set_authority(cpi_ctx, AuthorityType::MintTokens, Some(new_authority))
