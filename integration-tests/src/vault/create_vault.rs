@@ -1,3 +1,4 @@
+use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
@@ -65,6 +66,8 @@ fn test_create_vault(
         0,
         initial_price,
         fee_recipient.pubkey(),
+        token::ID,
+        token::ID,
     );
     assert_eq!(
         result.is_ok(),
