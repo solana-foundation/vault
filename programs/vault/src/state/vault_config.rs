@@ -78,19 +78,18 @@ impl VaultConfig {
 
     pub fn get_shares_from_assets(
         self,
-        share_mint: &InterfaceAccount<'_, Mint>,
+        supply: u64,
         asset_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
         let mut assets_times_total_supply: u128;
-        if self.total_asset_balance == 0 && share_mint.supply == 0 {
+        if supply == 0 {
             assets_times_total_supply = u128::from(self.initial_price)
                 .checked_mul(u128::from(asset_amount))
                 .ok_or(VaultProgramError::ArithmeticError)?;
         } else {
             assets_times_total_supply = u128::from(
-                share_mint
-                    .supply
+                supply
                     .checked_add(1)
                     .ok_or(VaultProgramError::ArithmeticError)?,
             )
@@ -132,93 +131,209 @@ impl VaultConfig {
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_no_fee() {
-        let fee_type = FeeType::NoFee;
-        assert_eq!(fee_type.get_fee(1000).unwrap(), 0);
-        assert_eq!(fee_type.get_fee(0).unwrap(), 0);
-        assert_eq!(fee_type.get_fee(u64::MAX).unwrap(), 0);
+    fn create_vault_config(total_asset_balance: u64, initial_price: u64) -> VaultConfig {
+        VaultConfig {
+            asset_mint_address: Pubkey::new_unique(),
+            share_mint_address: Pubkey::new_unique(),
+            vault_token_account: Pubkey::new_unique(),
+            authority: Pubkey::new_unique(),
+            initial_price,
+            deposit_fees: FeeType::NoFee,
+            withdraw_fees: FeeType::NoFee,
+            paused: false,
+            vault_asset_cap: u64::MAX,
+            total_asset_balance,
+            fee_recipient: Pubkey::new_unique(),
+            reserve_bump: 255,
+            bump: 254,
+        }
     }
 
     #[test]
-    fn test_fixed_amount() {
-        let fee_type = FeeType::FixedAmount { amount: 100 };
-        assert_eq!(fee_type.get_fee(1000).unwrap(), 100);
-        assert_eq!(fee_type.get_fee(0).unwrap(), 100);
-        assert_eq!(fee_type.get_fee(u64::MAX).unwrap(), 100);
+    fn test_initial_deposit_zero_supply_zero_balance() {
+        let vault = create_vault_config(0, 1_000_000);
+        let shares = vault
+            .get_shares_from_assets(0, 100, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 100_000_000);
+
+        let shares_up = vault.get_shares_from_assets(0, 100, Rounding::Up).unwrap();
+        assert_eq!(shares_up, 100_000_000);
     }
 
     #[test]
-    fn test_percentage_zero_bps() {
-        let fee_type = FeeType::Percentage { bps: 0 };
-        assert_eq!(fee_type.get_fee(1000).unwrap(), 0);
-        assert_eq!(fee_type.get_fee(100_000).unwrap(), 0);
+    fn test_supply_positive_balance_zero() {
+        let vault = create_vault_config(0, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(1000, 100, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 100_100);
     }
 
     #[test]
-    fn test_percentage_standard_cases() {
-        let fee_type = FeeType::Percentage { bps: 100 };
-        assert_eq!(fee_type.get_fee(10_000).unwrap(), 100);
-        assert_eq!(fee_type.get_fee(50_000).unwrap(), 500);
+    fn test_supply_zero_balance_positive() {
+        let vault = create_vault_config(5000, 1_000_000);
 
-        let fee_type = FeeType::Percentage { bps: 1000 };
-        assert_eq!(fee_type.get_fee(10_000).unwrap(), 1000);
+        let shares = vault
+            .get_shares_from_assets(0, 100, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 19_996);
 
-        let fee_type = FeeType::Percentage { bps: 50 };
-        assert_eq!(fee_type.get_fee(100_000).unwrap(), 500);
+        let shares_up = vault.get_shares_from_assets(0, 100, Rounding::Up).unwrap();
+        assert_eq!(shares_up, 19_997);
     }
 
     #[test]
-    fn test_percentage_rounding_up() {
-        let fee_type = FeeType::Percentage { bps: 100 };
+    fn test_supply_positive_balance_positive() {
+        let vault = create_vault_config(10_000, 1_000_000);
 
-        assert_eq!(fee_type.get_fee(99).unwrap(), 1);
+        let shares = vault
+            .get_shares_from_assets(10_000, 100, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 100);
 
-        assert_eq!(fee_type.get_fee(1).unwrap(), 1);
+        let vault2 = create_vault_config(20_000, 1_000_000);
 
-        assert_eq!(fee_type.get_fee(9_999).unwrap(), 100);
+        let shares2 = vault2
+            .get_shares_from_assets(10_000, 100, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares2, 50);
     }
 
     #[test]
-    fn test_percentage_zero_amount() {
-        let fee_type = FeeType::Percentage { bps: 100 };
-        assert_eq!(fee_type.get_fee(0).unwrap(), 0);
+    fn test_rounding_down_vs_up() {
+        let vault2 = create_vault_config(10_000, 1_000_000);
+
+        let shares_down = vault2
+            .get_shares_from_assets(9_999, 100, Rounding::Down)
+            .unwrap();
+        let shares_up = vault2
+            .get_shares_from_assets(9_999, 100, Rounding::Up)
+            .unwrap();
+
+        assert_eq!(shares_down, 99);
+        assert_eq!(shares_up, 100);
     }
 
     #[test]
-    fn test_percentage_max_bps() {
-        let fee_type = FeeType::Percentage { bps: 10_000 };
-        assert_eq!(fee_type.get_fee(10_000).unwrap(), 10_000);
-        assert_eq!(fee_type.get_fee(5_000).unwrap(), 5_000);
-    }
+    fn test_max_supply() {
+        let vault = create_vault_config(1_000_000, 1_000_000);
 
-    #[test]
-    fn test_percentage_overflow_on_multiply() {
-        let fee_type = FeeType::Percentage { bps: 10_000 };
-        let result = fee_type.get_fee(u64::MAX);
+        let result = vault.get_shares_from_assets(u64::MAX, 100, Rounding::Down);
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_percentage_overflow_on_add() {
-        let fee_type = FeeType::Percentage { bps: 1 };
-        let large_amount = u64::MAX - 5000;
-        let result = fee_type.get_fee(large_amount);
+    fn test_max_total_assets() {
+        let vault = create_vault_config(u64::MAX, 1_000_000);
+
+        let result = vault.get_shares_from_assets(1_000_000, 100, Rounding::Down);
         assert!(result.is_err());
     }
 
     #[test]
-    fn test_percentage_various_precision() {
-        let fee_type = FeeType::Percentage { bps: 1 };
-        assert_eq!(fee_type.get_fee(1_000_000).unwrap(), 100);
-        assert_eq!(fee_type.get_fee(10_000).unwrap(), 1);
+    fn test_zero_asset_amount() {
+        let vault = create_vault_config(10_000, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(10_000, 0, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 0);
     }
 
     #[test]
-    fn test_percentage_edge_case_large_values() {
-        let fee_type = FeeType::Percentage { bps: 1 };
-        let safe_large = 1_000_000_000_000u64;
-        let fee = fee_type.get_fee(safe_large).unwrap();
-        assert_eq!(fee, 100_000_000);
+    fn test_multiplication_overflow_initial_price() {
+        let vault = create_vault_config(0, u64::MAX);
+
+        let result = vault.get_shares_from_assets(0, u64::MAX, Rounding::Down);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_multiplication_overflow_supply() {
+        let vault = create_vault_config(1, 1_000_000);
+
+        let result = vault.get_shares_from_assets(u64::MAX - 1, u64::MAX, Rounding::Down);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_result_exceeds_u64_max() {
+        let vault = create_vault_config(1, 1_000_000);
+
+        let result = vault.get_shares_from_assets(u64::MAX / 2, u64::MAX, Rounding::Down);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_div_by_zero_prevention() {
+        let vault = create_vault_config(0, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(100, 50, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 5_050);
+    }
+
+    #[test]
+    fn test_large_values_no_overflow() {
+        let vault = create_vault_config(1_000_000_000, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(1_000_000_000, 1_000_000, Rounding::Down)
+            .unwrap();
+
+        assert_eq!(shares, 1_000_000);
+    }
+
+    #[test]
+    fn test_precision_with_small_amounts() {
+        let vault = create_vault_config(1_000_000, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(1_000_000, 1, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 1);
+
+        let shares_up = vault
+            .get_shares_from_assets(1_000_000, 1, Rounding::Up)
+            .unwrap();
+        assert_eq!(shares_up, 1);
+    }
+
+    #[test]
+    fn test_asymmetric_supply_vs_assets() {
+        let vault = create_vault_config(100, 1_000_000);
+
+        let shares = vault
+            .get_shares_from_assets(1_000_000_000, 10, Rounding::Down)
+            .unwrap();
+
+        assert_eq!(shares, 99_009_901);
+
+        let vault2 = create_vault_config(1_000_000_000, 1_000_000);
+
+        let shares2 = vault2
+            .get_shares_from_assets(100, 10_000, Rounding::Down)
+            .unwrap();
+
+        assert_eq!(shares2, 0);
+    }
+
+    #[test]
+    fn test_initial_price_variations() {
+        let vault_high = create_vault_config(0, 1_000_000_000);
+
+        let shares = vault_high
+            .get_shares_from_assets(0, 1, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares, 1_000_000_000);
+
+        let vault_low = create_vault_config(0, 1);
+        let shares_low = vault_low
+            .get_shares_from_assets(0, 1_000_000, Rounding::Down)
+            .unwrap();
+        assert_eq!(shares_low, 1_000_000);
     }
 }

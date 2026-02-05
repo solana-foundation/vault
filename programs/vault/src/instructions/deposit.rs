@@ -151,7 +151,7 @@ pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
     );
 
     let shares = ctx.accounts.vault.get_shares_from_assets(
-        &ctx.accounts.share_mint,
+        ctx.accounts.share_mint.supply,
         actual_transferred_amount,
         Rounding::Down,
     )?;
