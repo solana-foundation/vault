@@ -67,7 +67,7 @@ fn test_withdraw_vault(
         &vault_client::sdk::program_id(),
     );
 
-    let _ = create_vault(
+    create_vault(
         &mut svm,
         &authority,
         &payer,
@@ -81,9 +81,10 @@ fn test_withdraw_vault(
         0,
         100_000,
         fee_recipient.pubkey(),
-    );
+    )
+    .expect("create_vault failed");
 
-    let _ = update_vault(
+    update_vault(
         &mut svm,
         &authority,
         asset_mint.pubkey(),
@@ -94,7 +95,8 @@ fn test_withdraw_vault(
         updated_vault_asset_cap,
         updated_paused_status,
         authority.pubkey(),
-    );
+    )
+    .expect("update_vault failed");
 
     let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey());
     let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey());
