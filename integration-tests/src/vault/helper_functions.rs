@@ -363,7 +363,7 @@ pub fn set_up_vault(
         asset_token_program,
         share_token_program,
     );
-    msg!("Logs: {:?}", result.unwrap().logs);
+
     let _ = update_vault(
         svm,
         &authority,

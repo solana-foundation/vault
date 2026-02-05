@@ -53,6 +53,8 @@ impl FeeType {
                         MAX_BPS
                             .checked_sub(*bps)
                             .ok_or(VaultProgramError::ArithmeticError)?
+                            .checked_add(1)
+                            .ok_or(VaultProgramError::ArithmeticError)?
                             .into(),
                     )
                     .ok_or(VaultProgramError::ArithmeticError)?;
@@ -141,13 +143,12 @@ impl VaultConfig {
 
     pub fn get_shares_from_assets(
         self,
-        share_mint: &InterfaceAccount<'_, Mint>,
+        supply: u64,
         asset_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
         let assets_times_total_supply = u128::from(
-            share_mint
-                .supply
+            supply
                 .checked_add(1)
                 .ok_or(VaultProgramError::ArithmeticError)?,
         )
