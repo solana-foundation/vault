@@ -15,6 +15,7 @@ solana-sdk = "2.2.1"
 sha2 = "0.10"
 # Pin blake3 to fix edition error
 blake3 = "=1.5.5"
+test-case = "3.3.1"
 
 [profile.release]
 overflow-checks = true

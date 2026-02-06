@@ -126,7 +126,7 @@ pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
     let fee = ctx.accounts.vault.get_deposit_fee(assets)?;
     // current vault amount
-    let current_reserve_amount = ctx.accounts.reserve.amount;
+    let reserve_amount_before = ctx.accounts.reserve.amount;
     // transfer assets in case there are transfer fees (Token2022)
     let remaining_amount = assets
         .checked_sub(fee)
@@ -138,10 +138,10 @@ pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
     let updated_reserve_amount = ctx.accounts.reserve.amount;
 
     let actual_transferred_amount = updated_reserve_amount
-        .checked_sub(current_reserve_amount)
+        .checked_sub(reserve_amount_before)
         .ok_or(VaultProgramError::ArithmeticError)?;
 
-    let expected_new_total_asset_balance = ctx
+    let new_total_asset_balance = ctx
         .accounts
         .vault
         .total_asset_balance
@@ -149,7 +149,7 @@ pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
         .ok_or(VaultProgramError::ArithmeticError)?;
 
     require!(
-        expected_new_total_asset_balance <= ctx.accounts.vault.vault_asset_cap,
+        new_total_asset_balance <= ctx.accounts.vault.vault_asset_cap,
         VaultProgramError::MaxVaultAssetCapExceeded
     );
 

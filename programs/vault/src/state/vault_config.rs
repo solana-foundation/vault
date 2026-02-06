@@ -1,6 +1,5 @@
 use crate::{error::VaultProgramError, state::Rounding};
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
 
 /// The fee types:
 /// FixedAmount: a fixed fee is applied (ex 0.1 asset)
@@ -82,20 +81,19 @@ impl VaultConfig {
         asset_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
-        let mut assets_times_total_supply: u128;
-        if supply == 0 {
-            assets_times_total_supply = u128::from(self.initial_price)
+        let assets_times_total_supply: u128 = if supply == 0 {
+            u128::from(self.initial_price)
                 .checked_mul(u128::from(asset_amount))
-                .ok_or(VaultProgramError::ArithmeticError)?;
+                .ok_or(VaultProgramError::ArithmeticError)?
         } else {
-            assets_times_total_supply = u128::from(
+            u128::from(
                 supply
                     .checked_add(1)
                     .ok_or(VaultProgramError::ArithmeticError)?,
             )
             .checked_mul(u128::from(asset_amount))
-            .ok_or(VaultProgramError::ArithmeticError)?;
-        }
+            .ok_or(VaultProgramError::ArithmeticError)?
+        };
         let result = match rounding {
             Rounding::Up => assets_times_total_supply.div_ceil(u128::from(
                 self.total_assets()
@@ -130,6 +128,7 @@ impl VaultConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
     fn create_vault_config(total_asset_balance: u64, initial_price: u64) -> VaultConfig {
         VaultConfig {
@@ -149,178 +148,54 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_initial_deposit_zero_supply_zero_balance() {
-        let vault = create_vault_config(0, 1_000_000);
+    #[test_case(0, 1_000_000, 0, 100, Rounding::Down, 100_000_000;"Initial deposit zero supply zero balance round down")]
+    #[test_case(0, 1_000_000, 0, 100, Rounding::Up, 100_000_000;"Initial deposit zero supply zero balance round up")]
+    #[test_case(0, 1_000_000, 1000, 100, Rounding::Down, 100_100;"Initial deposit zero supply positive balance round down")]
+    #[test_case(5000, 1_000_000, 0, 100, Rounding::Down, 19_996;"Initial deposit zero supply positive balance round down 2")]
+    #[test_case(5000, 1_000_000, 0, 100, Rounding::Up, 19_997;"Initial deposit zero supply positive balance round up 2")]
+    #[test_case(5000, 1_000_000, 0, 100, Rounding::Down, 19_996;"Initial deposit zero supply positive balance round down 3")]
+    #[test_case(10_000, 1_000_000, 10_000, 100, Rounding::Down, 100;"Initial deposit positive supply positive balance round down 2")]
+    #[test_case(20_000, 1_000_000, 10_000, 100, Rounding::Down, 50;"Initial deposit positive supply positive balance round down 3")]
+    #[test_case(10_000, 1_000_000, 9_999, 100, Rounding::Down, 99;"Initial deposit positive supply positive balance round down 4")]
+    #[test_case(10_000, 1_000_000, 9_999, 100, Rounding::Up, 100;"Initial deposit positive supply positive balance round up 1")]
+    #[test_case(10_000, 1_000_000, 10_000, 0, Rounding::Down, 0;"Initial deposit positive supply zero balance round down, high initial price")]
+    #[test_case(0, 1_000_000, 100, 50, Rounding::Down, 5_050;"Initial deposit div by zero prevention")]
+    #[test_case(1_000_000_000, 1_000_000, 1_000_000_000, 1_000_000, Rounding::Down, 1_000_000;"Initial Large values no overflow")]
+    #[test_case(1_000_000, 1_000_000, 1_000_000, 1, Rounding::Down, 1;"Precision with small amounts")]
+    #[test_case(100, 1_000_000, 1_000_000_000, 10, Rounding::Down, 99_009_901;"Assymmetric supply vs assets")]
+
+    fn test_get_shares_from_assets(
+        total_asset_balance: u64,
+        initial_price: u64,
+        supply: u64,
+        asset_amount: u64,
+        rounding: Rounding,
+        expected_shares: u64,
+    ) {
+        let vault = create_vault_config(total_asset_balance, initial_price);
         let shares = vault
-            .get_shares_from_assets(0, 100, Rounding::Down)
+            .get_shares_from_assets(supply, asset_amount, rounding)
             .unwrap();
-        assert_eq!(shares, 100_000_000);
-
-        let shares_up = vault.get_shares_from_assets(0, 100, Rounding::Up).unwrap();
-        assert_eq!(shares_up, 100_000_000);
+        assert_eq!(shares, expected_shares);
     }
 
-    #[test]
-    fn test_supply_positive_balance_zero() {
-        let vault = create_vault_config(0, 1_000_000);
+    #[test_case(1_000_000, 1_000_000, u64::MAX, 100, Rounding::Down;"ERROR: Initial deposit max supply positive balance round down")]
+    #[test_case(u64::MAX, 1_000_000, 1_000_000, 100, Rounding::Down;"ERROR: Initial deposit positive supply max balance round down")]
+    #[test_case(0, u64::MAX, 0, u64::MAX, Rounding::Down;"ERROR: Multiplication overflow initial price")]
+    #[test_case(1, 1_000_000, u64::MAX-1, u64::MAX, Rounding::Down;"ERROR: Multiplication overflow supply")]
+    #[test_case(1, 1_000_000, u64::MAX/2, u64::MAX, Rounding::Down;"ERROR: Result overflows")]
+    fn test_get_shares_from_assets_arithmetic_errors(
+        total_asset_balance: u64,
+        initial_price: u64,
+        supply: u64,
+        asset_amount: u64,
+        rounding: Rounding,
+    ) {
+        let vault = create_vault_config(total_asset_balance, initial_price);
 
-        let shares = vault
-            .get_shares_from_assets(1000, 100, Rounding::Down)
-            .unwrap();
-        assert_eq!(shares, 100_100);
-    }
-
-    #[test]
-    fn test_supply_zero_balance_positive() {
-        let vault = create_vault_config(5000, 1_000_000);
-
-        let shares = vault
-            .get_shares_from_assets(0, 100, Rounding::Down)
-            .unwrap();
-        assert_eq!(shares, 19_996);
-
-        let shares_up = vault.get_shares_from_assets(0, 100, Rounding::Up).unwrap();
-        assert_eq!(shares_up, 19_997);
-    }
-
-    #[test]
-    fn test_supply_positive_balance_positive() {
-        let vault = create_vault_config(10_000, 1_000_000);
-
-        let shares = vault
-            .get_shares_from_assets(10_000, 100, Rounding::Down)
-            .unwrap();
-        assert_eq!(shares, 100);
-
-        let vault2 = create_vault_config(20_000, 1_000_000);
-
-        let shares2 = vault2
-            .get_shares_from_assets(10_000, 100, Rounding::Down)
-            .unwrap();
-        assert_eq!(shares2, 50);
-    }
-
-    #[test]
-    fn test_rounding_down_vs_up() {
-        let vault2 = create_vault_config(10_000, 1_000_000);
-
-        let shares_down = vault2
-            .get_shares_from_assets(9_999, 100, Rounding::Down)
-            .unwrap();
-        let shares_up = vault2
-            .get_shares_from_assets(9_999, 100, Rounding::Up)
-            .unwrap();
-
-        assert_eq!(shares_down, 99);
-        assert_eq!(shares_up, 100);
-    }
-
-    #[test]
-    fn test_max_supply() {
-        let vault = create_vault_config(1_000_000, 1_000_000);
-
-        let result = vault.get_shares_from_assets(u64::MAX, 100, Rounding::Down);
+        let result = vault.get_shares_from_assets(supply, asset_amount, rounding);
         assert!(result.is_err());
     }
-
-    #[test]
-    fn test_max_total_assets() {
-        let vault = create_vault_config(u64::MAX, 1_000_000);
-
-        let result = vault.get_shares_from_assets(1_000_000, 100, Rounding::Down);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_zero_asset_amount() {
-        let vault = create_vault_config(10_000, 1_000_000);
-
-        let shares = vault
-            .get_shares_from_assets(10_000, 0, Rounding::Down)
-            .unwrap();
-        assert_eq!(shares, 0);
-    }
-
-    #[test]
-    fn test_multiplication_overflow_initial_price() {
-        let vault = create_vault_config(0, u64::MAX);
-
-        let result = vault.get_shares_from_assets(0, u64::MAX, Rounding::Down);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_multiplication_overflow_supply() {
-        let vault = create_vault_config(1, 1_000_000);
-
-        let result = vault.get_shares_from_assets(u64::MAX - 1, u64::MAX, Rounding::Down);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_result_exceeds_u64_max() {
-        let vault = create_vault_config(1, 1_000_000);
-
-        let result = vault.get_shares_from_assets(u64::MAX / 2, u64::MAX, Rounding::Down);
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_div_by_zero_prevention() {
-        let vault = create_vault_config(0, 1_000_000);
-
-        let shares = vault
-            .get_shares_from_assets(100, 50, Rounding::Down)
-            .unwrap();
-        assert_eq!(shares, 5_050);
-    }
-
-    #[test]
-    fn test_large_values_no_overflow() {
-        let vault = create_vault_config(1_000_000_000, 1_000_000);
-
-        let shares = vault
-            .get_shares_from_assets(1_000_000_000, 1_000_000, Rounding::Down)
-            .unwrap();
-
-        assert_eq!(shares, 1_000_000);
-    }
-
-    #[test]
-    fn test_precision_with_small_amounts() {
-        let vault = create_vault_config(1_000_000, 1_000_000);
-
-        let shares = vault
-            .get_shares_from_assets(1_000_000, 1, Rounding::Down)
-            .unwrap();
-        assert_eq!(shares, 1);
-
-        let shares_up = vault
-            .get_shares_from_assets(1_000_000, 1, Rounding::Up)
-            .unwrap();
-        assert_eq!(shares_up, 1);
-    }
-
-    #[test]
-    fn test_asymmetric_supply_vs_assets() {
-        let vault = create_vault_config(100, 1_000_000);
-
-        let shares = vault
-            .get_shares_from_assets(1_000_000_000, 10, Rounding::Down)
-            .unwrap();
-
-        assert_eq!(shares, 99_009_901);
-
-        let vault2 = create_vault_config(1_000_000_000, 1_000_000);
-
-        let shares2 = vault2
-            .get_shares_from_assets(100, 10_000, Rounding::Down)
-            .unwrap();
-
-        assert_eq!(shares2, 0);
-    }
-
     #[test]
     fn test_initial_price_variations() {
         let vault_high = create_vault_config(0, 1_000_000_000);
