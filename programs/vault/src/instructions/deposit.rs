@@ -22,6 +22,9 @@ pub struct Deposit<'info> {
 
     #[account(
         mut,
+        token::mint = asset_mint,
+        token::authority = vault,
+        token::token_program = asset_token_program,
         seeds = [RESERVE_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
         bump,
     )]
