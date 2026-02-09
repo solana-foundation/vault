@@ -8,7 +8,7 @@ use solana_sdk::{
 };
 use vault_client::{
     sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
-    Pubkey, UpdateVaultBuilder, WithdrawBuilder,
+    Pubkey, RedeemBuilder, UpdateVaultBuilder, WithdrawBuilder,
 };
 
 use anchor_spl::{
@@ -194,6 +194,40 @@ pub fn withdraw(
         .user_assets_account(user_assets_account)
         .user_shares_account(user_shares_account)
         .assets(assets_amount)
+        .asset_token_program(asset_token_program)
+        .share_token_program(share_token_program)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
+    return svm.send_transaction(tx);
+}
+
+pub fn redeem(
+    svm: &mut LiteSVM,
+    user: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    reserve: Pubkey,
+    vault: Pubkey,
+    fee_recipient: Pubkey,
+    user_assets_account: Pubkey,
+    user_shares_account: Pubkey,
+    shares_amount: u64,
+    asset_token_program: Pubkey,
+    share_token_program: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = RedeemBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .reserve(reserve)
+        .vault(vault)
+        .fee_recipient(fee_recipient)
+        .user_assets_account(user_assets_account)
+        .user_shares_account(user_shares_account)
+        .shares(shares_amount)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
         .instruction()
