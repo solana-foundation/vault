@@ -191,8 +191,8 @@ pub fn withdraw(
         .user_assets_account(user_assets_account)
         .user_shares_account(user_shares_account)
         .assets(assets_amount)
-        .reserve_token_program(token::ID)
-        .token_program(token::ID)
+        .asset_token_program(token::ID)
+        .share_token_program(token::ID)
         .instruction()
         .into_sdk_instruction();
 

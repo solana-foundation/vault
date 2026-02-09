@@ -29,6 +29,9 @@ pub enum VaultProgramError {
     #[msg("Deposit amount too small to mint shares.")]
     InsufficientDepositAmount,
 
+    #[msg("Initial price has to be bigger than 0")]
+    InvalidInitialPrice,
+
     #[msg("Withdraw amount too small to burn shares.")]
     InsufficientWithdrawAmount,
 }

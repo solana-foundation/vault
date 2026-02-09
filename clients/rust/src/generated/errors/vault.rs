@@ -36,9 +36,12 @@ pub enum VaultError {
     /// 6008 - Deposit amount too small to mint shares.
     #[error("Deposit amount too small to mint shares.")]
     InsufficientDepositAmount = 0x1778,
-    /// 6009 - Withdraw amount too small to burn shares.
+    /// 6009 - Initial price has to be bigger than 0
+    #[error("Initial price has to be bigger than 0")]
+    InvalidInitialPrice = 0x1779,
+    /// 6010 - Withdraw amount too small to burn shares.
     #[error("Withdraw amount too small to burn shares.")]
-    InsufficientWithdrawAmount = 0x1779,
+    InsufficientWithdrawAmount = 0x177A,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

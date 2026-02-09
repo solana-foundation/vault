@@ -4,7 +4,7 @@ use solana_sdk::{
     account::ReadableAccount, instruction::InstructionError, program_pack::Pack, signature::Keypair, signer::Signer, transaction::TransactionError
 };
 use spl_token::state::{Account as TokenAccount, Mint as TokenMint};
-use vault_client::{sdk::program_id, FeeType};
+use vault_client::{FeeType, VaultConfig, sdk::program_id};
 
 use crate::vault::helper_functions::{
     create_ata, create_mint, deposit, get_fee, helper_mint_to, set_up_vault, withdraw
@@ -98,7 +98,7 @@ fn test_withdraw_vault(
     )
     .unwrap()
     .amount;
-    // newly created reserve ATA should have 0 assets
+    // newly created reserve toke account should have 0 assets
     assert_eq!(reserve_balance_before, 0);
 
     let share_supply_before_deposit = TokenMint::unpack(
@@ -107,6 +107,12 @@ fn test_withdraw_vault(
     .unwrap()
     .supply;
     assert_eq!(share_supply_before_deposit, 0);
+
+    let vault = svm
+        .get_account(&vault_pubkey)
+        .expect("Vault account should exist");
+    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    assert_eq!(vault_config.total_asset_balance, 0, "Vault internal balance should be 0");
 
     // -------------------- deposit --------------------
     let deposit_amount = 500_000;
@@ -169,6 +175,12 @@ fn test_withdraw_vault(
     .unwrap()
     .supply;
     assert_eq!(share_supply_after_deposit, deposit_net);
+
+    let vault = svm
+        .get_account(&vault_pubkey)
+        .expect("Vault account should exist");
+    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    assert_eq!(vault_config.total_asset_balance, deposit_net, "Vault internal balance should be equal to deposit_net");
 
     // -------------------- withdraw --------------------
     // `assets_out` is NET to user. Vault additionally pays `withdraw_fee(assets_out)` out of reserve.
@@ -240,7 +252,17 @@ fn test_withdraw_vault(
     .unwrap()
     .supply;
     assert_eq!(share_supply_after_withdraw, deposit_net - gross_amount);
-    
+
+    let vault = svm
+        .get_account(&vault_pubkey)
+        .expect("Vault account should exist");
+    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    assert_eq!(
+        vault_config.total_asset_balance,
+        deposit_net - gross_amount,
+        "Vault internal balance should be deposit_net - gross_amount"
+    );    
+
     // ---------- withdraw fails (not enough shares) ------------
     let failing_assets_out = user_asset_amount * 2; // amount the user has not deposited
     let result = withdraw(

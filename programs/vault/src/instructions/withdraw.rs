@@ -25,6 +25,9 @@ pub struct Withdraw<'info> {
     /// Vault reserve token account holding underlying assets
     #[account(
         mut,
+        token::mint = asset_mint,
+        token::authority = vault,
+        token::token_program = asset_token_program,
         seeds = [RESERVE_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
         bump,
     )]
@@ -53,7 +56,6 @@ pub struct Withdraw<'info> {
         associated_token::authority = user,
         associated_token::mint = asset_mint,
         associated_token::token_program = asset_token_program,
-        
     )]
     pub user_assets_account: InterfaceAccount<'info, TokenAccount>,
 
@@ -69,7 +71,6 @@ pub struct Withdraw<'info> {
     pub share_token_program: Interface<'info, TokenInterface>,
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub associated_token_program: Program<'info, AssociatedToken>,
-    pub system_program: Program<'info, System>,
 }
 
 impl <'info> Withdraw<'info> {
