@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
-    token_interface::{self, burn, Mint, Burn, TokenAccount, TokenInterface, TransferChecked},
+    token_interface::{self, burn, Burn, Mint, TokenAccount, TokenInterface, TransferChecked},
 };
 
 use crate::{
@@ -73,11 +73,11 @@ pub struct Withdraw<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
-impl <'info> Withdraw<'info> {
+impl<'info> Withdraw<'info> {
     pub fn transfer_assets_to_fee_recipient(&mut self, fee: u64) -> Result<()> {
         let asset_mint = self.asset_mint.key();
         let share_mint = self.share_mint.key();
-        
+
         let cpi_accounts = TransferChecked {
             from: self.reserve.to_account_info(),
             mint: self.asset_mint.to_account_info(),
@@ -95,7 +95,7 @@ impl <'info> Withdraw<'info> {
         let cpi_ctx = CpiContext::new_with_signer(
             self.asset_token_program.to_account_info(),
             cpi_accounts,
-            seeds
+            seeds,
         );
 
         token_interface::transfer_checked(cpi_ctx, fee, self.asset_mint.decimals)
@@ -121,9 +121,9 @@ impl <'info> Withdraw<'info> {
         ]];
 
         let cpi_ctx = CpiContext::new_with_signer(
-            self.asset_token_program.to_account_info(), 
-            cpi_accounts, 
-            seeds
+            self.asset_token_program.to_account_info(),
+            cpi_accounts,
+            seeds,
         );
 
         token_interface::transfer_checked(cpi_ctx, asset_amount, self.asset_mint.decimals)
@@ -137,10 +137,7 @@ impl <'info> Withdraw<'info> {
             authority: self.user.to_account_info(),
         };
 
-        let cpi_ctx = CpiContext::new(
-            self.share_token_program.to_account_info(), 
-            cpi_accounts
-        );
+        let cpi_ctx = CpiContext::new(self.share_token_program.to_account_info(), cpi_accounts);
 
         burn(cpi_ctx, shares_amount)
     }
@@ -162,10 +159,10 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
         .ok_or(VaultProgramError::ArithmeticError)?;
 
     let shares_to_burn = ctx.accounts.vault.get_shares_from_assets(
-        ctx.accounts.share_mint.supply, 
-        amount_with_fee, 
+        ctx.accounts.share_mint.supply,
+        amount_with_fee,
         // This ensures the user provides (burns) enough shares
-        Rounding::Up
+        Rounding::Up,
     )?;
 
     // no need to check if user has enough shares
@@ -185,7 +182,7 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
     // transfer from vault to user
     ctx.accounts.transfer_assets_to_user(amount_assets_out)?;
 
-    // decrease vault assets 
+    // decrease vault assets
     ctx.accounts.vault.decrease_asset_supply(amount_with_fee)?;
 
     Ok(())

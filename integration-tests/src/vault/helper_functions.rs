@@ -7,7 +7,8 @@ use solana_sdk::{
     system_instruction::create_account, transaction::Transaction,
 };
 use vault_client::{
-    CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType, Pubkey, UpdateVaultBuilder, WithdrawBuilder, sdk::IntoSdkInstruction
+    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
+    Pubkey, UpdateVaultBuilder, WithdrawBuilder,
 };
 
 use anchor_spl::{
@@ -319,7 +320,7 @@ pub fn set_up_vault(
     asset_token_program: Pubkey,
     share_token_program: Pubkey,
     deposit_fees: &FeeType,
-    withdraw_fees: &FeeType
+    withdraw_fees: &FeeType,
 ) -> (Keypair, Keypair, Keypair, Keypair, Keypair, Pubkey, Pubkey) {
     let authority = Keypair::new();
     let user = Keypair::new();
