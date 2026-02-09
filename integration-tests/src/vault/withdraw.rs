@@ -85,7 +85,7 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType) {
         TokenAccount::unpack(svm.get_account(&reserve_pubkey).unwrap().data())
             .unwrap()
             .amount;
-    // newly created reserve toke account should have 0 assets
+    // newly created reserve token account should have 0 assets
     assert_eq!(reserve_balance_before, 0);
 
     let share_supply_before_deposit =
@@ -197,6 +197,8 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType) {
         user_asset_ata,
         user_share_ata,
         assets_out, // NET to user
+        token::ID,
+        token::ID,
     );
     assert!(result.is_ok(), "withdraw failed unexpectedly");
 
@@ -265,6 +267,8 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType) {
         user_asset_ata,
         user_share_ata,
         failing_assets_out,
+        token::ID,
+        token::ID,
     );
 
     let Err(error) = result else {

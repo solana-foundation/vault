@@ -16,7 +16,7 @@ use anchor_spl::{
         get_associated_token_address_with_program_id,
         spl_associated_token_account::instruction::create_associated_token_account,
     },
-    token::{self, spl_token},
+    token::spl_token,
     token_2022::spl_token_2022::{
         self,
         extension::{transfer_fee::instruction::initialize_transfer_fee_config, ExtensionType},
@@ -181,6 +181,8 @@ pub fn withdraw(
     user_assets_account: Pubkey,
     user_shares_account: Pubkey,
     assets_amount: u64,
+    asset_token_program: Pubkey,
+    share_token_program: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = WithdrawBuilder::new()
         .user(user.pubkey())
@@ -192,8 +194,8 @@ pub fn withdraw(
         .user_assets_account(user_assets_account)
         .user_shares_account(user_shares_account)
         .assets(assets_amount)
-        .asset_token_program(token::ID)
-        .share_token_program(token::ID)
+        .asset_token_program(asset_token_program)
+        .share_token_program(share_token_program)
         .instruction()
         .into_sdk_instruction();
 
