@@ -211,4 +211,45 @@ mod tests {
             .unwrap();
         assert_eq!(shares_low, 1_000_000);
     }
+
+    #[test_case(FeeType::NoFee, 0, 0; "NoFee with zero amount")]
+    #[test_case(FeeType::NoFee, 100, 0; "NoFee with small amount")]
+    #[test_case(FeeType::NoFee, 1_000_000, 0; "NoFee with large amount")]
+    #[test_case(FeeType::NoFee, u64::MAX, 0; "NoFee with max amount")]
+    #[test_case(FeeType::FixedAmount { amount: 0 }, 0, 0; "FixedAmount zero fee zero amount")]
+    #[test_case(FeeType::FixedAmount { amount: 0 }, 1_000_000, 0; "FixedAmount zero fee large amount")]
+    #[test_case(FeeType::FixedAmount { amount: 50 }, 0, 50; "FixedAmount fee with zero amount")]
+    #[test_case(FeeType::FixedAmount { amount: 100 }, 1_000, 100; "FixedAmount basic fee")]
+    #[test_case(FeeType::FixedAmount { amount: 1_000 }, 100, 1_000; "FixedAmount fee larger than amount")]
+    #[test_case(FeeType::FixedAmount { amount: u64::MAX }, u64::MAX, u64::MAX; "FixedAmount max fee max amount")]
+    #[test_case(FeeType::Percentage { bps: 0 }, 1_000_000, 0; "Percentage zero bps")]
+    #[test_case(FeeType::Percentage { bps: 100 }, 0, 0; "Percentage with zero amount")]
+    #[test_case(FeeType::Percentage { bps: 100 }, 1_000_000, 10_000; "Percentage 1% of 1M (100 bps)")]
+    #[test_case(FeeType::Percentage { bps: 50 }, 1_000_000, 5_000; "Percentage 0.5% of 1M (50 bps)")]
+    #[test_case(FeeType::Percentage { bps: 1 }, 1_000_000, 100; "Percentage 0.01% of 1M (1 bps)")]
+    #[test_case(FeeType::Percentage { bps: 10_000 }, 1_000_000, 1_000_000; "Percentage 100% of 1M (10000 bps)")]
+    #[test_case(FeeType::Percentage { bps: 100 }, 100, 1; "Percentage rounding up small amount")]
+    #[test_case(FeeType::Percentage { bps: 100 }, 99, 1; "Percentage rounding up tiny amount")]
+    #[test_case(FeeType::Percentage { bps: 100 }, 1, 1; "Percentage rounding up minimal amount")]
+    #[test_case(FeeType::Percentage { bps: 1 }, 10_000, 1; "Percentage 1 bps rounds up")]
+    #[test_case(FeeType::Percentage { bps: 50 }, 10_000, 50; "Percentage 50 bps on 10k")]
+    #[test_case(FeeType::Percentage { bps: 100 }, 10_000, 100; "Percentage 100 bps on 10k")]
+    #[test_case(FeeType::Percentage { bps: 10_000 }, 100, 100; "Percentage 100% fee equals amount")]
+    #[test_case(FeeType::Percentage { bps: 5_000 }, 100, 50; "Percentage 50% fee")]
+    #[test_case(FeeType::Percentage { bps: 1 }, 100, 1; "Percentage very small bps")]
+    #[test_case(FeeType::Percentage { bps: 9_999 }, 10_000, 9_999; "Percentage near 100%")]
+    #[test_case(FeeType::Percentage { bps: 100 }, 1_000_000_000, 10_000_000; "Percentage on 1B")]
+    #[test_case(FeeType::Percentage { bps: 1 }, 1_000_000_000, 100_000; "Percentage 1 bps on 1B")]
+
+    fn test_get_fee(fee_type: FeeType, total_amount: u64, expected_fee: u64) {
+        let fee = fee_type.get_fee(total_amount).unwrap();
+        assert_eq!(fee, expected_fee);
+    }
+
+    #[test_case(FeeType::Percentage { bps: 10_000 }, u64::MAX;"ERROR: Result overflows on multiply")]
+    #[test_case(FeeType::Percentage { bps: u16::MAX  }, u64::MAX;"ERROR: Result overflows on add")]
+    fn test_percentage_overflow_on_multiply(fee_type: FeeType, amount: u64) {
+        let result = fee_type.get_fee(amount);
+        assert!(result.is_err());
+    }
 }
