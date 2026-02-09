@@ -36,6 +36,9 @@ pub enum VaultError {
     /// 6008 - Deposit amount too small to mint shares
     #[error("Deposit amount too small to mint shares")]
     InsufficientDepositAmount = 0x1778,
+    /// 6009 - Initial price has to be bigger than 0
+    #[error("Initial price has to be bigger than 0")]
+    InvalidInitialPrice = 0x1779,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

@@ -4,7 +4,10 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::state::{FeeType, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED};
+use crate::{
+    error::VaultProgramError,
+    state::{FeeType, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+};
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct VaultArgs {
@@ -75,6 +78,10 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
     if let Some(fee) = args.withdraw_fees {
         fee.validate()?;
     }
+    require!(
+        args.initial_price != 0,
+        VaultProgramError::InvalidInitialPrice
+    );
     ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
     ctx.accounts.vault.set_inner(VaultConfig {
         asset_mint_address: ctx.accounts.asset_mint.key(),
