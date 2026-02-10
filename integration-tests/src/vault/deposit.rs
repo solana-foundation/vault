@@ -11,7 +11,7 @@ use solana_sdk::{
 };
 use spl_token::state::Account as TokenAccount;
 use spl_token_2022::state::Account as TokenAccount2022;
-use vault_client::{sdk::program_id, FeeType};
+use vault_client::{sdk::program_id, FeeType, VaultConfig};
 
 use crate::vault::helper_functions::{
     create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, helper_mint_to,
@@ -54,7 +54,7 @@ fn test_deposit_vault() {
 
     let mut fee_recipient_ata_account = svm
         .get_account(&fee_recipient_ata)
-        .expect("Vault account should exist");
+        .expect("Fee recipient ata account should exist");
 
     let fee_recipient_balance_before = TokenAccount::unpack(fee_recipient_ata_account.data())
         .unwrap()
@@ -63,14 +63,14 @@ fn test_deposit_vault() {
 
     let mut reserve_account = svm
         .get_account(&reserve_pubkey)
-        .expect("Vault account should exist");
+        .expect("Reserve account should exist");
 
     let reserve_balance_before = TokenAccount::unpack(reserve_account.data()).unwrap().amount;
     assert_eq!(reserve_balance_before, 0);
 
     let mut user_asset_ata_account = svm
         .get_account(&user_asset_ata)
-        .expect("Vault account should exist");
+        .expect("User asset ata account should exist");
 
     let user_asset_balance_before = TokenAccount::unpack(user_asset_ata_account.data())
         .unwrap()
@@ -79,12 +79,19 @@ fn test_deposit_vault() {
 
     let mut user_share_ata_account = svm
         .get_account(&user_share_ata)
-        .expect("Vault account should exist");
+        .expect("User share ata should exist");
 
     let user_share_balance_before = TokenAccount::unpack(user_share_ata_account.data())
         .unwrap()
         .amount;
     assert_eq!(user_share_balance_before, 0);
+
+    let vault = svm
+        .get_account(&vault_pubkey)
+        .expect("Vault account should exist");
+    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    assert_eq!(vault_config.total_asset_balance, 0);
+
     let deposit_amount = 500_000;
     let result = deposit(
         &mut svm,
@@ -105,17 +112,18 @@ fn test_deposit_vault() {
 
     fee_recipient_ata_account = svm
         .get_account(&fee_recipient_ata)
-        .expect("Vault account should exist");
+        .expect("Fee recipient ata account should exist");
 
     let fee_recipient_balance_after = TokenAccount::unpack(fee_recipient_ata_account.data())
         .unwrap()
         .amount;
     let fee = get_fee(FeeType::Percentage { bps: 100 }, deposit_amount);
+    let deposit_amount_minus_fee = deposit_amount.checked_sub(fee).expect("overflow");
     assert_eq!(fee_recipient_balance_after, fee);
 
     user_asset_ata_account = svm
         .get_account(&user_asset_ata)
-        .expect("Vault account should exist");
+        .expect("user asset ata account should exist");
 
     let user_asset_balance_after = TokenAccount::unpack(user_asset_ata_account.data())
         .unwrap()
@@ -130,35 +138,31 @@ fn test_deposit_vault() {
 
     user_share_ata_account = svm
         .get_account(&user_share_ata)
-        .expect("Vault account should exist");
+        .expect("User share ata account should exist");
 
     let user_share_balance_after = TokenAccount::unpack(user_share_ata_account.data())
         .unwrap()
         .amount;
 
-    assert_eq!(
-        user_share_balance_after,
-        deposit_amount.checked_sub(fee).expect("overflow")
-    );
+    assert_eq!(user_share_balance_after, deposit_amount_minus_fee);
 
     reserve_account = svm
         .get_account(&reserve_pubkey)
-        .expect("Vault account should exist");
+        .expect("reserve account should exist");
 
     let reserve_balance_after = TokenAccount::unpack(reserve_account.data()).unwrap().amount;
-    assert_eq!(
-        reserve_balance_after,
-        deposit_amount.checked_sub(fee).expect("overflow")
-    );
+    assert_eq!(reserve_balance_after, deposit_amount_minus_fee);
     let share_mint_account = svm
         .get_account(&share_mint.pubkey())
-        .expect("Vault account should exist");
+        .expect("share mint account should exist");
 
     let mint_account = spl_token::state::Mint::unpack(&share_mint_account.data).unwrap();
-    assert_eq!(
-        mint_account.supply,
-        deposit_amount.checked_sub(fee).expect("overflow")
-    );
+    assert_eq!(mint_account.supply, deposit_amount_minus_fee);
+    let vault = svm
+        .get_account(&vault_pubkey)
+        .expect("Vault account should exist");
+    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    assert_eq!(vault_config.total_asset_balance, deposit_amount_minus_fee);
 }
 
 #[test]
@@ -203,7 +207,7 @@ fn test_deposit_vault_with_transfer_fees() {
 
     let mut fee_recipient_ata_account = svm
         .get_account(&fee_recipient_ata)
-        .expect("Vault account should exist");
+        .expect("Fee recipient ata account should exist");
 
     let fee_recipient_balance_before =
         StateWithExtensions::<TokenAccount2022>::unpack(fee_recipient_ata_account.data())
@@ -214,7 +218,7 @@ fn test_deposit_vault_with_transfer_fees() {
 
     let mut reserve_account = svm
         .get_account(&reserve_pubkey)
-        .expect("Vault account should exist");
+        .expect("Reserve account should exist");
 
     let reserve_balance_before =
         StateWithExtensions::<TokenAccount2022>::unpack(reserve_account.data())
@@ -225,7 +229,7 @@ fn test_deposit_vault_with_transfer_fees() {
 
     let mut user_asset_ata_account = svm
         .get_account(&user_asset_ata)
-        .expect("Vault account should exist");
+        .expect("User asset ata account should exist");
 
     let user_asset_balance_before =
         StateWithExtensions::<TokenAccount2022>::unpack(user_asset_ata_account.data())
@@ -236,12 +240,17 @@ fn test_deposit_vault_with_transfer_fees() {
 
     let mut user_share_ata_account = svm
         .get_account(&user_share_ata)
-        .expect("Vault account should exist");
+        .expect("User share ata account should exist");
 
     let user_share_balance_before = TokenAccount::unpack(user_share_ata_account.data())
         .unwrap()
         .amount;
     assert_eq!(user_share_balance_before, 0);
+    let vault = svm
+        .get_account(&vault_pubkey)
+        .expect("Vault account should exist");
+    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    assert_eq!(vault_config.total_asset_balance, 0);
     let deposit_amount = 500_000;
     let result = deposit(
         &mut svm,
@@ -262,7 +271,7 @@ fn test_deposit_vault_with_transfer_fees() {
 
     fee_recipient_ata_account = svm
         .get_account(&fee_recipient_ata)
-        .expect("Vault account should exist");
+        .expect("Fee recipient ata account should exist");
 
     let fee_recipient_balance_after =
         StateWithExtensions::<TokenAccount2022>::unpack(fee_recipient_ata_account.data())
@@ -275,14 +284,12 @@ fn test_deposit_vault_with_transfer_fees() {
         .unwrap()
         .checked_div(10_000)
         .unwrap();
-    assert_eq!(
-        fee_recipient_balance_after,
-        fee.checked_sub(transfer_fee_amount).unwrap()
-    );
+    let fee_minus_transfer_fee_amount = fee.checked_sub(transfer_fee_amount).unwrap();
+    assert_eq!(fee_recipient_balance_after, fee_minus_transfer_fee_amount);
 
     user_asset_ata_account = svm
         .get_account(&user_asset_ata)
-        .expect("Vault account should exist");
+        .expect("User asset account should exist");
 
     let user_asset_balance_after =
         StateWithExtensions::<TokenAccount2022>::unpack(user_asset_ata_account.data())
@@ -299,7 +306,7 @@ fn test_deposit_vault_with_transfer_fees() {
 
     user_share_ata_account = svm
         .get_account(&user_share_ata)
-        .expect("Vault account should exist");
+        .expect("User share ata account should exist");
 
     let user_share_balance_after = TokenAccount::unpack(user_share_ata_account.data())
         .unwrap()
@@ -313,18 +320,20 @@ fn test_deposit_vault_with_transfer_fees() {
         .checked_div(10_000)
         .unwrap();
 
+    let deposit_amount_minus_fee_minus_transfer_fee_deposit_amount = deposit_amount
+        .checked_sub(fee)
+        .expect("overflow")
+        .checked_sub(transfer_fee_deposit_amount)
+        .expect("overflow");
+
     assert_eq!(
         user_share_balance_after,
-        deposit_amount
-            .checked_sub(fee)
-            .expect("overflow")
-            .checked_sub(transfer_fee_deposit_amount)
-            .expect("overflow")
+        deposit_amount_minus_fee_minus_transfer_fee_deposit_amount
     );
 
     reserve_account = svm
         .get_account(&reserve_pubkey)
-        .expect("Vault account should exist");
+        .expect("Reserve account should exist");
 
     let reserve_balance_after =
         StateWithExtensions::<TokenAccount2022>::unpack(reserve_account.data())
@@ -333,23 +342,23 @@ fn test_deposit_vault_with_transfer_fees() {
             .amount;
     assert_eq!(
         reserve_balance_after,
-        deposit_amount
-            .checked_sub(fee)
-            .expect("overflow")
-            .checked_sub(transfer_fee_deposit_amount)
-            .expect("overflow")
+        deposit_amount_minus_fee_minus_transfer_fee_deposit_amount
     );
     let share_mint_account = svm
         .get_account(&share_mint.pubkey())
-        .expect("Vault account should exist");
+        .expect("Share mint account should exist");
 
     let mint_account = spl_token::state::Mint::unpack(&share_mint_account.data).unwrap();
     assert_eq!(
         mint_account.supply,
-        deposit_amount
-            .checked_sub(fee)
-            .expect("overflow")
-            .checked_sub(transfer_fee_deposit_amount)
-            .expect("overflow")
+        deposit_amount_minus_fee_minus_transfer_fee_deposit_amount
+    );
+    let vault = svm
+        .get_account(&vault_pubkey)
+        .expect("Vault account should exist");
+    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    assert_eq!(
+        vault_config.total_asset_balance,
+        deposit_amount_minus_fee_minus_transfer_fee_deposit_amount
     );
 }

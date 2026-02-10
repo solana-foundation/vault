@@ -365,7 +365,6 @@ pub fn set_up_vault(
         asset_token_program,
         share_token_program,
     );
-
     let _ = update_vault(
         svm,
         &authority,
