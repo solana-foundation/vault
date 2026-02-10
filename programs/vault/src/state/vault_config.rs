@@ -315,4 +315,76 @@ mod tests {
         let result = fee_type.get_fee(amount);
         assert!(result.is_err());
     }
+    #[test_case(1000,1,500,100,Rounding::Down,50;"Basic calculation rounding down")]
+    #[test_case(1000,1,500,100,Rounding::Up,51;"Basic calculation rounding up")]
+    #[test_case(1000,1,0,100,Rounding::Down,0;"Zero supply")]
+    #[test_case(0,1,500,100,Rounding::Down,50100;"Zero assets")]
+    #[test_case(0,1,0,0,Rounding::Down,0;"All zeros")]
+    #[test_case(1000,1,1000,500,Rounding::Down,500;"Equal supply and total assets")]
+    #[test_case(1_000_000_000,1,1_000_000_000,1_000_000,Rounding::Down,1_000_000;"Large values within bounds")]
+    #[test_case(3,1,10,1,Rounding::Down,2;"Precision loss rounding down")]
+    #[test_case(3,1,10,1,Rounding::Up,3;"Precision loss rounding up")]
+    #[test_case(1,1,1,1,Rounding::Down,1;"Single unit")]
+
+    fn test_get_assets_from_shares(
+        total_asset_amount: u64,
+        initial_price: u64,
+        supply: u64,
+        asset_amount: u64,
+        rounding: Rounding,
+        expected_amount: u64,
+    ) {
+        let vault = create_vault_config(total_asset_amount, initial_price);
+        let result = vault.get_assets_from_shares(supply, asset_amount, rounding);
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), expected_amount);
+    }
+
+    #[test_case(1000,1,u64::MAX,100,Rounding::Down;"Error: Overflow")]
+    #[test_case(u64::MAX,1,100,100,Rounding::Down;"Error: Total assets overflow")]
+    #[test_case(1,1,u64::MAX - 1,u64::MAX - 1,Rounding::Down;"Error: Multiplication overflow")]
+    #[test_case(1,1,u64::MAX / 2,u64::MAX / 2,Rounding::Down;"Error: Mint result exceeds u64 max")]
+    fn test_get_assets_from_shares_error(
+        total_asset_amount: u64,
+        initial_price: u64,
+        supply: u64,
+        asset_amount: u64,
+        rounding: Rounding,
+    ) {
+        let vault = create_vault_config(total_asset_amount, initial_price);
+        let result = vault.get_assets_from_shares(supply, asset_amount, rounding);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_rounding_difference() {
+        let vault_down = create_vault_config(1000, 1);
+        let vault_up = create_vault_config(1000, 1);
+
+        let result_down = vault_down
+            .get_assets_from_shares(333, 100, Rounding::Down)
+            .unwrap();
+        let result_up = vault_up
+            .get_assets_from_shares(333, 100, Rounding::Up)
+            .unwrap();
+
+        assert!(result_up >= result_down);
+    }
+    #[test]
+    fn test_exact_division() {
+        let vault_down = create_vault_config(99, 1);
+        let result_down = vault_down
+            .get_assets_from_shares(99, 100, Rounding::Down)
+            .unwrap();
+
+        let vault_up = create_vault_config(99, 1);
+        let result_up = vault_up
+            .get_assets_from_shares(99, 100, Rounding::Up)
+            .unwrap();
+
+        assert_eq!(result_down, 100);
+        assert_eq!(result_up, 100);
+    }
 }
