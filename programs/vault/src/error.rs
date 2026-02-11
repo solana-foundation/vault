@@ -26,9 +26,18 @@ pub enum VaultProgramError {
     #[msg("The provided vault reserve should be empty in order to close it.")]
     VaultShouldBeEmpty,
 
-    #[msg("Deposit amount too small to mint shares")]
+    #[msg("Deposit amount too small to mint shares.")]
     InsufficientDepositAmount,
 
     #[msg("Initial price has to be bigger than 0")]
     InvalidInitialPrice,
+
+    #[msg("Withdraw amount too small to burn shares.")]
+    InsufficientWithdrawAmount,
+
+    #[msg("Redeem shares amount too small.")]
+    InsufficientRedeemAmount,
+
+    #[msg("Invalid vault state for this operation.")]
+    InvalidState,
 }

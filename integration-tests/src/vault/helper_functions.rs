@@ -3,12 +3,16 @@ use litesvm::{
     LiteSVM,
 };
 use solana_sdk::{
-    msg, program_pack::Pack, signature::Keypair, signer::Signer,
-    system_instruction::create_account, transaction::Transaction,
+    account::{Account, ReadableAccount},
+    program_pack::Pack,
+    signature::Keypair,
+    signer::Signer,
+    system_instruction::create_account,
+    transaction::Transaction,
 };
 use vault_client::{
     sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
-    MintBuilder, Pubkey, UpdateVaultBuilder,
+    MintBuilder, Pubkey, RedeemBuilder, UpdateVaultBuilder, WithdrawBuilder,
 };
 
 use anchor_spl::{
@@ -16,13 +20,21 @@ use anchor_spl::{
         get_associated_token_address_with_program_id,
         spl_associated_token_account::instruction::create_associated_token_account,
     },
-    token::{self, spl_token},
-    token_2022::spl_token_2022::{
+    token::spl_token,
+    token_2022::{
         self,
-        extension::{transfer_fee::instruction::initialize_transfer_fee_config, ExtensionType},
-        state::Mint,
+        spl_token_2022::{
+            self,
+            extension::{
+                transfer_fee::instruction::initialize_transfer_fee_config, ExtensionType,
+                StateWithExtensions,
+            },
+            state::Mint,
+        },
     },
 };
+use spl_token::state::Account as TokenAccount;
+use spl_token_2022::state::{Account as TokenAccount2022, Mint as Token2022Mint};
 
 pub fn create_vault(
     svm: &mut LiteSVM,
@@ -204,6 +216,74 @@ pub fn mint(
     return svm.send_transaction(tx);
 }
 
+pub fn withdraw(
+    svm: &mut LiteSVM,
+    user: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    reserve: Pubkey,
+    vault: Pubkey,
+    fee_recipient: Pubkey,
+    user_assets_account: Pubkey,
+    user_shares_account: Pubkey,
+    assets_amount: u64,
+    asset_token_program: Pubkey,
+    share_token_program: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = WithdrawBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .reserve(reserve)
+        .vault(vault)
+        .fee_recipient(fee_recipient)
+        .user_assets_account(user_assets_account)
+        .user_shares_account(user_shares_account)
+        .assets(assets_amount)
+        .asset_token_program(asset_token_program)
+        .share_token_program(share_token_program)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
+    return svm.send_transaction(tx);
+}
+
+pub fn redeem(
+    svm: &mut LiteSVM,
+    user: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    reserve: Pubkey,
+    vault: Pubkey,
+    fee_recipient: Pubkey,
+    user_assets_account: Pubkey,
+    user_shares_account: Pubkey,
+    shares_amount: u64,
+    asset_token_program: Pubkey,
+    share_token_program: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = RedeemBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .reserve(reserve)
+        .vault(vault)
+        .fee_recipient(fee_recipient)
+        .user_assets_account(user_assets_account)
+        .user_shares_account(user_shares_account)
+        .shares(shares_amount)
+        .asset_token_program(asset_token_program)
+        .share_token_program(share_token_program)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
+    return svm.send_transaction(tx);
+}
+
 pub fn create_mint(svm: &mut LiteSVM, signer: &Keypair, mint: &Keypair) {
     let rent = svm.minimum_balance_for_rent_exemption(Mint::LEN);
     let init_account_ix: solana_sdk::instruction::Instruction = create_account(
@@ -321,6 +401,8 @@ pub fn set_up_vault(
     share_mint: &Keypair,
     asset_token_program: Pubkey,
     share_token_program: Pubkey,
+    deposit_fees: &FeeType,
+    withdraw_fees: &FeeType,
 ) -> (Keypair, Keypair, Keypair, Keypair, Keypair, Pubkey, Pubkey) {
     let authority = Keypair::new();
     let user = Keypair::new();
@@ -357,8 +439,8 @@ pub fn set_up_vault(
         share_mint.pubkey(),
         reserve_pubkey,
         vault_pubkey,
-        FeeType::Percentage { bps: 100 },
-        FeeType::NoFee,
+        deposit_fees.clone(),
+        withdraw_fees.clone(),
         100_000_000,
         1,
         fee_recipient.pubkey(),
@@ -371,8 +453,8 @@ pub fn set_up_vault(
         asset_mint.pubkey(),
         share_mint.pubkey(),
         vault_pubkey,
-        FeeType::Percentage { bps: 100 },
-        FeeType::NoFee,
+        deposit_fees.clone(),
+        withdraw_fees.clone(),
         100_000_000,
         false,
         authority.pubkey(),
@@ -441,4 +523,44 @@ pub fn create_mint_with_transfer_fee(
 
     svm.send_transaction(tx)
         .expect("create_mint_with_transfer_fee transaction failed");
+}
+
+/// gets the amount of a token account, depending on the account owner
+pub fn get_token_account_amount(account: &Account) -> u64 {
+    if account.owner == token_2022::ID {
+        StateWithExtensions::<TokenAccount2022>::unpack(account.data())
+            .unwrap()
+            .base
+            .amount
+    } else {
+        TokenAccount::unpack(account.data()).unwrap().amount
+    }
+}
+
+/// gets the supply of a token mint, depending on the account owner
+pub fn get_mint_supply(account: &Account) -> u64 {
+    if account.owner == token_2022::ID {
+        let state = StateWithExtensions::<Token2022Mint>::unpack(account.data())
+            .expect("unpack token-2022 mint");
+        state.base.supply
+    } else {
+        spl_token::state::Mint::unpack(account.data())
+            .expect("unpack token-keg mint")
+            .supply
+    }
+}
+
+fn transfer_fee_from_params(amount: u64, bps: u16, max_fee: u64) -> u64 {
+    if amount == 0 || bps == 0 {
+        return 0;
+    }
+    let numerator = (amount as u128) * (bps as u128);
+    let fee = (numerator + 10_000u128 - 1) / 10_000u128; // ceil
+    let fee_u64 = u64::try_from(fee).expect("fee overflow u64");
+    fee_u64.min(max_fee)
+}
+
+/// calculates the amount to receive after transfer fees (from token2022) are substracted
+pub fn recv_amount_from_params(amount: u64, bps: u16, max_fee: u64) -> u64 {
+    amount.saturating_sub(transfer_fee_from_params(amount, bps, max_fee))
 }

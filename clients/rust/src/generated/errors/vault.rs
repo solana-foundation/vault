@@ -33,12 +33,21 @@ pub enum VaultError {
     /// 6007 - The provided vault reserve should be empty in order to close it.
     #[error("The provided vault reserve should be empty in order to close it.")]
     VaultShouldBeEmpty = 0x1777,
-    /// 6008 - Deposit amount too small to mint shares
-    #[error("Deposit amount too small to mint shares")]
+    /// 6008 - Deposit amount too small to mint shares.
+    #[error("Deposit amount too small to mint shares.")]
     InsufficientDepositAmount = 0x1778,
     /// 6009 - Initial price has to be bigger than 0
     #[error("Initial price has to be bigger than 0")]
     InvalidInitialPrice = 0x1779,
+    /// 6010 - Withdraw amount too small to burn shares.
+    #[error("Withdraw amount too small to burn shares.")]
+    InsufficientWithdrawAmount = 0x177A,
+    /// 6011 - Redeem shares amount too small.
+    #[error("Redeem shares amount too small.")]
+    InsufficientRedeemAmount = 0x177B,
+    /// 6012 - Invalid vault state for this operation.
+    #[error("Invalid vault state for this operation.")]
+    InvalidState = 0x177C,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {
