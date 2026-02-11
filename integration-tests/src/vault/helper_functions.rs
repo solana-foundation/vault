@@ -3,8 +3,7 @@ use litesvm::{
     LiteSVM,
 };
 use solana_sdk::{
-    msg, program_pack::Pack, signature::Keypair, signer::Signer,
-    system_instruction::create_account, transaction::Transaction,
+    account::{Account, ReadableAccount}, msg, program_pack::Pack, signature::Keypair, signer::Signer, system_instruction::create_account, transaction::Transaction
 };
 use vault_client::{
     sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
@@ -17,12 +16,15 @@ use anchor_spl::{
         spl_associated_token_account::instruction::create_associated_token_account,
     },
     token::spl_token,
-    token_2022::spl_token_2022::{
+    token_2022::{self, spl_token_2022::{
         self,
-        extension::{transfer_fee::instruction::initialize_transfer_fee_config, ExtensionType},
+        extension::{ExtensionType, StateWithExtensions, transfer_fee::instruction::initialize_transfer_fee_config},
         state::Mint,
-    },
+    }},
+    
 };
+use spl_token::state::Account as TokenAccount;
+use spl_token_2022::state::{Account as TokenAccount2022, Mint as Token2022Mint};
 
 pub fn create_vault(
     svm: &mut LiteSVM,
@@ -478,4 +480,31 @@ pub fn create_mint_with_transfer_fee(
 
     svm.send_transaction(tx)
         .expect("create_mint_with_transfer_fee transaction failed");
+}
+
+/// gets the amount of a token account, depending on the account owner
+pub fn get_token_account_amount(account: &Account) -> u64 {
+    if account.owner == token_2022::ID {
+        StateWithExtensions::<TokenAccount2022>::unpack(account.data())
+            .unwrap()
+            .base
+            .amount
+    } else {
+        TokenAccount::unpack(account.data())
+            .unwrap()
+            .amount
+    }
+}
+
+/// gets the supply of a token mint, depending on the account owner
+pub fn get_mint_supply(account: &Account) -> u64 {
+    if account.owner == token_2022::ID {
+        let state = StateWithExtensions::<Token2022Mint>::unpack(account.data())
+            .expect("unpack token-2022 mint");
+        state.base.supply
+    } else {
+        spl_token::state::Mint::unpack(account.data())
+            .expect("unpack token-keg mint")
+            .supply
+    }
 }
