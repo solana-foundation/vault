@@ -3,7 +3,13 @@ use litesvm::{
     LiteSVM,
 };
 use solana_sdk::{
-    account::{Account, ReadableAccount}, msg, program_pack::Pack, signature::Keypair, signer::Signer, system_instruction::create_account, transaction::Transaction
+    account::{Account, ReadableAccount},
+    msg,
+    program_pack::Pack,
+    signature::Keypair,
+    signer::Signer,
+    system_instruction::create_account,
+    transaction::Transaction,
 };
 use vault_client::{
     sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
@@ -16,12 +22,17 @@ use anchor_spl::{
         spl_associated_token_account::instruction::create_associated_token_account,
     },
     token::spl_token,
-    token_2022::{self, spl_token_2022::{
+    token_2022::{
         self,
-        extension::{ExtensionType, StateWithExtensions, transfer_fee::instruction::initialize_transfer_fee_config},
-        state::Mint,
-    }},
-    
+        spl_token_2022::{
+            self,
+            extension::{
+                transfer_fee::instruction::initialize_transfer_fee_config, ExtensionType,
+                StateWithExtensions,
+            },
+            state::Mint,
+        },
+    },
 };
 use spl_token::state::Account as TokenAccount;
 use spl_token_2022::state::{Account as TokenAccount2022, Mint as Token2022Mint};
@@ -490,9 +501,7 @@ pub fn get_token_account_amount(account: &Account) -> u64 {
             .base
             .amount
     } else {
-        TokenAccount::unpack(account.data())
-            .unwrap()
-            .amount
+        TokenAccount::unpack(account.data()).unwrap().amount
     }
 }
 

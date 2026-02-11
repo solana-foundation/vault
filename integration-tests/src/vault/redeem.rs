@@ -1,13 +1,17 @@
-use anchor_spl::{token, token_2022::{self, spl_token_2022}};
+use anchor_spl::{
+    token,
+    token_2022::{self, spl_token_2022},
+};
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, instruction::InstructionError,
-    signature::Keypair, signer::Signer, transaction::TransactionError,
+    account::ReadableAccount, instruction::InstructionError, signature::Keypair, signer::Signer,
+    transaction::TransactionError,
 };
-use vault_client::{FeeType, Pubkey, VaultConfig, sdk::program_id};
+use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
 
 use crate::vault::helper_functions::{
-    create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, get_mint_supply, get_token_account_amount, helper_mint_to, redeem, set_up_vault
+    create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, get_mint_supply,
+    get_token_account_amount, helper_mint_to, redeem, set_up_vault,
 };
 use test_case::test_case;
 
@@ -76,11 +80,7 @@ fn assets_from_shares_formula(
     token_2022::ID;
     "Redeem successfully (no fees) token 2022 and transfer fee"
 )]
-fn test_redeem_vault(
-    deposit_fee: FeeType, 
-    withdraw_fee: FeeType,
-    token_program: Pubkey
-) {
+fn test_redeem_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program: Pubkey) {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
@@ -101,8 +101,20 @@ fn test_redeem_vault(
     } else {
         transfer_fee_bps = 10;
         transfer_fee_max_fee = 1000;
-        create_mint_with_transfer_fee(&mut svm, &mint_authority, &asset_mint, transfer_fee_bps, transfer_fee_max_fee);
-        create_mint_with_transfer_fee(&mut svm, &mint_authority, &share_mint, transfer_fee_bps, transfer_fee_max_fee);
+        create_mint_with_transfer_fee(
+            &mut svm,
+            &mint_authority,
+            &asset_mint,
+            transfer_fee_bps,
+            transfer_fee_max_fee,
+        );
+        create_mint_with_transfer_fee(
+            &mut svm,
+            &mint_authority,
+            &share_mint,
+            transfer_fee_bps,
+            transfer_fee_max_fee,
+        );
     }
 
     let (_, user, _, mint_authority, fee_recipient, reserve_pubkey, vault_pubkey) = set_up_vault(
@@ -116,7 +128,12 @@ fn test_redeem_vault(
         &withdraw_fee,
     );
 
-    let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token_program);
+    let fee_recipient_ata = create_ata(
+        &mut svm,
+        &fee_recipient,
+        &asset_mint.pubkey(),
+        &token_program,
+    );
     let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token_program);
     let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &token_program);
 
@@ -164,7 +181,6 @@ fn test_redeem_vault(
         get_token_account_amount(&svm.get_account(&fee_recipient_ata).unwrap());
     assert_eq!(fee_recipient_after_deposit, deposit_fee_received);
 
-
     let reserve_after_deposit =
         get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
     assert_eq!(reserve_after_deposit, deposit_net_received);
@@ -193,9 +209,9 @@ fn test_redeem_vault(
 
     let total_assets_out = assets_from_shares_formula(
         vault_cfg_after_deposit.total_asset_balance, // total_assets
-        share_supply_after_deposit, // shares_supply
-        redeem_shares, // share_amount
-        false, // Rounding::Down
+        share_supply_after_deposit,                  // shares_supply
+        redeem_shares,                               // share_amount
+        false,                                       // Rounding::Down
     );
 
     let redeem_fee_amount = get_fee(withdraw_fee.clone(), total_assets_out);
@@ -247,8 +263,7 @@ fn test_redeem_vault(
     );
 
     // reserve decreases by total assets withdrawn (fee + user net)
-    let reserve_after_redeem =
-        get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
+    let reserve_after_redeem = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
     assert_eq!(
         reserve_after_redeem,
         reserve_after_deposit - total_assets_out
@@ -309,8 +324,14 @@ fn test_redeem_vault(
         other => panic!("unexpected tx error (not Custom): {:?}", other),
     };
     if token_program == token::ID {
-        assert_eq!(error_code, spl_token::error::TokenError::InsufficientFunds as u32);
+        assert_eq!(
+            error_code,
+            spl_token::error::TokenError::InsufficientFunds as u32
+        );
     } else {
-        assert_eq!(error_code, spl_token_2022::error::TokenError::InsufficientFunds as u32);
+        assert_eq!(
+            error_code,
+            spl_token_2022::error::TokenError::InsufficientFunds as u32
+        );
     }
 }
