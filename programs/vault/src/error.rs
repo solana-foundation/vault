@@ -34,4 +34,10 @@ pub enum VaultProgramError {
 
     #[msg("Withdraw amount too small to burn shares.")]
     InsufficientWithdrawAmount,
+
+    #[msg("Redeem shares amount too small.")]
+    InsufficientRedeemAmount,
+
+    #[msg("Invalid vault state for this operation.")]
+    InvalidState,
 }

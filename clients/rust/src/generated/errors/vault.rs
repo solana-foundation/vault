@@ -42,6 +42,12 @@ pub enum VaultError {
     /// 6010 - Withdraw amount too small to burn shares.
     #[error("Withdraw amount too small to burn shares.")]
     InsufficientWithdrawAmount = 0x177A,
+    /// 6011 - Redeem shares amount too small.
+    #[error("Redeem shares amount too small.")]
+    InsufficientRedeemAmount = 0x177B,
+    /// 6012 - Invalid vault state for this operation.
+    #[error("Invalid vault state for this operation.")]
+    InvalidState = 0x177C,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

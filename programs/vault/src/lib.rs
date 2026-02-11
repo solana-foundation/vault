@@ -70,4 +70,15 @@ pub mod vault {
     pub fn withdraw(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
         instructions::withdraw::handler(ctx, assets)
     }
+
+    /// Redeems shares for assets.
+    /// Burns `shares` from the user's shares Token account and transfers the corresponding amount
+    /// of asset tokens from the vault's reserve account to the user's assets ATA.
+    /// Fees, if any, are taken from the total assets.
+    ///
+    /// # Arguments
+    /// * `shares` - The amount of shares to redeem for asset tokens
+    pub fn redeem(ctx: Context<Redeem>, shares: u64) -> Result<()> {
+        instructions::redeem::handler(ctx, shares)
+    }
 }
