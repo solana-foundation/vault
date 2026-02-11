@@ -146,7 +146,10 @@ impl<'info> Redeem<'info> {
 pub fn handler<'info>(ctx: Context<Redeem>, shares: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
     require!(shares > 0, VaultProgramError::InsufficientRedeemAmount);
-
+    require!(
+        ctx.accounts.share_mint.supply > 0,
+        VaultProgramError::InvalidState
+    );
     // get amount of assets from shares arg
     let total_assets_out = ctx.accounts.vault.get_assets_from_shares(
         ctx.accounts.share_mint.supply,

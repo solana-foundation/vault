@@ -1,7 +1,7 @@
 use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
+    account::ReadableAccount, msg, program_pack::Pack, signature::Keypair, signer::Signer,
 };
 use spl_token::state::Account as TokenAccount;
 use vault_client::{sdk::program_id, FeeType, Pubkey};
@@ -140,8 +140,8 @@ fn test_mint_vault(
         token::ID,
         token::ID,
     );
-
-    assert_eq!(result.is_ok(), true, "Unexpected result for test case");
+    msg!("Result: {:?}", result.unwrap().logs);
+    //assert_eq!(result.is_ok(), true, "Unexpected result for test case");
 
     fee_recipient_ata_account = svm
         .get_account(&fee_recipient_ata)
