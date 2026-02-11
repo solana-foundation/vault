@@ -517,3 +517,18 @@ pub fn get_mint_supply(account: &Account) -> u64 {
             .supply
     }
 }
+
+fn transfer_fee_from_params(amount: u64, bps: u16, max_fee: u64) -> u64 {
+    if amount == 0 || bps == 0 {
+        return 0;
+    }
+    let numerator = (amount as u128) * (bps as u128);
+    let fee = (numerator + 10_000u128 - 1) / 10_000u128; // ceil
+    let fee_u64 = u64::try_from(fee).expect("fee overflow u64");
+    fee_u64.min(max_fee)
+}
+
+/// calculates the amount to receive after transfer fees (from token2022) are substracted
+pub fn recv_amount_from_params(amount: u64, bps: u16, max_fee: u64) -> u64 {
+    amount.saturating_sub(transfer_fee_from_params(amount, bps, max_fee))
+}

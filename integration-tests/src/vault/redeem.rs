@@ -11,23 +11,9 @@ use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
 
 use crate::vault::helper_functions::{
     create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, get_mint_supply,
-    get_token_account_amount, helper_mint_to, redeem, set_up_vault,
+    get_token_account_amount, helper_mint_to, recv_amount_from_params, redeem, set_up_vault,
 };
 use test_case::test_case;
-
-fn transfer_fee_from_params(amount: u64, bps: u16, max_fee: u64) -> u64 {
-    if amount == 0 || bps == 0 {
-        return 0;
-    }
-    let numerator = (amount as u128) * (bps as u128);
-    let fee = (numerator + 10_000u128 - 1) / 10_000u128; // ceil
-    let fee_u64 = u64::try_from(fee).expect("fee overflow u64");
-    fee_u64.min(max_fee)
-}
-
-fn recv_amount_from_params(amount: u64, bps: u16, max_fee: u64) -> u64 {
-    amount.saturating_sub(transfer_fee_from_params(amount, bps, max_fee))
-}
 
 /// Mirrors get_assets_from_shares formula:
 fn assets_from_shares_formula(
