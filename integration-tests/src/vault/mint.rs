@@ -150,7 +150,7 @@ fn test_mint_vault(
     let fee_recipient_balance_after = TokenAccount::unpack(fee_recipient_ata_account.data())
         .unwrap()
         .amount;
-    let fee = 4999;
+    let fee = 5050;
     assert_eq!(fee_recipient_balance_after, fee);
 
     user_asset_ata_account = svm

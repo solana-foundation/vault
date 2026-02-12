@@ -45,21 +45,31 @@ impl FeeType {
     pub fn get_deposit_fee_when_minting(&self, net_assets: u64) -> Result<u64> {
         match self {
             FeeType::Percentage { bps } => {
-                let gross = u128::from(net_assets)
-                    .checked_mul(MAX_BPS.into())
-                    .ok_or(VaultProgramError::ArithmeticError)?
-                    .checked_div(
-                        MAX_BPS
-                            .checked_sub(*bps)
-                            .ok_or(VaultProgramError::ArithmeticError)?
-                            .checked_add(1)
-                            .ok_or(VaultProgramError::ArithmeticError)?
-                            .into(),
-                    )
-                    .ok_or(VaultProgramError::ArithmeticError)?;
-                let fee = gross
-                    .checked_sub(u128::from(net_assets))
-                    .ok_or(VaultProgramError::ArithmeticError)?;
+                let gross = if *bps == MAX_BPS {
+                    net_assets
+                        .checked_mul(2)
+                        .ok_or(VaultProgramError::ArithmeticError)?
+                        .into()
+                } else {
+                    u128::from(net_assets)
+                        .checked_mul(MAX_BPS.into())
+                        .ok_or(VaultProgramError::ArithmeticError)?
+                        .checked_div(
+                            MAX_BPS
+                                .checked_sub(*bps)
+                                .ok_or(VaultProgramError::ArithmeticError)?
+                                .into(),
+                        )
+                        .ok_or(VaultProgramError::ArithmeticError)?
+                };
+
+                let fee = if *bps == 0 {
+                    0
+                } else {
+                    gross
+                        .checked_sub(u128::from(net_assets))
+                        .ok_or(VaultProgramError::ArithmeticError)?
+                };
                 Ok(u64::try_from(fee)?)
             }
             FeeType::FixedAmount { amount } => return Ok(*amount),
@@ -403,5 +413,17 @@ mod tests {
 
         assert_eq!(result_down, 100);
         assert_eq!(result_up, 100);
+    }
+
+    #[test_case(0,1000,0;"Percentage fee zero bps")]
+    #[test_case(100,1000,10;"Percentage fee 100 bps")]
+    #[test_case(500,10000,526;"Percentage fee 500 bps")]
+    #[test_case(1000,9000,1000;"Percentage fee 1000 bps")]
+    #[test_case(9900,100,9900;"Percentage fee 9900 bps")]
+    #[test_case(10_000,100,100;"Percentage fee 10_000 bps")]
+    fn test_percentage_fee_zero_bps(bps: u16, net_assets: u64, expected_amount: u64) {
+        let fee_type = FeeType::Percentage { bps: bps };
+        let result = fee_type.get_deposit_fee_when_minting(net_assets).unwrap();
+        assert_eq!(result, expected_amount);
     }
 }
