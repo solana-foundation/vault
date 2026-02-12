@@ -11,7 +11,7 @@ use crate::vault::helper_functions::{
 };
 use test_case::test_case;
 
-#[test_case(FeeType::NoFee, FeeType::NoFee,  FeeType::Percentage { bps: 100 },FeeType::Percentage { bps: 0 }, false, 100_000; "Mint successfully")]
+#[test_case(FeeType::NoFee, FeeType::NoFee,  FeeType::Percentage { bps: 100 },FeeType::Percentage { bps: 0 }, false, 1_000_000; "Mint successfully")]
 fn test_mint_vault(
     deposit_fee: FeeType,
     withdraw_fee: FeeType,
@@ -67,7 +67,7 @@ fn test_mint_vault(
         vault_pubkey,
         deposit_fee.clone(),
         withdraw_fee.clone(),
-        100_000,
+        1_000_000,
         1,
         fee_recipient.pubkey(),
         token::ID,

@@ -10,9 +10,28 @@ pub fn handler<'info>(ctx: Context<Deposit>, shares: u64) -> Result<()> {
         shares,
         Rounding::Up,
     )?;
-    let fee = ctx.accounts.vault.get_deposit_fee_when_minting(assets)?;
-    ctx.accounts.vault.increase_asset_supply(assets)?;
+
+    require!(
+        assets <= ctx.accounts.vault.vault_asset_cap,
+        VaultProgramError::MaxVaultAssetCapExceeded
+    );
+    // current vault amount
+    let reserve_amount_before = ctx.accounts.reserve.amount;
     ctx.accounts.transfer_asset_token_to_vault(assets)?;
+    ctx.accounts.reserve.reload()?;
+    let updated_reserve_amount = ctx.accounts.reserve.amount;
+
+    let actual_transferred_amount = updated_reserve_amount
+        .checked_sub(reserve_amount_before)
+        .ok_or(VaultProgramError::ArithmeticError)?;
+    let fee = ctx
+        .accounts
+        .vault
+        .get_deposit_fee_when_minting(actual_transferred_amount)?;
+    ctx.accounts
+        .vault
+        .increase_asset_supply(actual_transferred_amount)?;
+
     ctx.accounts
         .transfer_asset_token_fee_to_fee_recipient(fee)?;
     ctx.accounts.mint_shares_to_user(shares)?;
