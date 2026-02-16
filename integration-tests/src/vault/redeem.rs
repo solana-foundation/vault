@@ -31,7 +31,7 @@ fn assets_from_shares_formula(
         .checked_mul(u128::from(total_assets))
         .expect("overflow");
 
-    let denominator = u128::from(shares_supply);
+    let denominator = u128::from(shares_supply + 1);
 
     let q = if round_up {
         numerator.div_ceil(denominator)
@@ -205,6 +205,7 @@ fn test_redeem_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program:
     let user_assets_out = total_assets_out
         .checked_sub(redeem_fee_amount)
         .expect("overflow");
+
     assert!(user_assets_out > 0, "test expects non-zero net assets out");
 
     let redeem_fee_received =

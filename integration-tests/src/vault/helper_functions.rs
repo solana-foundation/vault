@@ -564,3 +564,17 @@ fn transfer_fee_from_params(amount: u64, bps: u16, max_fee: u64) -> u64 {
 pub fn recv_amount_from_params(amount: u64, bps: u16, max_fee: u64) -> u64 {
     amount.saturating_sub(transfer_fee_from_params(amount, bps, max_fee))
 }
+
+pub fn get_assets_from_shares(total_assets: u64, supply: u64, share_amount: u64) -> u64 {
+    let numerator = u128::from(share_amount)
+        .checked_mul(u128::from(total_assets))
+        .unwrap();
+
+    let denominator = u128::from(supply.checked_add(1).unwrap());
+
+    return numerator
+        .checked_div(denominator)
+        .unwrap()
+        .try_into()
+        .unwrap();
+}

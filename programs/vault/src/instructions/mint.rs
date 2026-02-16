@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
-use crate::{error::VaultProgramError, instructions::Deposit, state::Rounding};
+use crate::{error::VaultProgramError, instructions::DepositAndMint, state::Rounding};
 
-pub fn handler<'info>(ctx: Context<Deposit>, shares: u64) -> Result<()> {
+pub fn handler<'info>(ctx: Context<DepositAndMint>, shares: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
 
     let assets = ctx.accounts.vault.get_assets_from_shares(
@@ -10,9 +10,15 @@ pub fn handler<'info>(ctx: Context<Deposit>, shares: u64) -> Result<()> {
         shares,
         Rounding::Up,
     )?;
+    let expected_total_assets = ctx
+        .accounts
+        .vault
+        .total_asset_balance
+        .checked_add(assets)
+        .ok_or(VaultProgramError::ArithmeticError)?;
 
     require!(
-        assets <= ctx.accounts.vault.vault_asset_cap,
+        expected_total_assets <= ctx.accounts.vault.vault_asset_cap,
         VaultProgramError::MaxVaultAssetCapExceeded
     );
     // current vault amount

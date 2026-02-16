@@ -10,7 +10,7 @@ use crate::{
 };
 
 #[derive(Accounts)]
-pub struct Deposit<'info> {
+pub struct DepositAndMint<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -67,7 +67,7 @@ pub struct Deposit<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> Deposit<'info> {
+impl<'info> DepositAndMint<'info> {
     pub fn transfer_asset_token_fee_to_fee_recipient(&mut self, fee: u64) -> Result<()> {
         let fee_recipient_transfer_cpi_accounts = TransferChecked {
             from: self.user_assets_account.to_account_info(),
@@ -122,7 +122,7 @@ impl<'info> Deposit<'info> {
         mint_to(mint_cpi_ctx, amount)
     }
 }
-pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
+pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
     let fee = ctx.accounts.vault.get_deposit_fee(assets)?;
     // current vault amount
