@@ -122,7 +122,8 @@ impl<'info> Deposit<'info> {
         mint_to(mint_cpi_ctx, amount)
     }
 }
-pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
+
+pub fn handler<'info>(ctx: Context<Deposit>, assets: u64, min_shares_out: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
     let fee = ctx.accounts.vault.get_deposit_fee(assets)?;
     // current vault amount
@@ -162,6 +163,11 @@ pub fn handler<'info>(ctx: Context<Deposit>, assets: u64) -> Result<()> {
     if shares == 0 {
         return Err(VaultProgramError::InsufficientDepositAmount.into());
     }
+
+    if shares < min_shares_out {
+        return Err(VaultProgramError::SlippageExceeded.into())
+    }
+
     ctx.accounts
         .vault
         .increase_asset_supply(actual_transferred_amount)?;

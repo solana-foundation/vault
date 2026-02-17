@@ -55,8 +55,8 @@ pub mod vault {
     ///
     /// # Arguments
     /// * `assets` - The amount of asset tokens to deposit into the vault
-    pub fn deposit(ctx: Context<Deposit>, assets: u64) -> Result<()> {
-        instructions::deposit::handler(ctx, assets)
+    pub fn deposit(ctx: Context<Deposit>, assets: u64, min_shares_out: u64) -> Result<()> {
+        instructions::deposit::handler(ctx, assets, min_shares_out)
     }
 
     /// Withdraws assets from the vault by burning the required amount of shares.
@@ -67,8 +67,8 @@ pub mod vault {
     ///
     /// # Arguments
     /// * `assets` - The amount of asset tokens to withdraw from the vault
-    pub fn withdraw(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
-        instructions::withdraw::handler(ctx, assets)
+    pub fn withdraw(ctx: Context<Withdraw>, assets: u64, max_shares_burned: u64) -> Result<()> {
+        instructions::withdraw::handler(ctx, assets, max_shares_burned)
     }
 
     /// Redeems shares for assets.
@@ -78,7 +78,7 @@ pub mod vault {
     ///
     /// # Arguments
     /// * `shares` - The amount of shares to redeem for asset tokens
-    pub fn redeem(ctx: Context<Redeem>, shares: u64) -> Result<()> {
-        instructions::redeem::handler(ctx, shares)
+    pub fn redeem(ctx: Context<Redeem>, shares: u64, min_assets_out: u64) -> Result<()> {
+        instructions::redeem::handler(ctx, shares, min_assets_out)
     }
 }

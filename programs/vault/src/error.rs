@@ -40,4 +40,7 @@ pub enum VaultProgramError {
 
     #[msg("Invalid vault state for this operation.")]
     InvalidState,
+
+    #[msg("Slippage exceeded.")]
+    SlippageExceeded,
 }
