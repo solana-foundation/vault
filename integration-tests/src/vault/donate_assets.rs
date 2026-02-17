@@ -1,3 +1,4 @@
+use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
@@ -71,6 +72,8 @@ fn test_donate_assets_to_vault(
         0,
         100_000,
         fee_recipient.pubkey(),
+        token::ID,
+        token::ID,
     );
 
     let _ = update_vault(
@@ -86,7 +89,7 @@ fn test_donate_assets_to_vault(
         authority.pubkey(),
     );
 
-    let authority_asset_ata = create_ata(&mut svm, &authority, &asset_mint.pubkey());
+    let authority_asset_ata = create_ata(&mut svm, &authority, &asset_mint.pubkey(), &token::ID);
     let authority_asset_amount = 100_000_000;
     helper_mint_to(
         &mut svm,
@@ -94,6 +97,7 @@ fn test_donate_assets_to_vault(
         &authority_asset_ata,
         &mint_authority,
         authority_asset_amount,
+        &token::ID,
     );
 
     let mut reserve_ata_account = svm
