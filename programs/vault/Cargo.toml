@@ -24,6 +24,7 @@ custom-panic = []
 [dependencies]
 anchor-lang.workspace = true
 anchor-spl.workspace = true
+test-case.workspace = true
 # Pin blake3 to fix edition error
 blake3.workspace = true
 

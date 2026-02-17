@@ -4,7 +4,10 @@ use anchor_spl::{
     token_interface::{Mint, TokenAccount, TokenInterface},
 };
 
-use crate::state::{FeeType, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED};
+use crate::{
+    error::VaultProgramError,
+    state::{FeeType, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+};
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct VaultArgs {
@@ -30,8 +33,9 @@ pub struct CreateVault<'info> {
 
     #[account(
         init,
-        token::mint = asset_mint,
         token::authority = vault,
+        token::mint = asset_mint,
+        token::token_program = asset_token_program,
         payer = payer,
         seeds = [RESERVE_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
         bump,
@@ -47,7 +51,8 @@ pub struct CreateVault<'info> {
     )]
     pub vault: Account<'info, VaultConfig>,
 
-    pub token_program: Interface<'info, TokenInterface>,
+    pub asset_token_program: Interface<'info, TokenInterface>,
+    pub share_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
@@ -59,7 +64,7 @@ impl<'info> CreateVault<'info> {
         };
 
         let cpi_ctx = CpiContext::new(
-            self.token_program.to_account_info(),
+            self.share_token_program.to_account_info(),
             set_authority_cpi_accounts,
         );
         set_authority(cpi_ctx, AuthorityType::MintTokens, Some(new_authority))
@@ -73,6 +78,10 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
     if let Some(fee) = args.withdraw_fees {
         fee.validate()?;
     }
+    require!(
+        args.initial_price != 0,
+        VaultProgramError::InvalidInitialPrice
+    );
     ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
     ctx.accounts.vault.set_inner(VaultConfig {
         asset_mint_address: ctx.accounts.asset_mint.key(),
@@ -86,7 +95,6 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
         vault_asset_cap: args.vault_asset_cap.unwrap_or(0),
         total_asset_balance: 0,
         fee_recipient: args.fee_recipient,
-
         reserve_bump: ctx.bumps.reserve,
         bump: ctx.bumps.vault,
     });

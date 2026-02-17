@@ -15,12 +15,12 @@ pub enum VaultError {
     /// 6001 - The provided signer is not allowed to execute this instruction.
     #[error("The provided signer is not allowed to execute this instruction.")]
     UnauthorizedSigner = 0x1771,
-    /// 6002 - The vault is paused.
-    #[error("The vault is paused.")]
-    PausedVault = 0x1772,
-    /// 6003 - Something happened while performing an arithmetic operation.
+    /// 6002 - Something happened while performing an arithmetic operation.
     #[error("Something happened while performing an arithmetic operation.")]
-    ArithmeticError = 0x1773,
+    ArithmeticError = 0x1772,
+    /// 6003 - The vault is paused.
+    #[error("The vault is paused.")]
+    PausedVault = 0x1773,
     /// 6004 - The vault max asset cap has been exceeded.
     #[error("The vault max asset cap has been exceeded.")]
     MaxVaultAssetCapExceeded = 0x1774,
@@ -33,6 +33,21 @@ pub enum VaultError {
     /// 6007 - The provided vault reserve should be empty in order to close it.
     #[error("The provided vault reserve should be empty in order to close it.")]
     VaultShouldBeEmpty = 0x1777,
+    /// 6008 - Deposit amount too small to mint shares.
+    #[error("Deposit amount too small to mint shares.")]
+    InsufficientDepositAmount = 0x1778,
+    /// 6009 - Initial price has to be bigger than 0
+    #[error("Initial price has to be bigger than 0")]
+    InvalidInitialPrice = 0x1779,
+    /// 6010 - Withdraw amount too small to burn shares.
+    #[error("Withdraw amount too small to burn shares.")]
+    InsufficientWithdrawAmount = 0x177A,
+    /// 6011 - Redeem shares amount too small.
+    #[error("Redeem shares amount too small.")]
+    InsufficientRedeemAmount = 0x177B,
+    /// 6012 - Invalid vault state for this operation.
+    #[error("Invalid vault state for this operation.")]
+    InvalidState = 0x177C,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

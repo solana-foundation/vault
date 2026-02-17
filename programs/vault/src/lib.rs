@@ -13,8 +13,8 @@ pub mod vault {
     use super::*;
 
     /// Initialize a new tokenized vault with configurable fees and asset cap.
-    /// Creates a vault config account, share token mint, and reserve token account.
-    /// It also sets the vault as the mint authority
+    /// Creates the vault config account and reserve token account.
+    /// Sets the vault as mint authority for the provided share mint.
     ///
     /// # Arguments
     /// * `authority` - The pubkey that will control vault operations and updates
@@ -27,10 +27,8 @@ pub mod vault {
         instructions::create_vault::handler(ctx, args)
     }
 
-    /// Closes a vault and returns rent to the specified destination.
-    /// Requires the share mint supply to be zero and the reserve to be empty.
+    /// Closes a vault after reserves are emptied and share supply is zero.
     /// Closes the reserve token account and the vault config account.
-    /// Only the vault authority can close the vault.
     pub fn close_vault(ctx: Context<CloseVault>) -> Result<()> {
         instructions::close_vault::handler(ctx)
     }
@@ -57,8 +55,37 @@ pub mod vault {
     ///
     /// # Arguments
     /// * `assets` - The amount of asset tokens to deposit into the vault
-    pub fn deposit(ctx: Context<Deposit>, assets: u64) -> Result<()> {
+    pub fn deposit(ctx: Context<DepositAndMint>, assets: u64) -> Result<()> {
         instructions::deposit::handler(ctx, assets)
+    }
+
+    /// Mint shares from the atomic vault.
+    /// # Arguments
+    /// * `shares` - The amount of shares to mint to the user
+    pub fn mint(ctx: Context<DepositAndMint>, shares: u64) -> Result<()> {
+        instructions::mint::handler(ctx, shares)
+    }
+    /// Withdraws assets from the vault by burning the required amount of shares.
+    /// Burns shares from the user's shares Token account and transfers the requested amount of
+    /// asset tokens from the vault's reserve account to the user's assets ATA.
+    /// The number of shares to burn is computed using the vault's current price and
+    /// rounded up to ensure the user burns enough shares to cover the withdrawal.
+    ///
+    /// # Arguments
+    /// * `assets` - The amount of asset tokens to withdraw from the vault
+    pub fn withdraw(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
+        instructions::withdraw::handler(ctx, assets)
+    }
+
+    /// Redeems shares for assets.
+    /// Burns `shares` from the user's shares Token account and transfers the corresponding amount
+    /// of asset tokens from the vault's reserve account to the user's assets ATA.
+    /// Fees, if any, are taken from the total assets.
+    ///
+    /// # Arguments
+    /// * `shares` - The amount of shares to redeem for asset tokens
+    pub fn redeem(ctx: Context<Redeem>, shares: u64) -> Result<()> {
+        instructions::redeem::handler(ctx, shares)
     }
 
     /// Donate assets into the vault.
