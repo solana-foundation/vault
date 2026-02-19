@@ -14,7 +14,8 @@ use spl_token_2022::state::Account as TokenAccount2022;
 use vault_client::{sdk::program_id, FeeType, VaultConfig};
 
 use crate::vault::helper_functions::{
-    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, helper_mint_to, set_up_vault
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee,
+    helper_mint_to, set_up_vault,
 };
 
 #[test]
@@ -378,7 +379,8 @@ fn test_deposit_slippage_protection() {
     let share_mint = Keypair::new();
     let mint_authority = Keypair::new();
 
-    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
+        .unwrap();
     create_mint(&mut svm, &mint_authority, &asset_mint);
     create_mint(&mut svm, &mint_authority, &share_mint);
 
@@ -430,16 +432,13 @@ fn test_deposit_slippage_protection() {
         token::ID,
     );
 
-    assert_error_code(
-        &result.unwrap_err(), 
-        6013, 
-        "Slippage exceeded."
-    );
+    assert_error_code(&result.unwrap_err(), 6013, "Slippage exceeded.");
 
-    // ensure state did not change 
+    // ensure state did not change
     let user_share_ata_account = svm.get_account(&user_share_ata).unwrap();
-    let user_share_balance_after =
-        TokenAccount::unpack(user_share_ata_account.data()).unwrap().amount;
+    let user_share_balance_after = TokenAccount::unpack(user_share_ata_account.data())
+        .unwrap()
+        .amount;
     assert_eq!(user_share_balance_after, 0);
 
     let reserve_account = svm.get_account(&reserve_pubkey).unwrap();
@@ -450,4 +449,3 @@ fn test_deposit_slippage_protection() {
     let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
     assert_eq!(vault_config.total_asset_balance, 0);
 }
-

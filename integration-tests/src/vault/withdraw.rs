@@ -10,7 +10,9 @@ use solana_sdk::{
 use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
 
 use crate::vault::helper_functions::{
-    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, get_mint_supply, get_token_account_amount, helper_mint_to, recv_amount_from_params, set_up_vault, withdraw
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee,
+    get_mint_supply, get_token_account_amount, helper_mint_to, recv_amount_from_params,
+    set_up_vault, withdraw,
 };
 use test_case::test_case;
 
@@ -228,7 +230,7 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_progra
         user_asset_ata,
         user_share_ata,
         assets_out, // NET to user,
-        u64::MAX, // no slippage protection
+        u64::MAX,   // no slippage protection
         token_program,
         token_program,
     );
@@ -332,7 +334,8 @@ fn test_withdraw_slippage_protection() {
     let share_mint = Keypair::new();
     let mint_authority = Keypair::new();
 
-    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
+        .unwrap();
     create_mint(&mut svm, &mint_authority, &asset_mint);
     create_mint(&mut svm, &mint_authority, &share_mint);
 
@@ -440,5 +443,8 @@ fn test_withdraw_slippage_protection() {
     assert_eq!(user_assets_after, user_assets_before);
     assert_eq!(user_shares_after, user_shares_before);
     assert_eq!(reserve_after, reserve_before);
-    assert_eq!(vault_after.total_asset_balance, vault_before.total_asset_balance);
+    assert_eq!(
+        vault_after.total_asset_balance,
+        vault_before.total_asset_balance
+    );
 }

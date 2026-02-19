@@ -156,7 +156,6 @@ impl VaultConfig {
         share_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
-
         let total_assets = self.total_assets();
 
         // Bootstrap: initial_price is "assets per share" (already scaled by asset decimals).
@@ -167,7 +166,6 @@ impl VaultConfig {
                 .ok_or(VaultProgramError::ArithmeticError)?;
             return u64::try_from(assets).map_err(|_| VaultProgramError::ArithmeticError.into());
         }
-
 
         let numerator = u128::from(share_amount)
             .checked_mul(u128::from(self.total_assets()))

@@ -169,7 +169,7 @@ pub fn handler<'info>(ctx: Context<Redeem>, shares: u64, min_assets: u64) -> Res
         .ok_or(VaultProgramError::ArithmeticError)?;
 
     if user_assets_out < min_assets {
-        return Err(VaultProgramError::SlippageExceeded.into())
+        return Err(VaultProgramError::SlippageExceeded.into());
     }
 
     // burn user shares

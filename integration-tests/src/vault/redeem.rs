@@ -10,7 +10,9 @@ use solana_sdk::{
 use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
 
 use crate::vault::helper_functions::{
-    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, get_mint_supply, get_token_account_amount, helper_mint_to, recv_amount_from_params, redeem, set_up_vault
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee,
+    get_mint_supply, get_token_account_amount, helper_mint_to, recv_amount_from_params, redeem,
+    set_up_vault,
 };
 use test_case::test_case;
 
@@ -335,7 +337,8 @@ fn test_redeem_slippage_protection() {
     let share_mint = Keypair::new();
     let mint_authority = Keypair::new();
 
-    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
+        .unwrap();
     create_mint(&mut svm, &mint_authority, &asset_mint);
     create_mint(&mut svm, &mint_authority, &share_mint);
 
@@ -396,10 +399,10 @@ fn test_redeem_slippage_protection() {
 
     // matches on-chain: total_assets_out = floor(shares * total_assets / (supply + 1))
     let total_assets_out = assets_from_shares_formula(
-        minted_shares,  // total_assets tracked by vault after deposit (no transfer fee here)
-        minted_shares,  // share supply after deposit
+        minted_shares, // total_assets tracked by vault after deposit (no transfer fee here)
+        minted_shares, // share supply after deposit
         redeem_shares,
-        false,          // Rounding::Down
+        false, // Rounding::Down
     );
 
     let redeem_fee_amt = get_fee(redeem_fee.clone(), total_assets_out);
@@ -415,7 +418,8 @@ fn test_redeem_slippage_protection() {
     let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
     let fee_recipient_before =
         get_token_account_amount(&svm.get_account(&fee_recipient_ata).unwrap());
-    let vault_before = VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
+    let vault_before =
+        VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
 
     let result = redeem(
         &mut svm,
@@ -445,11 +449,15 @@ fn test_redeem_slippage_protection() {
     let reserve_after = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
     let fee_recipient_after =
         get_token_account_amount(&svm.get_account(&fee_recipient_ata).unwrap());
-    let vault_after = VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
+    let vault_after =
+        VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
 
     assert_eq!(user_assets_after, user_assets_before);
     assert_eq!(user_shares_after, user_shares_before);
     assert_eq!(reserve_after, reserve_before);
     assert_eq!(fee_recipient_after, fee_recipient_before);
-    assert_eq!(vault_after.total_asset_balance, vault_before.total_asset_balance);
+    assert_eq!(
+        vault_after.total_asset_balance,
+        vault_before.total_asset_balance
+    );
 }

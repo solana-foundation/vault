@@ -12,7 +12,7 @@ pub fn handler<'info>(ctx: Context<DepositAndMint>, shares: u64, max_assets: u64
     )?;
 
     if assets > max_assets {
-        return Err(VaultProgramError::SlippageExceeded.into())
+        return Err(VaultProgramError::SlippageExceeded.into());
     }
 
     let transfer_fee: u64 = ctx.accounts.get_transfer_fees(assets)?;

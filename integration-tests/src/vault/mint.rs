@@ -14,7 +14,8 @@ use spl_token_2022::state::Account as TokenAccount2022;
 use vault_client::{sdk::program_id, FeeType, VaultConfig};
 
 use crate::vault::helper_functions::{
-    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, helper_mint_to, mint, set_up_vault
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, helper_mint_to,
+    mint, set_up_vault,
 };
 
 #[test]
@@ -115,7 +116,7 @@ fn test_mint_vault() {
     let fee_recipient_balance_after = TokenAccount::unpack(fee_recipient_ata_account.data())
         .unwrap()
         .amount;
-    
+
     let vault = svm.get_account(&vault_pubkey).unwrap();
     let vault_cfg = VaultConfig::from_bytes(vault.data()).unwrap();
 
@@ -125,9 +126,10 @@ fn test_mint_vault() {
         .try_into()
         .unwrap();
 
-    let user_asset_balance_after = TokenAccount::unpack(
-        svm.get_account(&user_asset_ata).unwrap().data()
-    ).unwrap().amount;
+    let user_asset_balance_after =
+        TokenAccount::unpack(svm.get_account(&user_asset_ata).unwrap().data())
+            .unwrap()
+            .amount;
 
     let fee = user_asset_amount
         .checked_sub(user_asset_balance_after).unwrap() // total the user lost
@@ -294,12 +296,14 @@ fn test_mint_vault_with_transfer_fees() {
             .amount;
 
     let transfer_fee_withheld = user_asset_amount
-        .checked_sub(user_asset_balance_after).unwrap()
+        .checked_sub(user_asset_balance_after)
+        .unwrap()
         .checked_sub(
             reserve_balance_after
                 .checked_add(fee_recipient_balance_after)
-                .unwrap()
-        ).unwrap();
+                .unwrap(),
+        )
+        .unwrap();
 
     assert_eq!(
         user_asset_balance_after,
@@ -325,7 +329,6 @@ fn test_mint_vault_with_transfer_fees() {
     let deposit_amount_minus_fee_minus_transfer_fee_deposit_amount = reserve_balance_after;
 
     assert_eq!(user_share_balance_after, mint_amount);
-
 
     assert_eq!(
         reserve_balance_after,
@@ -363,7 +366,8 @@ fn test_mint_vault_slippage_protection_fails() {
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();
 
-    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
+        .unwrap();
     create_mint(&mut svm, &mint_authority, &asset_mint);
     create_mint(&mut svm, &mint_authority, &share_mint);
 
@@ -378,8 +382,7 @@ fn test_mint_vault_slippage_protection_fails() {
         &FeeType::NoFee,
     );
 
-    let fee_recipient_ata =
-        create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
+    let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
     let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
     let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &token::ID);
 
@@ -409,10 +412,12 @@ fn test_mint_vault_slippage_protection_fails() {
     let max_assets = assets_required - 1;
 
     // Snapshot state for "no side effects" check
-    let user_share_before =
-        TokenAccount::unpack(svm.get_account(&user_share_ata).unwrap().data()).unwrap().amount;
-    let reserve_before =
-        TokenAccount::unpack(svm.get_account(&reserve_pubkey).unwrap().data()).unwrap().amount;
+    let user_share_before = TokenAccount::unpack(svm.get_account(&user_share_ata).unwrap().data())
+        .unwrap()
+        .amount;
+    let reserve_before = TokenAccount::unpack(svm.get_account(&reserve_pubkey).unwrap().data())
+        .unwrap()
+        .amount;
     let vault_before = VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data())
         .unwrap()
         .total_asset_balance;
@@ -433,18 +438,15 @@ fn test_mint_vault_slippage_protection_fails() {
         token::ID,
     );
 
-    assert_error_code(
-        &result.unwrap_err(), 
-        6013,
-        "Slippage exceeded."
-    );
+    assert_error_code(&result.unwrap_err(), 6013, "Slippage exceeded.");
 
-        
     // Ensure state did not change
-    let user_share_after =
-        TokenAccount::unpack(svm.get_account(&user_share_ata).unwrap().data()).unwrap().amount;
-    let reserve_after =
-        TokenAccount::unpack(svm.get_account(&reserve_pubkey).unwrap().data()).unwrap().amount;
+    let user_share_after = TokenAccount::unpack(svm.get_account(&user_share_ata).unwrap().data())
+        .unwrap()
+        .amount;
+    let reserve_after = TokenAccount::unpack(svm.get_account(&reserve_pubkey).unwrap().data())
+        .unwrap()
+        .amount;
     let vault_after = VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data())
         .unwrap()
         .total_asset_balance;

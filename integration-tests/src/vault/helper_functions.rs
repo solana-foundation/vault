@@ -454,7 +454,8 @@ pub fn set_up_vault(
         fee_recipient.pubkey(),
         asset_token_program,
         share_token_program,
-    ).expect("Failed to create vault");
+    )
+    .expect("Failed to create vault");
     let _ = update_vault(
         svm,
         &authority,

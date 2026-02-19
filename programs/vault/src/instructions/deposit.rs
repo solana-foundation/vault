@@ -189,7 +189,7 @@ pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64
     }
 
     if shares < min_shares {
-        return Err(VaultProgramError::SlippageExceeded.into())
+        return Err(VaultProgramError::SlippageExceeded.into());
     }
 
     ctx.accounts

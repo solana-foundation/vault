@@ -172,7 +172,7 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64, max_shares: u64) -> R
     }
 
     if shares_to_burn > max_shares {
-        return Err(VaultProgramError::SlippageExceeded.into())
+        return Err(VaultProgramError::SlippageExceeded.into());
     }
 
     // burn user shares
