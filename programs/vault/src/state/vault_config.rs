@@ -1,4 +1,7 @@
-use crate::{error::VaultProgramError, state::Rounding};
+use crate::{
+    error::VaultProgramError,
+    state::{Rounding, MAX_BPS},
+};
 use anchor_lang::prelude::*;
 
 /// The fee types:
@@ -15,7 +18,7 @@ impl FeeType {
     pub fn validate(self) -> Result<()> {
         match self {
             FeeType::Percentage { bps } => {
-                require!(bps <= 10_000, VaultProgramError::FeeBPSLimitReached);
+                require!(bps <= MAX_BPS, VaultProgramError::FeeBPSLimitReached);
             }
             FeeType::NoFee | FeeType::FixedAmount { .. } => {}
         }
@@ -35,6 +38,41 @@ impl FeeType {
                 return Ok(fee);
             }
             FeeType::FixedAmount { amount } => return Ok(amount),
+            FeeType::NoFee => return Ok(0),
+        }
+    }
+
+    pub fn get_deposit_fee_when_minting(&self, net_assets: u64) -> Result<u64> {
+        match self {
+            FeeType::Percentage { bps } => {
+                let gross = if *bps == MAX_BPS {
+                    net_assets
+                        .checked_mul(2)
+                        .ok_or(VaultProgramError::ArithmeticError)?
+                        .into()
+                } else {
+                    u128::from(net_assets)
+                        .checked_mul(MAX_BPS.into())
+                        .ok_or(VaultProgramError::ArithmeticError)?
+                        .checked_div(
+                            MAX_BPS
+                                .checked_sub(*bps)
+                                .ok_or(VaultProgramError::ArithmeticError)?
+                                .into(),
+                        )
+                        .ok_or(VaultProgramError::ArithmeticError)?
+                };
+
+                let fee = if *bps == 0 {
+                    0
+                } else {
+                    gross
+                        .checked_sub(u128::from(net_assets))
+                        .ok_or(VaultProgramError::ArithmeticError)?
+                };
+                Ok(u64::try_from(fee)?)
+            }
+            FeeType::FixedAmount { amount } => return Ok(*amount),
             FeeType::NoFee => return Ok(0),
         }
     }
@@ -81,19 +119,20 @@ impl VaultConfig {
         asset_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
-        let assets_times_total_supply: u128 = if supply == 0 {
-            u128::from(self.initial_price)
+        let assets_times_total_supply: u128;
+        if supply == 0 {
+            assets_times_total_supply = u128::from(self.initial_price)
                 .checked_mul(u128::from(asset_amount))
-                .ok_or(VaultProgramError::ArithmeticError)?
+                .ok_or(VaultProgramError::ArithmeticError)?;
         } else {
-            u128::from(
+            assets_times_total_supply = u128::from(
                 supply
                     .checked_add(1)
                     .ok_or(VaultProgramError::ArithmeticError)?,
             )
             .checked_mul(u128::from(asset_amount))
-            .ok_or(VaultProgramError::ArithmeticError)?
-        };
+            .ok_or(VaultProgramError::ArithmeticError)?;
+        }
         let result = match rounding {
             Rounding::Up => assets_times_total_supply.div_ceil(u128::from(
                 self.total_assets()
@@ -113,17 +152,32 @@ impl VaultConfig {
 
     pub fn get_assets_from_shares(
         self,
-        shares_supply: u64,
+        supply: u64,
         share_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
-        require!(shares_supply > 0, VaultProgramError::InvalidState);
+
+        let total_assets = self.total_assets();
+
+        // Bootstrap: initial_price is "assets per share" (already scaled by asset decimals).
+        // If the vault is empty (or supply is zero), price is fixed at initial_price.
+        if supply == 0 || total_assets == 0 {
+            let assets = u128::from(share_amount)
+                .checked_mul(u128::from(self.initial_price))
+                .ok_or(VaultProgramError::ArithmeticError)?;
+            return u64::try_from(assets).map_err(|_| VaultProgramError::ArithmeticError.into());
+        }
+
 
         let numerator = u128::from(share_amount)
             .checked_mul(u128::from(self.total_assets()))
             .ok_or(VaultProgramError::ArithmeticError)?;
 
-        let denominator = u128::from(shares_supply);
+        let denominator = u128::from(
+            supply
+                .checked_add(1)
+                .ok_or(VaultProgramError::ArithmeticError)?,
+        );
 
         let result = match rounding {
             Rounding::Up => numerator.div_ceil(denominator),
@@ -132,7 +186,7 @@ impl VaultConfig {
                 .ok_or(VaultProgramError::ArithmeticError)?,
         };
 
-        u64::try_from(result).or(Err(VaultProgramError::ArithmeticError.into()))
+        u64::try_from(result).map_err(|_| VaultProgramError::ArithmeticError.into())
     }
 
     pub fn increase_asset_supply(&mut self, amount: u64) -> Result<()> {
@@ -142,6 +196,10 @@ impl VaultConfig {
             .ok_or(VaultProgramError::ArithmeticError)?;
         self.total_asset_balance = new_supply;
         Ok(())
+    }
+
+    pub fn get_deposit_fee_when_minting(self, assets: u64) -> Result<u64> {
+        self.deposit_fees.get_deposit_fee_when_minting(assets)
     }
 
     pub fn decrease_asset_supply(&mut self, amount: u64) -> Result<()> {
@@ -293,64 +351,91 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[test_case(1, 3, 1, Rounding::Down, 0; "ceil differs: 1*1/3 down")]
-    #[test_case(1, 3, 1, Rounding::Up, 1; "ceil differs: 1*1/3 up")]
-    #[test_case(10_000, 3, 2, Rounding::Down, 6_666; "non-clean division down")]
-    #[test_case(10_000, 3, 2, Rounding::Up, 6_667; "non-clean division up")]
-    #[test_case(0, 1_000, 100, Rounding::Down, 0; "Zero assets, positive supply, down")]
-    #[test_case(0, 1_000, 100, Rounding::Up, 0; "Zero assets, positive supply, up")]
-    #[test_case(10_000, 10_000, 100, Rounding::Down, 100; "1:1 ratio down")]
-    #[test_case(10_000, 10_000, 100, Rounding::Up, 100; "1:1 ratio up")]
-    #[test_case(2_000, 1_000, 100, Rounding::Down, 200; "2:1 assets:supply down")]
-    #[test_case(2_000, 1_000, 100, Rounding::Up, 200; "2:1 assets:supply up")]
-    #[test_case(9_999, 10_000, 100, Rounding::Down, 99; "Rounding edge down")]
-    #[test_case(9_999, 10_000, 100, Rounding::Up, 100; "Rounding edge up")]
-    #[test_case(10_000, 10_000, 0, Rounding::Down, 0; "Zero share_amount returns 0")]
-    #[test_case(1_000_000_000, 1_000_000_000, 1_000_000, Rounding::Down, 1_000_000; "Large values 1:1")]
-    #[test_case(1_000_000, 1_000_000, 1, Rounding::Down, 1; "Precision small amounts")]
-    #[test_case(100, 1_000_000_000, 10, Rounding::Down, 0; "Asymmetric small assets/share down")]
-    #[test_case(100, 1_000_000_000, 10, Rounding::Up, 1; "Asymmetric small assets/share up")]
-    #[test_case(1_000_000_000, 100, 10, Rounding::Down, 100_000_000; "Asymmetric huge assets/share down")]
-    #[test_case(1_000_000_000, 100, 10, Rounding::Up, 100_000_000; "Asymmetric huge assets/share up")]
+    #[test_case(1000,1,500,100,Rounding::Down,199;"Basic calculation rounding down")]
+    #[test_case(1000,1,500,100,Rounding::Up,200;"Basic calculation rounding up")]
+    #[test_case(1000,1,0,100,Rounding::Down,100;"Zero supply")]
+    #[test_case(0,1,500,100,Rounding::Down,100;"Zero assets")]
+    #[test_case(0,1,0,0,Rounding::Down,0;"All zeros")]
+    #[test_case(1000,1,1000,500,Rounding::Down,499;"Equal supply and total assets")]
+    #[test_case(1_000_000_000,1,1_000_000_000,1_000_000,Rounding::Down,999_999;"Large values within bounds")]
+    #[test_case(3,1,10,1,Rounding::Down,0;"Precision loss rounding down")]
+    #[test_case(3,1,10,1,Rounding::Up,1;"Precision loss rounding up")]
+    #[test_case(1,1,1,1,Rounding::Down,0;"Single unit")]
+    #[test_case(1,1_000_000, 3, 1, Rounding::Down, 0; "ceil differs: 1*1/3 down")]
+    #[test_case(1,1_000_000, 3, 1, Rounding::Up, 1; "ceil differs: 1*1/3 up")]
+    #[test_case(10_000,1_000_000, 3, 2, Rounding::Down, 5000; "non-clean division down")]
+    #[test_case(10_000,1_000_000, 3, 2, Rounding::Up, 5000; "non-clean division up")]
+    #[test_case(0,1_000_000, 1_000, 100, Rounding::Down, 100_000_000; "Zero assets, positive supply, down")]
+    #[test_case(0,1_000_000, 1_000, 100, Rounding::Up, 100_000_000; "Zero assets, positive supply, up")]
+    #[test_case(10_000,1_000_000, 10_000, 100, Rounding::Down, 99; "1:1 ratio down")]
+    #[test_case(10_000,1_000_000, 10_000, 100, Rounding::Up, 100; "1:1 ratio up")]
+    #[test_case(2_000,1_000_000, 1_000, 100, Rounding::Down, 199; "2:1 assets:supply down")]
+    #[test_case(2_000,1_000_000, 1_000, 100, Rounding::Up, 200; "2:1 assets:supply up")]
+    #[test_case(9_999,1_000_000, 10_000, 100, Rounding::Down, 99; "Rounding edge down")]
+    #[test_case(9_999,1_000_000, 10_000, 100, Rounding::Up, 100; "Rounding edge up")]
+    #[test_case(10_000,1_000_000, 10_000, 0, Rounding::Down, 0; "Zero share_amount returns 0")]
+    #[test_case(1_000_000_000,1_000_000, 1_000_000_000, 1_000_000, Rounding::Down, 999_999; "Large values 1:1")]
+    #[test_case(1_000_000,1_000_000, 1_000_000, 1, Rounding::Down, 0; "Precision small amounts")]
+    #[test_case(100,1_000_000, 1_000_000_000, 10, Rounding::Down, 0; "Asymmetric small assets/share down")]
+    #[test_case(100,1_000_000, 1_000_000_000, 10, Rounding::Up, 1; "Asymmetric small assets/share up")]
+    #[test_case(1_000_000_000,1_000_000, 100, 10, Rounding::Down, 99_009_900; "Asymmetric huge assets/share down")]
+    #[test_case(1_000_000_000,1_000_000, 100, 10, Rounding::Up, 99_009_901; "Asymmetric huge assets/share up")]
+
     fn test_get_assets_from_shares(
-        total_asset_balance: u64,
-        shares_supply: u64,
-        share_amount: u64,
+        total_asset_amount: u64,
+        initial_price: u64,
+        supply: u64,
+        asset_amount: u64,
         rounding: Rounding,
-        expected_assets: u64,
+        expected_amount: u64,
     ) {
-        let vault = create_vault_config(total_asset_balance, 1_000_000);
+        let vault = create_vault_config(total_asset_amount, initial_price);
+        let result = vault.get_assets_from_shares(supply, asset_amount, rounding);
 
-        let assets = vault
-            .get_assets_from_shares(shares_supply, share_amount, rounding)
-            .unwrap();
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), expected_amount);
+    }
 
-        assert_eq!(assets, expected_assets);
+    #[test_case(1000,1,u64::MAX,100,Rounding::Down;"Error: Overflow")]
+    #[test_case(1,1_000_000, u64::MAX, u64::MAX, Rounding::Down; "ERROR: result overflows u64 (down)")]
+    #[test_case(1,1_000_000, u64::MAX, u64::MAX, Rounding::Up;   "ERROR: result overflows u64 (up)")]
+    fn test_get_assets_from_shares_error(
+        total_asset_amount: u64,
+        initial_price: u64,
+        supply: u64,
+        asset_amount: u64,
+        rounding: Rounding,
+    ) {
+        let vault = create_vault_config(total_asset_amount, initial_price);
+        let result = vault.get_assets_from_shares(supply, asset_amount, rounding);
+
+        assert!(result.is_err());
     }
 
     #[test]
-    fn get_assets_from_shares_no_share_supply_fails() {
-        let vault = create_vault_config(100, 1_000_000);
+    fn test_rounding_difference() {
+        let vault_down = create_vault_config(1000, 1);
+        let vault_up = create_vault_config(1000, 1);
 
-        let result = vault.get_assets_from_shares(0, 1_000_000, Rounding::Up);
+        let result_down = vault_down
+            .get_assets_from_shares(333, 100, Rounding::Down)
+            .unwrap();
+        let result_up = vault_up
+            .get_assets_from_shares(333, 100, Rounding::Up)
+            .unwrap();
 
-        assert_eq!(result.unwrap_err(), VaultProgramError::InvalidState.into());
+        assert!(result_up >= result_down);
     }
 
-    #[test_case(1, u64::MAX, u64::MAX, Rounding::Down; "ERROR: result overflows u64 (down)")]
-    #[test_case(1, u64::MAX, u64::MAX, Rounding::Up;   "ERROR: result overflows u64 (up)")]
-    fn test_get_assets_from_shares_errors(
-        shares_supply: u64,
-        total_asset_balance: u64,
-        share_amount: u64,
-        rounding: Rounding,
-    ) {
-        let vault = create_vault_config(total_asset_balance, 1_000_000);
-
-        let result = vault.get_assets_from_shares(shares_supply, share_amount, rounding);
-        assert_eq!(
-            result.unwrap_err(),
-            VaultProgramError::ArithmeticError.into()
-        );
+    #[test_case(0,1000,0;"Percentage fee zero bps")]
+    #[test_case(100,1000,10;"Percentage fee 100 bps")]
+    #[test_case(500,10000,526;"Percentage fee 500 bps")]
+    #[test_case(1000,9000,1000;"Percentage fee 1000 bps")]
+    #[test_case(9900,100,9900;"Percentage fee 9900 bps")]
+    #[test_case(10_000,100,100;"Percentage fee 10_000 bps")]
+    fn test_percentage_fee_zero_bps(bps: u16, net_assets: u64, expected_amount: u64) {
+        let fee_type = FeeType::Percentage { bps: bps };
+        let result = fee_type.get_deposit_fee_when_minting(net_assets).unwrap();
+        assert_eq!(result, expected_amount);
     }
 }

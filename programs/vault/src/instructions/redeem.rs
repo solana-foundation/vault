@@ -143,10 +143,13 @@ impl<'info> Redeem<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<Redeem>, shares: u64, min_assets_out: u64) -> Result<()> {
+pub fn handler<'info>(ctx: Context<Redeem>, shares: u64, min_assets: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
     require!(shares > 0, VaultProgramError::InsufficientRedeemAmount);
-
+    require!(
+        ctx.accounts.share_mint.supply > 0,
+        VaultProgramError::InvalidState
+    );
     // get amount of assets from shares arg
     let total_assets_out = ctx.accounts.vault.get_assets_from_shares(
         ctx.accounts.share_mint.supply,
@@ -165,7 +168,7 @@ pub fn handler<'info>(ctx: Context<Redeem>, shares: u64, min_assets_out: u64) ->
         .checked_sub(fee)
         .ok_or(VaultProgramError::ArithmeticError)?;
 
-    if user_assets_out < min_assets_out {
+    if user_assets_out < min_assets {
         return Err(VaultProgramError::SlippageExceeded.into())
     }
 

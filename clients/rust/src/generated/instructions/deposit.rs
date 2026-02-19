@@ -126,6 +126,7 @@ impl Default for DepositInstructionData {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct DepositInstructionArgs {
     pub assets: u64,
+    pub min_shares: u64,
 }
 
 impl DepositInstructionArgs {
@@ -166,6 +167,7 @@ pub struct DepositBuilder {
     associated_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     assets: Option<u64>,
+    min_shares: Option<u64>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -257,6 +259,12 @@ impl DepositBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn min_shares(&mut self, min_shares: u64) -> &mut Self {
+        self.min_shares = Some(min_shares);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -304,6 +312,7 @@ impl DepositBuilder {
         };
         let args = DepositInstructionArgs {
             assets: self.assets.clone().expect("assets is not set"),
+            min_shares: self.min_shares.clone().expect("min_shares is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -542,6 +551,7 @@ impl<'a, 'b> DepositCpiBuilder<'a, 'b> {
             associated_token_program: None,
             system_program: None,
             assets: None,
+            min_shares: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -652,6 +662,12 @@ impl<'a, 'b> DepositCpiBuilder<'a, 'b> {
         self
     }
 
+    #[inline(always)]
+    pub fn min_shares(&mut self, min_shares: u64) -> &mut Self {
+        self.instruction.min_shares = Some(min_shares);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -692,6 +708,11 @@ impl<'a, 'b> DepositCpiBuilder<'a, 'b> {
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
         let args = DepositInstructionArgs {
             assets: self.instruction.assets.clone().expect("assets is not set"),
+            min_shares: self
+                .instruction
+                .min_shares
+                .clone()
+                .expect("min_shares is not set"),
         };
         let instruction = DepositCpi {
             __program: self.instruction.__program,
@@ -765,6 +786,7 @@ struct DepositCpiBuilderInstruction<'a, 'b> {
     associated_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     assets: Option<u64>,
+    min_shares: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

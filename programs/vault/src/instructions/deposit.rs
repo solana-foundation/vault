@@ -1,16 +1,21 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
     associated_token::AssociatedToken,
+    token::spl_token,
+    token_2022::spl_token_2022::{
+        self,
+        extension::{BaseStateWithExtensions, StateWithExtensions},
+    },
     token_interface::{self, mint_to, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked},
 };
 
 use crate::{
     error::VaultProgramError,
-    state::{Rounding, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    state::{Rounding, VaultConfig, MAX_BPS, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
 };
 
 #[derive(Accounts)]
-pub struct Deposit<'info> {
+pub struct DepositAndMint<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
@@ -67,7 +72,7 @@ pub struct Deposit<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> Deposit<'info> {
+impl<'info> DepositAndMint<'info> {
     pub fn transfer_asset_token_fee_to_fee_recipient(&mut self, fee: u64) -> Result<()> {
         let fee_recipient_transfer_cpi_accounts = TransferChecked {
             from: self.user_assets_account.to_account_info(),
@@ -121,9 +126,28 @@ impl<'info> Deposit<'info> {
         );
         mint_to(mint_cpi_ctx, amount)
     }
+
+    pub fn get_transfer_fees(&mut self, amount: u64) -> Result<u64> {
+        if self.asset_mint.to_account_info().owner == &spl_token::id() {
+            return Ok(0);
+        }
+        let binding = self.asset_mint.to_account_info();
+        let mint_data = binding.data.borrow();
+        let mint = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_data)?;
+        let transfer_fee_config =
+            mint.get_extension::<spl_token_2022::extension::transfer_fee::TransferFeeConfig>()?;
+        let transfer_fee: u16 = transfer_fee_config
+            .newer_transfer_fee
+            .transfer_fee_basis_points
+            .into();
+        Ok(amount
+            .checked_mul(transfer_fee.into())
+            .ok_or(VaultProgramError::ArithmeticError)?
+            .div_ceil(MAX_BPS.into()))
+    }
 }
 
-pub fn handler<'info>(ctx: Context<Deposit>, assets: u64, min_shares_out: u64) -> Result<()> {
+pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
     let fee = ctx.accounts.vault.get_deposit_fee(assets)?;
     // current vault amount
@@ -164,7 +188,7 @@ pub fn handler<'info>(ctx: Context<Deposit>, assets: u64, min_shares_out: u64) -
         return Err(VaultProgramError::InsufficientDepositAmount.into());
     }
 
-    if shares < min_shares_out {
+    if shares < min_shares {
         return Err(VaultProgramError::SlippageExceeded.into())
     }
 

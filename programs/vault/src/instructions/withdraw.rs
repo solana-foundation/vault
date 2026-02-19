@@ -143,7 +143,7 @@ impl<'info> Withdraw<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64, max_shares_burned: u64) -> Result<()> {
+pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64, max_shares: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
 
     // assets is NET to receiver/user.
@@ -171,7 +171,7 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64, max_shares_burned: u6
         return Err(VaultProgramError::InsufficientWithdrawAmount.into());
     }
 
-    if shares_to_burn > max_shares_burned {
+    if shares_to_burn > max_shares {
         return Err(VaultProgramError::SlippageExceeded.into())
     }
 

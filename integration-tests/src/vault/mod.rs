@@ -3,6 +3,7 @@ mod constants;
 mod create_vault;
 mod deposit;
 mod helper_functions;
+mod mint;
 mod redeem;
 mod update_vault;
 mod withdraw;

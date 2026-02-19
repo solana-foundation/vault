@@ -4,7 +4,6 @@ use litesvm::{
 };
 use solana_sdk::{
     account::{Account, ReadableAccount},
-    msg,
     program_pack::Pack,
     signature::Keypair,
     signer::Signer,
@@ -13,7 +12,7 @@ use solana_sdk::{
 };
 use vault_client::{
     sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
-    Pubkey, RedeemBuilder, UpdateVaultBuilder, WithdrawBuilder,
+    MintBuilder, Pubkey, RedeemBuilder, UpdateVaultBuilder, WithdrawBuilder,
 };
 
 use anchor_spl::{
@@ -160,6 +159,7 @@ pub fn deposit(
     user_assets_account: Pubkey,
     user_shares_account: Pubkey,
     assets_amount: u64,
+    min_shares: u64,
     asset_token_program: Pubkey,
     share_token_program: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
@@ -173,6 +173,43 @@ pub fn deposit(
         .user_assets_account(user_assets_account)
         .user_shares_account(user_shares_account)
         .assets(assets_amount)
+        .min_shares(min_shares)
+        .asset_token_program(asset_token_program)
+        .share_token_program(share_token_program)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
+    return svm.send_transaction(tx);
+}
+
+pub fn mint(
+    svm: &mut LiteSVM,
+    user: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    reserve: Pubkey,
+    vault: Pubkey,
+    fee_recipient: Pubkey,
+    user_assets_account: Pubkey,
+    user_shares_account: Pubkey,
+    shares_amount: u64,
+    max_assets: u64,
+    asset_token_program: Pubkey,
+    share_token_program: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = MintBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .reserve(reserve)
+        .vault(vault)
+        .fee_recipient(fee_recipient)
+        .user_assets_account(user_assets_account)
+        .user_shares_account(user_shares_account)
+        .shares(shares_amount)
+        .max_assets(max_assets)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
         .instruction()
@@ -194,6 +231,7 @@ pub fn withdraw(
     user_assets_account: Pubkey,
     user_shares_account: Pubkey,
     assets_amount: u64,
+    max_shares: u64,
     asset_token_program: Pubkey,
     share_token_program: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
@@ -207,6 +245,7 @@ pub fn withdraw(
         .user_assets_account(user_assets_account)
         .user_shares_account(user_shares_account)
         .assets(assets_amount)
+        .max_shares(max_shares)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
         .instruction()
@@ -228,6 +267,7 @@ pub fn redeem(
     user_assets_account: Pubkey,
     user_shares_account: Pubkey,
     shares_amount: u64,
+    min_assets: u64,
     asset_token_program: Pubkey,
     share_token_program: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
@@ -241,6 +281,7 @@ pub fn redeem(
         .user_assets_account(user_assets_account)
         .user_shares_account(user_shares_account)
         .shares(shares_amount)
+        .min_assets(min_assets)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
         .instruction()
@@ -397,7 +438,7 @@ pub fn set_up_vault(
         ],
         &vault_client::sdk::program_id(),
     );
-    let result = create_vault(
+    create_vault(
         svm,
         &authority,
         &payer,
@@ -413,8 +454,7 @@ pub fn set_up_vault(
         fee_recipient.pubkey(),
         asset_token_program,
         share_token_program,
-    );
-    msg!("Logs: {:?}", result.unwrap().logs);
+    ).expect("Failed to create vault");
     let _ = update_vault(
         svm,
         &authority,

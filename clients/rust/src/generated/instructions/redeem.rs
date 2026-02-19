@@ -121,6 +121,7 @@ impl Default for RedeemInstructionData {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct RedeemInstructionArgs {
     pub shares: u64,
+    pub min_assets: u64,
 }
 
 impl RedeemInstructionArgs {
@@ -159,6 +160,7 @@ pub struct RedeemBuilder {
     asset_token_program: Option<solana_pubkey::Pubkey>,
     associated_token_program: Option<solana_pubkey::Pubkey>,
     shares: Option<u64>,
+    min_assets: Option<u64>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -251,6 +253,12 @@ impl RedeemBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn min_assets(&mut self, min_assets: u64) -> &mut Self {
+        self.min_assets = Some(min_assets);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -295,6 +303,7 @@ impl RedeemBuilder {
         };
         let args = RedeemInstructionArgs {
             shares: self.shares.clone().expect("shares is not set"),
+            min_assets: self.min_assets.clone().expect("min_assets is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -522,6 +531,7 @@ impl<'a, 'b> RedeemCpiBuilder<'a, 'b> {
             asset_token_program: None,
             associated_token_program: None,
             shares: None,
+            min_assets: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -631,6 +641,12 @@ impl<'a, 'b> RedeemCpiBuilder<'a, 'b> {
         self
     }
 
+    #[inline(always)]
+    pub fn min_assets(&mut self, min_assets: u64) -> &mut Self {
+        self.instruction.min_assets = Some(min_assets);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -671,6 +687,11 @@ impl<'a, 'b> RedeemCpiBuilder<'a, 'b> {
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
         let args = RedeemInstructionArgs {
             shares: self.instruction.shares.clone().expect("shares is not set"),
+            min_assets: self
+                .instruction
+                .min_assets
+                .clone()
+                .expect("min_assets is not set"),
         };
         let instruction = RedeemCpi {
             __program: self.instruction.__program,
@@ -738,6 +759,7 @@ struct RedeemCpiBuilderInstruction<'a, 'b> {
     asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     associated_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     shares: Option<u64>,
+    min_assets: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }
