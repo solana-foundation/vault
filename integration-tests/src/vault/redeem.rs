@@ -16,6 +16,23 @@ use crate::vault::helper_functions::{
 };
 use test_case::test_case;
 
+/// Mirrors get_withdraw_fee_when_redeeming formula:
+/// fee = ceil(gross * bps / (MAX_BPS + bps))
+fn redeem_fee_from_gross(fee: FeeType, gross: u64) -> u64 {
+    match fee {
+        FeeType::Percentage { bps } => {
+            if bps == 0 {
+                return 0;
+            }
+            let denominator = 10_000u128 + bps as u128;
+            let numerator = gross as u128 * bps as u128;
+            u64::try_from(numerator.div_ceil(denominator)).expect("overflow")
+        }
+        FeeType::FixedAmount { amount } => amount,
+        FeeType::NoFee => 0,
+    }
+}
+
 /// Mirrors get_assets_from_shares formula:
 fn assets_from_shares_formula(
     total_assets: u64,
@@ -202,7 +219,7 @@ fn test_redeem_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program:
         false,                                       // Rounding::Down
     );
 
-    let redeem_fee_amount = get_fee(withdraw_fee.clone(), total_assets_out);
+    let redeem_fee_amount = redeem_fee_from_gross(withdraw_fee.clone(), total_assets_out);
 
     let user_assets_out = total_assets_out
         .checked_sub(redeem_fee_amount)
@@ -405,7 +422,7 @@ fn test_redeem_slippage_protection() {
         false, // Rounding::Down
     );
 
-    let redeem_fee_amt = get_fee(redeem_fee.clone(), total_assets_out);
+    let redeem_fee_amt = redeem_fee_from_gross(redeem_fee.clone(), total_assets_out);
     let user_assets_out = total_assets_out.checked_sub(redeem_fee_amt).unwrap();
     assert!(user_assets_out > 0);
 
