@@ -156,13 +156,13 @@ pub fn handler<'info>(ctx: Context<Redeem>, shares: u64, min_assets: u64) -> Res
         shares,
         Rounding::Down, // avoid overpaying assets for a given shares input
     )?;
-
+ 
     if total_assets_out == 0 {
         return Err(VaultProgramError::InsufficientRedeemAmount.into());
     }
 
-    // fee computed on the total amount of assets to withdraw from vault
-    let fee = ctx.accounts.vault.get_withdraw_fee(total_assets_out)?;
+    // fee computed on net assets to user, consistent with withdraw (fee rate on NET)
+    let fee = ctx.accounts.vault.get_withdraw_fee_when_redeeming(total_assets_out)?;
 
     let user_assets_out = total_assets_out
         .checked_sub(fee)

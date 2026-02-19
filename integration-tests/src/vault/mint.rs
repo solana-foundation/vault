@@ -273,9 +273,6 @@ fn test_mint_vault_with_transfer_fees() {
             .base
             .amount;
 
-    let fee_minus_transfer_fee_amount = fee_recipient_balance_after;
-    assert_eq!(fee_recipient_balance_after, fee_minus_transfer_fee_amount);
-
     user_asset_ata_account = svm
         .get_account(&user_asset_ata)
         .expect("User asset account should exist");
