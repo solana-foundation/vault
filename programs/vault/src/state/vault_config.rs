@@ -223,7 +223,8 @@ impl VaultConfig {
     }
 
     pub fn get_withdraw_fee_when_redeeming(self, gross_assets: u64) -> Result<u64> {
-        self.withdraw_fees.get_withdraw_fee_when_redeeming(gross_assets)
+        self.withdraw_fees
+            .get_withdraw_fee_when_redeeming(gross_assets)
     }
 
     pub fn decrease_asset_supply(&mut self, amount: u64) -> Result<()> {
