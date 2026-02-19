@@ -180,13 +180,17 @@ impl VaultConfig {
     ) -> Result<u64> {
         let total_assets = self.total_assets();
 
-        // Bootstrap: initial_price is "assets per share" (already scaled by asset decimals).
-        // If the vault is empty (or supply is zero), price is fixed at initial_price.
-        if supply == 0 || total_assets == 0 {
+        // Bootstrap: no shares exist yet, price is fixed at initial_price.
+        if supply == 0 {
             let assets = u128::from(share_amount)
                 .checked_mul(u128::from(self.initial_price))
                 .ok_or(VaultProgramError::ArithmeticError)?;
             return u64::try_from(assets).map_err(|_| VaultProgramError::ArithmeticError.into());
+        }
+        // Insolvent vault: shares exist but total_assets is zero (losses/rounding/state drift).
+        // Return 0 so slippage checks correctly reject redemptions.
+        if total_assets == 0 {
+            return Ok(0);
         }
 
         let numerator = u128::from(share_amount)
@@ -379,7 +383,7 @@ mod tests {
     #[test_case(1000,1,500,100,Rounding::Down,199;"Basic calculation rounding down")]
     #[test_case(1000,1,500,100,Rounding::Up,200;"Basic calculation rounding up")]
     #[test_case(1000,1,0,100,Rounding::Down,100;"Zero supply")]
-    #[test_case(0,1,500,100,Rounding::Down,100;"Zero assets")]
+    #[test_case(0,1,500,100,Rounding::Down,0;"Zero assets")]
     #[test_case(0,1,0,0,Rounding::Down,0;"All zeros")]
     #[test_case(1000,1,1000,500,Rounding::Down,499;"Equal supply and total assets")]
     #[test_case(1_000_000_000,1,1_000_000_000,1_000_000,Rounding::Down,999_999;"Large values within bounds")]
@@ -390,8 +394,8 @@ mod tests {
     #[test_case(1,1_000_000, 3, 1, Rounding::Up, 1; "ceil differs: 1*1/3 up")]
     #[test_case(10_000,1_000_000, 3, 2, Rounding::Down, 5000; "non-clean division down")]
     #[test_case(10_000,1_000_000, 3, 2, Rounding::Up, 5000; "non-clean division up")]
-    #[test_case(0,1_000_000, 1_000, 100, Rounding::Down, 100_000_000; "Zero assets, positive supply, down")]
-    #[test_case(0,1_000_000, 1_000, 100, Rounding::Up, 100_000_000; "Zero assets, positive supply, up")]
+    #[test_case(0,1_000_000, 1_000, 100, Rounding::Down, 0; "Zero assets, positive supply, down")]
+    #[test_case(0,1_000_000, 1_000, 100, Rounding::Up, 0; "Zero assets, positive supply, up")]
     #[test_case(10_000,1_000_000, 10_000, 100, Rounding::Down, 99; "1:1 ratio down")]
     #[test_case(10_000,1_000_000, 10_000, 100, Rounding::Up, 100; "1:1 ratio up")]
     #[test_case(2_000,1_000_000, 1_000, 100, Rounding::Down, 199; "2:1 assets:supply down")]
