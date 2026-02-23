@@ -45,8 +45,6 @@ pub struct VaultConfig {
     pub paused: bool,
     /// max balance allowed in vault
     pub vault_asset_cap: u64,
-    /// virtual vault asset balance
-    pub total_asset_balance: u64,
     /// pubkey that is required to own the TokenAccount fees are sent to
     #[cfg_attr(
         feature = "serde",

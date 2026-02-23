@@ -166,19 +166,13 @@ pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64
         .checked_sub(reserve_amount_before)
         .ok_or(VaultProgramError::ArithmeticError)?;
 
-    let new_total_asset_balance = ctx
-        .accounts
-        .vault
-        .total_asset_balance
-        .checked_add(actual_transferred_amount)
-        .ok_or(VaultProgramError::ArithmeticError)?;
-
     require!(
-        new_total_asset_balance <= ctx.accounts.vault.vault_asset_cap,
+        updated_reserve_amount <= ctx.accounts.vault.vault_asset_cap,
         VaultProgramError::MaxVaultAssetCapExceeded
     );
 
     let shares = ctx.accounts.vault.get_shares_from_assets(
+        reserve_amount_before,
         ctx.accounts.share_mint.supply,
         actual_transferred_amount,
         Rounding::Down,
@@ -192,9 +186,6 @@ pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64
         return Err(VaultProgramError::SlippageExceeded.into());
     }
 
-    ctx.accounts
-        .vault
-        .increase_asset_supply(actual_transferred_amount)?;
     ctx.accounts
         .transfer_asset_token_fee_to_fee_recipient(fee)?;
     ctx.accounts.mint_shares_to_user(shares)?;

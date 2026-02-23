@@ -159,6 +159,7 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64, max_shares: u64) -> R
         .ok_or(VaultProgramError::ArithmeticError)?;
 
     let shares_to_burn = ctx.accounts.vault.get_shares_from_assets(
+        ctx.accounts.reserve.amount,
         ctx.accounts.share_mint.supply,
         amount_with_fee,
         // This ensures the user provides (burns) enough shares
@@ -185,9 +186,6 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64, max_shares: u64) -> R
 
     // transfer from vault to user
     ctx.accounts.transfer_assets_to_user(amount_assets_out)?;
-
-    // decrease vault assets
-    ctx.accounts.vault.decrease_asset_supply(amount_with_fee)?;
 
     Ok(())
 }

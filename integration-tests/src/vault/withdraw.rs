@@ -4,15 +4,13 @@ use anchor_spl::{
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, instruction::InstructionError, signature::Keypair, signer::Signer,
+    instruction::InstructionError, signature::Keypair, signer::Signer,
     transaction::TransactionError,
 };
-use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
+use vault_client::{sdk::program_id, FeeType, Pubkey};
 
 use crate::vault::helper_functions::{
-    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee,
-    get_mint_supply, get_token_account_amount, helper_mint_to, recv_amount_from_params,
-    set_up_vault, withdraw,
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, get_mint_supply, get_token_account_amount, get_vault_asset_balance, helper_mint_to, recv_amount_from_params, set_up_vault, withdraw
 };
 use test_case::test_case;
 
@@ -129,12 +127,10 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_progra
         get_mint_supply(&svm.get_account(&share_mint.pubkey()).unwrap());
     assert_eq!(share_supply_before_deposit, 0);
 
-    let vault = svm
-        .get_account(&vault_pubkey)
-        .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    
+    let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
     assert_eq!(
-        vault_config.total_asset_balance, 0,
+        vault_asset_balance, 0,
         "Vault internal balance should be 0"
     );
 
@@ -196,11 +192,8 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_progra
         get_mint_supply(&svm.get_account(&share_mint.pubkey()).unwrap());
     assert_eq!(share_supply_after_deposit, deposit_net_received);
 
-    let vault = svm
-        .get_account(&vault_pubkey)
-        .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
-    assert_eq!(vault_config.total_asset_balance, deposit_net_received);
+    let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
+    assert_eq!(vault_asset_balance, deposit_net_received);
 
     // -------------------- withdraw --------------------
     // `assets_out` is NET to user. Vault additionally pays `withdraw_fee(assets_out)` out of
@@ -274,12 +267,9 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_progra
         deposit_net_received - gross_amount
     );
 
-    let vault = svm
-        .get_account(&vault_pubkey)
-        .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
     assert_eq!(
-        vault_config.total_asset_balance,
+        vault_asset_balance,
         deposit_net_received - gross_amount,
         "Vault internal balance should be deposit_net_received - gross_amount"
     );
@@ -405,8 +395,7 @@ fn test_withdraw_slippage_protection() {
     let user_assets_before = get_token_account_amount(&svm.get_account(&user_asset_ata).unwrap());
     let user_shares_before = get_token_account_amount(&svm.get_account(&user_share_ata).unwrap());
     let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
-    let vault_before =
-        VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
+    let vault_asset_balance_before = get_vault_asset_balance(&svm, &vault_pubkey);
 
     let result = withdraw(
         &mut svm,
@@ -436,15 +425,14 @@ fn test_withdraw_slippage_protection() {
     let user_assets_after = get_token_account_amount(&svm.get_account(&user_asset_ata).unwrap());
     let user_shares_after = get_token_account_amount(&svm.get_account(&user_share_ata).unwrap());
     let reserve_after = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
-    let vault_after =
-        VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
+    let vault_asset_balance_after = get_vault_asset_balance(&svm, &vault_pubkey);
 
     assert_eq!(fee_recipient_after, fee_recipient_before);
     assert_eq!(user_assets_after, user_assets_before);
     assert_eq!(user_shares_after, user_shares_before);
     assert_eq!(reserve_after, reserve_before);
     assert_eq!(
-        vault_after.total_asset_balance,
-        vault_before.total_asset_balance
+        vault_asset_balance_after,
+        vault_asset_balance_before
     );
 }

@@ -122,8 +122,6 @@ pub struct VaultConfig {
     pub paused: bool,
     /// max balance allowed in vault
     pub vault_asset_cap: u64,
-    /// virtual vault asset balance
-    pub total_asset_balance: u64,
     /// pubkey that is required to own the TokenAccount fees are sent to
     pub fee_recipient: Pubkey,
     pub reserve_bump: u8,
@@ -131,24 +129,22 @@ pub struct VaultConfig {
 }
 
 impl VaultConfig {
-    pub fn total_assets(self) -> u64 {
-        return self.total_asset_balance;
-    }
 
     pub fn get_shares_from_assets(
         self,
-        supply: u64,
+        reserve_balance: u64,
+        share_supply: u64,
         asset_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
         let assets_times_total_supply: u128;
-        if supply == 0 {
+        if share_supply == 0 {
             assets_times_total_supply = u128::from(self.initial_price)
                 .checked_mul(u128::from(asset_amount))
                 .ok_or(VaultProgramError::ArithmeticError)?;
         } else {
             assets_times_total_supply = u128::from(
-                supply
+                share_supply
                     .checked_add(1)
                     .ok_or(VaultProgramError::ArithmeticError)?,
             )
@@ -157,13 +153,13 @@ impl VaultConfig {
         }
         let result = match rounding {
             Rounding::Up => assets_times_total_supply.div_ceil(u128::from(
-                self.total_assets()
+                reserve_balance
                     .checked_add(1)
                     .ok_or(VaultProgramError::ArithmeticError)?,
             )),
             Rounding::Down => assets_times_total_supply
                 .checked_div(u128::from(
-                    self.total_assets()
+                    reserve_balance
                         .checked_add(1)
                         .ok_or(VaultProgramError::ArithmeticError)?,
                 ))
@@ -174,14 +170,15 @@ impl VaultConfig {
 
     pub fn get_assets_from_shares(
         self,
-        supply: u64,
+        reserve_balance: u64,
+        share_supply: u64,
         share_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
-        let total_assets = self.total_assets();
+        let total_assets = reserve_balance;
 
         // Bootstrap: no shares exist yet, price is fixed at initial_price.
-        if supply == 0 {
+        if share_supply == 0 {
             let assets = u128::from(share_amount)
                 .checked_mul(u128::from(self.initial_price))
                 .ok_or(VaultProgramError::ArithmeticError)?;
@@ -194,11 +191,11 @@ impl VaultConfig {
         }
 
         let numerator = u128::from(share_amount)
-            .checked_mul(u128::from(self.total_assets()))
+            .checked_mul(u128::from(total_assets))
             .ok_or(VaultProgramError::ArithmeticError)?;
 
         let denominator = u128::from(
-            supply
+            share_supply
                 .checked_add(1)
                 .ok_or(VaultProgramError::ArithmeticError)?,
         );
@@ -213,15 +210,6 @@ impl VaultConfig {
         u64::try_from(result).map_err(|_| VaultProgramError::ArithmeticError.into())
     }
 
-    pub fn increase_asset_supply(&mut self, amount: u64) -> Result<()> {
-        let new_supply = self
-            .total_asset_balance
-            .checked_add(amount)
-            .ok_or(VaultProgramError::ArithmeticError)?;
-        self.total_asset_balance = new_supply;
-        Ok(())
-    }
-
     pub fn get_deposit_fee_when_minting(self, assets: u64) -> Result<u64> {
         self.deposit_fees.get_deposit_fee_when_minting(assets)
     }
@@ -229,17 +217,6 @@ impl VaultConfig {
     pub fn get_withdraw_fee_when_redeeming(self, gross_assets: u64) -> Result<u64> {
         self.withdraw_fees
             .get_withdraw_fee_when_redeeming(gross_assets)
-    }
-
-    pub fn decrease_asset_supply(&mut self, amount: u64) -> Result<()> {
-        let new_supply = self
-            .total_asset_balance
-            .checked_sub(amount)
-            .ok_or(VaultProgramError::ArithmeticError)?;
-
-        self.total_asset_balance = new_supply;
-
-        Ok(())
     }
 
     pub fn get_deposit_fee(self, deposit_amount: u64) -> Result<u64> {
@@ -256,7 +233,7 @@ mod tests {
     use super::*;
     use test_case::test_case;
 
-    fn create_vault_config(total_asset_balance: u64, initial_price: u64) -> VaultConfig {
+    fn create_vault_config(initial_price: u64) -> VaultConfig {
         VaultConfig {
             asset_mint_address: Pubkey::new_unique(),
             share_mint_address: Pubkey::new_unique(),
@@ -267,7 +244,6 @@ mod tests {
             withdraw_fees: FeeType::NoFee,
             paused: false,
             vault_asset_cap: u64::MAX,
-            total_asset_balance,
             fee_recipient: Pubkey::new_unique(),
             reserve_bump: 255,
             bump: 254,
@@ -298,9 +274,9 @@ mod tests {
         rounding: Rounding,
         expected_shares: u64,
     ) {
-        let vault = create_vault_config(total_asset_balance, initial_price);
+        let vault = create_vault_config(initial_price);
         let shares = vault
-            .get_shares_from_assets(supply, asset_amount, rounding)
+            .get_shares_from_assets(total_asset_balance, supply, asset_amount, rounding)
             .unwrap();
         assert_eq!(shares, expected_shares);
     }
@@ -317,24 +293,24 @@ mod tests {
         asset_amount: u64,
         rounding: Rounding,
     ) {
-        let vault = create_vault_config(total_asset_balance, initial_price);
+        let vault = create_vault_config(initial_price);
 
-        let result = vault.get_shares_from_assets(supply, asset_amount, rounding);
+        let result = vault.get_shares_from_assets(total_asset_balance, supply, asset_amount, rounding);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_initial_price_variations() {
-        let vault_high = create_vault_config(0, 1_000_000_000);
+        let vault_high = create_vault_config(1_000_000_000);
 
         let shares = vault_high
-            .get_shares_from_assets(0, 1, Rounding::Down)
+            .get_shares_from_assets(0, 0, 1, Rounding::Down)
             .unwrap();
         assert_eq!(shares, 1_000_000_000);
 
-        let vault_low = create_vault_config(0, 1);
+        let vault_low = create_vault_config(1);
         let shares_low = vault_low
-            .get_shares_from_assets(0, 1_000_000, Rounding::Down)
+            .get_shares_from_assets(0, 0, 1_000_000, Rounding::Down)
             .unwrap();
         assert_eq!(shares_low, 1_000_000);
     }
@@ -418,8 +394,8 @@ mod tests {
         rounding: Rounding,
         expected_amount: u64,
     ) {
-        let vault = create_vault_config(total_asset_amount, initial_price);
-        let result = vault.get_assets_from_shares(supply, asset_amount, rounding);
+        let vault = create_vault_config(initial_price);
+        let result = vault.get_assets_from_shares(total_asset_amount, supply, asset_amount, rounding);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), expected_amount);
@@ -435,22 +411,22 @@ mod tests {
         asset_amount: u64,
         rounding: Rounding,
     ) {
-        let vault = create_vault_config(total_asset_amount, initial_price);
-        let result = vault.get_assets_from_shares(supply, asset_amount, rounding);
+        let vault = create_vault_config(initial_price);
+        let result = vault.get_assets_from_shares(total_asset_amount, supply, asset_amount, rounding);
 
         assert!(result.is_err());
     }
 
     #[test]
     fn test_rounding_difference() {
-        let vault_down = create_vault_config(1000, 1);
-        let vault_up = create_vault_config(1000, 1);
+        let vault_down = create_vault_config(1);
+        let vault_up = create_vault_config(1);
 
         let result_down = vault_down
-            .get_assets_from_shares(333, 100, Rounding::Down)
+            .get_assets_from_shares(1000, 333, 100, Rounding::Down)
             .unwrap();
         let result_up = vault_up
-            .get_assets_from_shares(333, 100, Rounding::Up)
+            .get_assets_from_shares(1000, 333, 100, Rounding::Up)
             .unwrap();
 
         assert!(result_up >= result_down);

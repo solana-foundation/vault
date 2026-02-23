@@ -93,7 +93,6 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
         withdraw_fees: args.withdraw_fees.unwrap_or(FeeType::NoFee),
         paused: true,
         vault_asset_cap: args.vault_asset_cap.unwrap_or(0),
-        total_asset_balance: 0,
         fee_recipient: args.fee_recipient,
         reserve_bump: ctx.bumps.reserve,
         bump: ctx.bumps.vault,

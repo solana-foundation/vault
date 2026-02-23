@@ -11,11 +11,10 @@ use solana_sdk::{
 };
 use spl_token::state::Account as TokenAccount;
 use spl_token_2022::state::Account as TokenAccount2022;
-use vault_client::{sdk::program_id, FeeType, VaultConfig};
+use vault_client::{sdk::program_id, FeeType};
 
 use crate::vault::helper_functions::{
-    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee,
-    helper_mint_to, set_up_vault,
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, get_vault_asset_balance, helper_mint_to, set_up_vault
 };
 
 #[test]
@@ -88,11 +87,8 @@ fn test_deposit_vault() {
         .amount;
     assert_eq!(user_share_balance_before, 0);
 
-    let vault = svm
-        .get_account(&vault_pubkey)
-        .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
-    assert_eq!(vault_config.total_asset_balance, 0);
+    let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
+    assert_eq!(vault_asset_balance, 0);
 
     let deposit_amount = 500_000;
     let result = deposit(
@@ -110,6 +106,12 @@ fn test_deposit_vault() {
         token::ID,
         token::ID,
     );
+    match &result {
+        Ok(_) => (),
+        Err(e) => {
+            println!("error: {}", e.meta.pretty_logs());
+        }
+    };
 
     assert_eq!(result.is_ok(), true, "Unexpected result for test case");
 
@@ -161,11 +163,9 @@ fn test_deposit_vault() {
 
     let mint_account = spl_token::state::Mint::unpack(&share_mint_account.data).unwrap();
     assert_eq!(mint_account.supply, deposit_amount_minus_fee);
-    let vault = svm
-        .get_account(&vault_pubkey)
-        .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
-    assert_eq!(vault_config.total_asset_balance, deposit_amount_minus_fee);
+
+    let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
+    assert_eq!(vault_asset_balance, deposit_amount_minus_fee);
 }
 
 #[test]
@@ -251,11 +251,9 @@ fn test_deposit_vault_with_transfer_fees() {
         .unwrap()
         .amount;
     assert_eq!(user_share_balance_before, 0);
-    let vault = svm
-        .get_account(&vault_pubkey)
-        .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
-    assert_eq!(vault_config.total_asset_balance, 0);
+
+    let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
+    assert_eq!(vault_asset_balance, 0);
     let deposit_amount = 500_000;
     let result = deposit(
         &mut svm,
@@ -359,12 +357,9 @@ fn test_deposit_vault_with_transfer_fees() {
         mint_account.supply,
         deposit_amount_minus_fee_minus_transfer_fee_deposit_amount
     );
-    let vault = svm
-        .get_account(&vault_pubkey)
-        .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
     assert_eq!(
-        vault_config.total_asset_balance,
+        vault_asset_balance,
         deposit_amount_minus_fee_minus_transfer_fee_deposit_amount
     );
 }
@@ -445,7 +440,6 @@ fn test_deposit_slippage_protection() {
     let reserve_balance_after = TokenAccount::unpack(reserve_account.data()).unwrap().amount;
     assert_eq!(reserve_balance_after, 0);
 
-    let vault = svm.get_account(&vault_pubkey).unwrap();
-    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
-    assert_eq!(vault_config.total_asset_balance, 0);
+    let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
+    assert_eq!(vault_asset_balance, 0);
 }

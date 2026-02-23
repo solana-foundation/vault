@@ -152,6 +152,7 @@ pub fn handler<'info>(ctx: Context<Redeem>, shares: u64, min_assets: u64) -> Res
     );
     // get amount of assets from shares arg
     let total_assets_out = ctx.accounts.vault.get_assets_from_shares(
+        ctx.accounts.reserve.amount,
         ctx.accounts.share_mint.supply,
         shares,
         Rounding::Down, // avoid overpaying assets for a given shares input
@@ -185,9 +186,6 @@ pub fn handler<'info>(ctx: Context<Redeem>, shares: u64, min_assets: u64) -> Res
 
     // transfer from vault to user
     ctx.accounts.transfer_assets_to_user(user_assets_out)?;
-
-    // decrease vault assets
-    ctx.accounts.vault.decrease_asset_supply(total_assets_out)?;
 
     Ok(())
 }

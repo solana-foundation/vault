@@ -89,7 +89,6 @@ fn test_create_vault(
         assert_eq!(vault_config.withdraw_fees, withdraw_fee);
         assert_eq!(vault_config.initial_price, initial_price);
         assert_eq!(vault_config.paused, true);
-        assert_eq!(vault_config.total_asset_balance, 0);
         assert_eq!(vault_config.vault_asset_cap, 0);
         assert_eq!(vault_config.vault_token_account, reserve_pubkey);
     } else {
