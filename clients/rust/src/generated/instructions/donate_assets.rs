@@ -21,7 +21,7 @@ pub struct DonateAssets {
 
     pub vault: solana_pubkey::Pubkey,
 
-    pub authority_assets_account: solana_pubkey::Pubkey,
+    pub assets_account: solana_pubkey::Pubkey,
 
     pub token_program: solana_pubkey::Pubkey,
 
@@ -58,7 +58,7 @@ impl DonateAssets {
             self.vault, false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(
-            self.authority_assets_account,
+            self.assets_account,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -127,7 +127,7 @@ impl DonateAssetsInstructionArgs {
 ///   2. `[writable]` share_mint
 ///   3. `[writable]` reserve
 ///   4. `[]` vault
-///   5. `[writable]` authority_assets_account
+///   5. `[writable]` assets_account
 ///   6. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
 ///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
@@ -137,7 +137,7 @@ pub struct DonateAssetsBuilder {
     share_mint: Option<solana_pubkey::Pubkey>,
     reserve: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
-    authority_assets_account: Option<solana_pubkey::Pubkey>,
+    assets_account: Option<solana_pubkey::Pubkey>,
     token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     assets: Option<u64>,
@@ -180,11 +180,8 @@ impl DonateAssetsBuilder {
     }
 
     #[inline(always)]
-    pub fn authority_assets_account(
-        &mut self,
-        authority_assets_account: solana_pubkey::Pubkey,
-    ) -> &mut Self {
-        self.authority_assets_account = Some(authority_assets_account);
+    pub fn assets_account(&mut self, assets_account: solana_pubkey::Pubkey) -> &mut Self {
+        self.assets_account = Some(assets_account);
         self
     }
 
@@ -233,9 +230,7 @@ impl DonateAssetsBuilder {
             share_mint: self.share_mint.expect("share_mint is not set"),
             reserve: self.reserve.expect("reserve is not set"),
             vault: self.vault.expect("vault is not set"),
-            authority_assets_account: self
-                .authority_assets_account
-                .expect("authority_assets_account is not set"),
+            assets_account: self.assets_account.expect("assets_account is not set"),
             token_program: self.token_program.unwrap_or(solana_pubkey::pubkey!(
                 "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
             )),
@@ -263,7 +258,7 @@ pub struct DonateAssetsCpiAccounts<'a, 'b> {
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
-    pub authority_assets_account: &'b solana_account_info::AccountInfo<'a>,
+    pub assets_account: &'b solana_account_info::AccountInfo<'a>,
 
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
 
@@ -285,7 +280,7 @@ pub struct DonateAssetsCpi<'a, 'b> {
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
-    pub authority_assets_account: &'b solana_account_info::AccountInfo<'a>,
+    pub assets_account: &'b solana_account_info::AccountInfo<'a>,
 
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
 
@@ -307,7 +302,7 @@ impl<'a, 'b> DonateAssetsCpi<'a, 'b> {
             share_mint: accounts.share_mint,
             reserve: accounts.reserve,
             vault: accounts.vault,
-            authority_assets_account: accounts.authority_assets_account,
+            assets_account: accounts.assets_account,
             token_program: accounts.token_program,
             system_program: accounts.system_program,
             __args: args,
@@ -362,7 +357,7 @@ impl<'a, 'b> DonateAssetsCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(
-            *self.authority_assets_account.key,
+            *self.assets_account.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -396,7 +391,7 @@ impl<'a, 'b> DonateAssetsCpi<'a, 'b> {
         account_infos.push(self.share_mint.clone());
         account_infos.push(self.reserve.clone());
         account_infos.push(self.vault.clone());
-        account_infos.push(self.authority_assets_account.clone());
+        account_infos.push(self.assets_account.clone());
         account_infos.push(self.token_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
@@ -420,7 +415,7 @@ impl<'a, 'b> DonateAssetsCpi<'a, 'b> {
 ///   2. `[writable]` share_mint
 ///   3. `[writable]` reserve
 ///   4. `[]` vault
-///   5. `[writable]` authority_assets_account
+///   5. `[writable]` assets_account
 ///   6. `[]` token_program
 ///   7. `[]` system_program
 #[derive(Clone, Debug)]
@@ -437,7 +432,7 @@ impl<'a, 'b> DonateAssetsCpiBuilder<'a, 'b> {
             share_mint: None,
             reserve: None,
             vault: None,
-            authority_assets_account: None,
+            assets_account: None,
             token_program: None,
             system_program: None,
             assets: None,
@@ -483,11 +478,11 @@ impl<'a, 'b> DonateAssetsCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
-    pub fn authority_assets_account(
+    pub fn assets_account(
         &mut self,
-        authority_assets_account: &'b solana_account_info::AccountInfo<'a>,
+        assets_account: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.authority_assets_account = Some(authority_assets_account);
+        self.instruction.assets_account = Some(assets_account);
         self
     }
 
@@ -569,10 +564,10 @@ impl<'a, 'b> DonateAssetsCpiBuilder<'a, 'b> {
 
             vault: self.instruction.vault.expect("vault is not set"),
 
-            authority_assets_account: self
+            assets_account: self
                 .instruction
-                .authority_assets_account
-                .expect("authority_assets_account is not set"),
+                .assets_account
+                .expect("assets_account is not set"),
 
             token_program: self
                 .instruction
@@ -600,7 +595,7 @@ struct DonateAssetsCpiBuilderInstruction<'a, 'b> {
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     reserve: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-    authority_assets_account: Option<&'b solana_account_info::AccountInfo<'a>>,
+    assets_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     assets: Option<u64>,

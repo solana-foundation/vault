@@ -23,7 +23,6 @@ pub struct DonateAssets<'info> {
     pub reserve: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
-        constraint = authority.key() == vault.authority @ VaultProgramError::UnauthorizedSigner,
         seeds = [VAULT_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
         bump
     )]
@@ -33,7 +32,7 @@ pub struct DonateAssets<'info> {
         mut,
         token::mint = asset_mint,
     )]
-    pub authority_assets_account: InterfaceAccount<'info, TokenAccount>,
+    pub assets_account: InterfaceAccount<'info, TokenAccount>,
 
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
@@ -42,7 +41,7 @@ pub struct DonateAssets<'info> {
 impl<'info> DonateAssets<'info> {
     pub fn transfer_reserve_token_to_vault(&mut self, amount: u64) -> Result<()> {
         let vault_transfer_cpi_accounts = TransferChecked {
-            from: self.authority_assets_account.to_account_info(),
+            from: self.assets_account.to_account_info(),
             mint: self.asset_mint.to_account_info(),
             to: self.reserve.to_account_info(),
             authority: self.authority.to_account_info(),

@@ -596,7 +596,7 @@ pub fn donate_assets(
     share_mint: Pubkey,
     reserve: Pubkey,
     vault: Pubkey,
-    authority_assets_account: Pubkey,
+    assets_account: Pubkey,
     assets_amount: u64,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = DonateAssetsBuilder::new()
@@ -605,7 +605,7 @@ pub fn donate_assets(
         .share_mint(share_mint)
         .reserve(reserve)
         .vault(vault)
-        .authority_assets_account(authority_assets_account)
+        .assets_account(assets_account)
         .assets(assets_amount)
         .token_program(token::ID)
         .instruction()
