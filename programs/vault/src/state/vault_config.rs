@@ -42,6 +42,28 @@ impl FeeType {
         }
     }
 
+    pub fn get_withdraw_fee_when_redeeming(&self, gross_assets: u64) -> Result<u64> {
+        match self {
+            FeeType::Percentage { bps } => {
+                if *bps == 0 {
+                    return Ok(0);
+                }
+                // fee = ceil(gross * bps / (MAX_BPS + bps))
+                // Derived from: fee = net * bps / MAX_BPS where net = gross - fee
+                let denominator = u128::from(MAX_BPS)
+                    .checked_add(u128::from(*bps))
+                    .ok_or(VaultProgramError::ArithmeticError)?;
+                let fee = u128::from(gross_assets)
+                    .checked_mul(u128::from(*bps))
+                    .ok_or(VaultProgramError::ArithmeticError)?
+                    .div_ceil(denominator);
+                Ok(u64::try_from(fee)?)
+            }
+            FeeType::FixedAmount { amount } => Ok(*amount),
+            FeeType::NoFee => Ok(0),
+        }
+    }
+
     pub fn get_deposit_fee_when_minting(&self, net_assets: u64) -> Result<u64> {
         match self {
             FeeType::Percentage { bps } => {
@@ -156,6 +178,21 @@ impl VaultConfig {
         share_amount: u64,
         rounding: Rounding,
     ) -> Result<u64> {
+        let total_assets = self.total_assets();
+
+        // Bootstrap: no shares exist yet, price is fixed at initial_price.
+        if supply == 0 {
+            let assets = u128::from(share_amount)
+                .checked_mul(u128::from(self.initial_price))
+                .ok_or(VaultProgramError::ArithmeticError)?;
+            return u64::try_from(assets).map_err(|_| VaultProgramError::ArithmeticError.into());
+        }
+        // Insolvent vault: shares exist but total_assets is zero (losses/rounding/state drift).
+        // Return 0 so slippage checks correctly reject redemptions.
+        if total_assets == 0 {
+            return Ok(0);
+        }
+
         let numerator = u128::from(share_amount)
             .checked_mul(u128::from(self.total_assets()))
             .ok_or(VaultProgramError::ArithmeticError)?;
@@ -187,6 +224,11 @@ impl VaultConfig {
 
     pub fn get_deposit_fee_when_minting(self, assets: u64) -> Result<u64> {
         self.deposit_fees.get_deposit_fee_when_minting(assets)
+    }
+
+    pub fn get_withdraw_fee_when_redeeming(self, gross_assets: u64) -> Result<u64> {
+        self.withdraw_fees
+            .get_withdraw_fee_when_redeeming(gross_assets)
     }
 
     pub fn decrease_asset_supply(&mut self, amount: u64) -> Result<()> {
@@ -340,7 +382,7 @@ mod tests {
 
     #[test_case(1000,1,500,100,Rounding::Down,199;"Basic calculation rounding down")]
     #[test_case(1000,1,500,100,Rounding::Up,200;"Basic calculation rounding up")]
-    #[test_case(1000,1,0,100,Rounding::Down,100_000;"Zero supply")]
+    #[test_case(1000,1,0,100,Rounding::Down,100;"Zero supply")]
     #[test_case(0,1,500,100,Rounding::Down,0;"Zero assets")]
     #[test_case(0,1,0,0,Rounding::Down,0;"All zeros")]
     #[test_case(1000,1,1000,500,Rounding::Down,499;"Equal supply and total assets")]
@@ -412,6 +454,30 @@ mod tests {
             .unwrap();
 
         assert!(result_up >= result_down);
+    }
+
+    // get_withdraw_fee_when_redeeming: fee = ceil(gross * bps / (MAX_BPS + bps))
+    // such that fee/net = bps/MAX_BPS (same rate as withdraw uses on net)
+    #[test_case(FeeType::NoFee, 0, 0; "NoFee zero gross")]
+    #[test_case(FeeType::NoFee, 1_000_000, 0; "NoFee large gross")]
+    #[test_case(FeeType::FixedAmount { amount: 50 }, 1_000, 50; "FixedAmount fee")]
+    #[test_case(FeeType::Percentage { bps: 0 }, 1_000, 0; "Percentage zero bps")]
+    #[test_case(FeeType::Percentage { bps: 100 }, 1_010, 10; "1% on gross=1010 gives fee=10 net=1000")]
+    #[test_case(FeeType::Percentage { bps: 500 }, 10_500, 500; "5% on gross=10500 gives fee=500 net=10000")]
+    #[test_case(FeeType::Percentage { bps: 10_000 }, 1_000, 500; "100% on gross=1000 gives fee=500 net=500")]
+    #[test_case(FeeType::Percentage { bps: 100 }, 1_000, 10; "1% rounds up: ceil(1000*100/10100)=10")]
+    fn test_get_withdraw_fee_when_redeeming(fee_type: FeeType, gross: u64, expected_fee: u64) {
+        let fee = fee_type.get_withdraw_fee_when_redeeming(gross).unwrap();
+        assert_eq!(fee, expected_fee);
+        // verify fee rate is on NET (not gross) for Percentage fees
+        if let FeeType::Percentage { bps } = fee_type {
+            if bps > 0 && fee > 0 {
+                let net = gross - fee;
+                // fee / net should approximate bps / MAX_BPS (within rounding)
+                let fee_rate_times_max_bps = fee * 10_000 / net;
+                assert!(fee_rate_times_max_bps <= bps as u64 + 1);
+            }
+        }
     }
 
     #[test_case(0,1000,0;"Percentage fee zero bps")]

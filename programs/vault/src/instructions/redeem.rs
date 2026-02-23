@@ -143,7 +143,7 @@ impl<'info> Redeem<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<Redeem>, shares: u64) -> Result<()> {
+pub fn handler<'info>(ctx: Context<Redeem>, shares: u64, min_assets: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
     require!(shares > 0, VaultProgramError::InsufficientRedeemAmount);
     require!(
@@ -161,12 +161,19 @@ pub fn handler<'info>(ctx: Context<Redeem>, shares: u64) -> Result<()> {
         return Err(VaultProgramError::InsufficientRedeemAmount.into());
     }
 
-    // fee computed on the total amount of assets to withdraw from vault
-    let fee = ctx.accounts.vault.get_withdraw_fee(total_assets_out)?;
+    // fee computed on net assets to user, consistent with withdraw (fee rate on NET)
+    let fee = ctx
+        .accounts
+        .vault
+        .get_withdraw_fee_when_redeeming(total_assets_out)?;
 
     let user_assets_out = total_assets_out
         .checked_sub(fee)
         .ok_or(VaultProgramError::ArithmeticError)?;
+
+    if user_assets_out < min_assets {
+        return Err(VaultProgramError::SlippageExceeded.into());
+    }
 
     // burn user shares
     ctx.accounts.burn_shares(shares)?;

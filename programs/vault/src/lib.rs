@@ -55,16 +55,19 @@ pub mod vault {
     ///
     /// # Arguments
     /// * `assets` - The amount of asset tokens to deposit into the vault
-    pub fn deposit(ctx: Context<DepositAndMint>, assets: u64) -> Result<()> {
-        instructions::deposit::handler(ctx, assets)
+    /// * `min_shares` - Minimum number of shares the user must receive (slippage check)
+    pub fn deposit(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64) -> Result<()> {
+        instructions::deposit::handler(ctx, assets, min_shares)
     }
 
     /// Mint shares from the atomic vault.
     /// # Arguments
     /// * `shares` - The amount of shares to mint to the user
-    pub fn mint(ctx: Context<DepositAndMint>, shares: u64) -> Result<()> {
-        instructions::mint::handler(ctx, shares)
+    /// * `max_assets` - Maximum amount of asset tokens the user is willing to pay (slippage check)
+    pub fn mint(ctx: Context<DepositAndMint>, shares: u64, max_assets: u64) -> Result<()> {
+        instructions::mint::handler(ctx, shares, max_assets)
     }
+
     /// Withdraws assets from the vault by burning the required amount of shares.
     /// Burns shares from the user's shares Token account and transfers the requested amount of
     /// asset tokens from the vault's reserve account to the user's assets ATA.
@@ -73,8 +76,9 @@ pub mod vault {
     ///
     /// # Arguments
     /// * `assets` - The amount of asset tokens to withdraw from the vault
-    pub fn withdraw(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
-        instructions::withdraw::handler(ctx, assets)
+    /// * `max_shares` - Maximum number of shares the user is willing to burn (slippage check)
+    pub fn withdraw(ctx: Context<Withdraw>, assets: u64, max_shares: u64) -> Result<()> {
+        instructions::withdraw::handler(ctx, assets, max_shares)
     }
 
     /// Redeems shares for assets.
@@ -84,8 +88,9 @@ pub mod vault {
     ///
     /// # Arguments
     /// * `shares` - The amount of shares to redeem for asset tokens
-    pub fn redeem(ctx: Context<Redeem>, shares: u64) -> Result<()> {
-        instructions::redeem::handler(ctx, shares)
+    /// * `min_assets` - Minimum amount of asset tokens the user must receive (slippage check)
+    pub fn redeem(ctx: Context<Redeem>, shares: u64, min_assets: u64) -> Result<()> {
+        instructions::redeem::handler(ctx, shares, min_assets)
     }
 
     /// Donate assets into the vault.

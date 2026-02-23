@@ -146,7 +146,8 @@ impl<'info> DepositAndMint<'info> {
             .div_ceil(MAX_BPS.into()))
     }
 }
-pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64) -> Result<()> {
+
+pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
     let fee = ctx.accounts.vault.get_deposit_fee(assets)?;
     // current vault amount
@@ -186,6 +187,11 @@ pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64) -> Result<()> {
     if shares == 0 {
         return Err(VaultProgramError::InsufficientDepositAmount.into());
     }
+
+    if shares < min_shares {
+        return Err(VaultProgramError::SlippageExceeded.into());
+    }
+
     ctx.accounts
         .vault
         .increase_asset_supply(actual_transferred_amount)?;

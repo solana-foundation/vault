@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{error::VaultProgramError, instructions::DepositAndMint, state::Rounding};
 
-pub fn handler<'info>(ctx: Context<DepositAndMint>, shares: u64) -> Result<()> {
+pub fn handler<'info>(ctx: Context<DepositAndMint>, shares: u64, max_assets: u64) -> Result<()> {
     require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
 
     let assets = ctx.accounts.vault.get_assets_from_shares(
@@ -10,6 +10,10 @@ pub fn handler<'info>(ctx: Context<DepositAndMint>, shares: u64) -> Result<()> {
         shares,
         Rounding::Up,
     )?;
+
+    if assets > max_assets {
+        return Err(VaultProgramError::SlippageExceeded.into());
+    }
 
     let transfer_fee: u64 = ctx.accounts.get_transfer_fees(assets)?;
     let assets_plus_transfer_fee = assets

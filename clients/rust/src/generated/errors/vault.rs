@@ -48,6 +48,9 @@ pub enum VaultError {
     /// 6012 - Invalid vault state for this operation.
     #[error("Invalid vault state for this operation.")]
     InvalidState = 0x177C,
+    /// 6013 - Slippage exceeded.
+    #[error("Slippage exceeded.")]
+    SlippageExceeded = 0x177D,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

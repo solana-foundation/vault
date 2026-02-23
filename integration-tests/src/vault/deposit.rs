@@ -14,8 +14,8 @@ use spl_token_2022::state::Account as TokenAccount2022;
 use vault_client::{sdk::program_id, FeeType, VaultConfig};
 
 use crate::vault::helper_functions::{
-    create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, helper_mint_to,
-    set_up_vault,
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee,
+    helper_mint_to, set_up_vault,
 };
 
 #[test]
@@ -106,6 +106,7 @@ fn test_deposit_vault() {
         user_asset_ata,
         user_share_ata,
         deposit_amount,
+        0, // no slippage protection set
         token::ID,
         token::ID,
     );
@@ -267,6 +268,7 @@ fn test_deposit_vault_with_transfer_fees() {
         user_asset_ata,
         user_share_ata,
         deposit_amount,
+        0, // no slippage protection set
         token_2022::ID,
         token::ID,
     );
@@ -365,4 +367,85 @@ fn test_deposit_vault_with_transfer_fees() {
         vault_config.total_asset_balance,
         deposit_amount_minus_fee_minus_transfer_fee_deposit_amount
     );
+}
+
+#[test]
+fn test_deposit_slippage_protection() {
+    let mut svm = LiteSVM::new();
+    let program_bytes = include_bytes!("../../../target/deploy/vault.so");
+    svm.add_program(program_id(), program_bytes);
+
+    let asset_mint = Keypair::new();
+    let share_mint = Keypair::new();
+    let mint_authority = Keypair::new();
+
+    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
+        .unwrap();
+    create_mint(&mut svm, &mint_authority, &asset_mint);
+    create_mint(&mut svm, &mint_authority, &share_mint);
+
+    let (_, user, _, mint_authority, fee_recipient, reserve_pubkey, vault_pubkey) = set_up_vault(
+        &mut svm,
+        mint_authority,
+        &asset_mint,
+        &share_mint,
+        token::ID,
+        token::ID,
+        &FeeType::Percentage { bps: 100 },
+        &FeeType::NoFee,
+    );
+
+    let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
+    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
+    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &token::ID);
+
+    let user_asset_amount = 100_000_000;
+    helper_mint_to(
+        &mut svm,
+        &asset_mint.pubkey(),
+        &user_asset_ata,
+        &mint_authority,
+        user_asset_amount,
+        &token::ID,
+    );
+
+    let deposit_amount = 500_000;
+    let fee = get_fee(FeeType::Percentage { bps: 100 }, deposit_amount);
+    let expected_shares = deposit_amount.checked_sub(fee).unwrap();
+
+    // force slippage failure: ask for more shares than can be minted
+    let min_shares = expected_shares + 1;
+
+    let result = deposit(
+        &mut svm,
+        &user,
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        vault_pubkey,
+        fee_recipient_ata,
+        user_asset_ata,
+        user_share_ata,
+        deposit_amount,
+        min_shares,
+        token::ID,
+        token::ID,
+    );
+
+    assert_error_code(&result.unwrap_err(), 6013, "Slippage exceeded.");
+
+    // ensure state did not change
+    let user_share_ata_account = svm.get_account(&user_share_ata).unwrap();
+    let user_share_balance_after = TokenAccount::unpack(user_share_ata_account.data())
+        .unwrap()
+        .amount;
+    assert_eq!(user_share_balance_after, 0);
+
+    let reserve_account = svm.get_account(&reserve_pubkey).unwrap();
+    let reserve_balance_after = TokenAccount::unpack(reserve_account.data()).unwrap().amount;
+    assert_eq!(reserve_balance_after, 0);
+
+    let vault = svm.get_account(&vault_pubkey).unwrap();
+    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    assert_eq!(vault_config.total_asset_balance, 0);
 }

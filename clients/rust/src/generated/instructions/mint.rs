@@ -126,6 +126,7 @@ impl Default for MintInstructionData {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MintInstructionArgs {
     pub shares: u64,
+    pub max_assets: u64,
 }
 
 impl MintInstructionArgs {
@@ -166,6 +167,7 @@ pub struct MintBuilder {
     associated_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     shares: Option<u64>,
+    max_assets: Option<u64>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -257,6 +259,12 @@ impl MintBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn max_assets(&mut self, max_assets: u64) -> &mut Self {
+        self.max_assets = Some(max_assets);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -304,6 +312,7 @@ impl MintBuilder {
         };
         let args = MintInstructionArgs {
             shares: self.shares.clone().expect("shares is not set"),
+            max_assets: self.max_assets.clone().expect("max_assets is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -542,6 +551,7 @@ impl<'a, 'b> MintCpiBuilder<'a, 'b> {
             associated_token_program: None,
             system_program: None,
             shares: None,
+            max_assets: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -652,6 +662,12 @@ impl<'a, 'b> MintCpiBuilder<'a, 'b> {
         self
     }
 
+    #[inline(always)]
+    pub fn max_assets(&mut self, max_assets: u64) -> &mut Self {
+        self.instruction.max_assets = Some(max_assets);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -692,6 +708,11 @@ impl<'a, 'b> MintCpiBuilder<'a, 'b> {
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
         let args = MintInstructionArgs {
             shares: self.instruction.shares.clone().expect("shares is not set"),
+            max_assets: self
+                .instruction
+                .max_assets
+                .clone()
+                .expect("max_assets is not set"),
         };
         let instruction = MintCpi {
             __program: self.instruction.__program,
@@ -765,6 +786,7 @@ struct MintCpiBuilderInstruction<'a, 'b> {
     associated_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     shares: Option<u64>,
+    max_assets: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

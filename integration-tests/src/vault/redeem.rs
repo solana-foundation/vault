@@ -10,10 +10,28 @@ use solana_sdk::{
 use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
 
 use crate::vault::helper_functions::{
-    create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, get_mint_supply,
-    get_token_account_amount, helper_mint_to, recv_amount_from_params, redeem, set_up_vault,
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee,
+    get_mint_supply, get_token_account_amount, helper_mint_to, recv_amount_from_params, redeem,
+    set_up_vault,
 };
 use test_case::test_case;
+
+/// Mirrors get_withdraw_fee_when_redeeming formula:
+/// fee = ceil(gross * bps / (MAX_BPS + bps))
+fn redeem_fee_from_gross(fee: FeeType, gross: u64) -> u64 {
+    match fee {
+        FeeType::Percentage { bps } => {
+            if bps == 0 {
+                return 0;
+            }
+            let denominator = 10_000u128 + bps as u128;
+            let numerator = gross as u128 * bps as u128;
+            u64::try_from(numerator.div_ceil(denominator)).expect("overflow")
+        }
+        FeeType::FixedAmount { amount } => amount,
+        FeeType::NoFee => 0,
+    }
+}
 
 /// Mirrors get_assets_from_shares formula:
 fn assets_from_shares_formula(
@@ -147,6 +165,7 @@ fn test_redeem_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program:
         user_asset_ata,
         user_share_ata,
         deposit_amount,
+        0, // no slippage protection
         token_program,
         token_program,
     );
@@ -200,7 +219,7 @@ fn test_redeem_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program:
         false,                                       // Rounding::Down
     );
 
-    let redeem_fee_amount = get_fee(withdraw_fee.clone(), total_assets_out);
+    let redeem_fee_amount = redeem_fee_from_gross(withdraw_fee.clone(), total_assets_out);
 
     let user_assets_out = total_assets_out
         .checked_sub(redeem_fee_amount)
@@ -227,6 +246,7 @@ fn test_redeem_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program:
         user_asset_ata,
         user_share_ata,
         redeem_shares,
+        0, // no slippage protection
         token_program,
         token_program,
     );
@@ -297,6 +317,7 @@ fn test_redeem_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program:
         user_asset_ata,
         user_share_ata,
         failing_shares,
+        0, // no slippage protection
         token_program,
         token_program,
     );
@@ -321,4 +342,139 @@ fn test_redeem_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program:
             spl_token_2022::error::TokenError::InsufficientFunds as u32
         );
     }
+}
+
+#[test]
+fn test_redeem_slippage_protection() {
+    let mut svm = LiteSVM::new();
+    let program_bytes = include_bytes!("../../../target/deploy/vault.so");
+    svm.add_program(program_id(), program_bytes);
+
+    let asset_mint = Keypair::new();
+    let share_mint = Keypair::new();
+    let mint_authority = Keypair::new();
+
+    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
+        .unwrap();
+    create_mint(&mut svm, &mint_authority, &asset_mint);
+    create_mint(&mut svm, &mint_authority, &share_mint);
+
+    // deposit fee 1%, redeem fee 0.5% (so redeem output is predictable)
+    let deposit_fee = FeeType::Percentage { bps: 100 };
+    let redeem_fee = FeeType::Percentage { bps: 50 };
+
+    let (_, user, _, mint_authority, fee_recipient, reserve_pubkey, vault_pubkey) = set_up_vault(
+        &mut svm,
+        mint_authority,
+        &asset_mint,
+        &share_mint,
+        token::ID,
+        token::ID,
+        &deposit_fee,
+        &redeem_fee,
+    );
+
+    let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
+    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
+    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &token::ID);
+
+    // fund user
+    helper_mint_to(
+        &mut svm,
+        &asset_mint.pubkey(),
+        &user_asset_ata,
+        &mint_authority,
+        100_000_000,
+        &token::ID,
+    );
+
+    // deposit first (no slippage)
+    let deposit_amount = 500_000;
+    let result = deposit(
+        &mut svm,
+        &user,
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        vault_pubkey,
+        fee_recipient_ata,
+        user_asset_ata,
+        user_share_ata,
+        deposit_amount,
+        0, // no slippage protection
+        token::ID,
+        token::ID,
+    );
+    assert!(result.is_ok(), "deposit failed unexpectedly");
+
+    // expected shares minted = deposit_amount - deposit_fee
+    let deposit_fee_amt = get_fee(deposit_fee.clone(), deposit_amount);
+    let minted_shares = deposit_amount.checked_sub(deposit_fee_amt).unwrap();
+
+    // redeem with forced slippage failure
+    let redeem_shares: u64 = 100_000;
+
+    // matches on-chain: total_assets_out = floor(shares * total_assets / (supply + 1))
+    let total_assets_out = assets_from_shares_formula(
+        minted_shares, // total_assets tracked by vault after deposit (no transfer fee here)
+        minted_shares, // share supply after deposit
+        redeem_shares,
+        false, // Rounding::Down
+    );
+
+    let redeem_fee_amt = redeem_fee_from_gross(redeem_fee.clone(), total_assets_out);
+    let user_assets_out = total_assets_out.checked_sub(redeem_fee_amt).unwrap();
+    assert!(user_assets_out > 0);
+
+    // force slippage failure: ask for more assets than user can receive
+    let min_assets = user_assets_out + 1;
+
+    // snapshot balances before failing redeem
+    let user_assets_before = get_token_account_amount(&svm.get_account(&user_asset_ata).unwrap());
+    let user_shares_before = get_token_account_amount(&svm.get_account(&user_share_ata).unwrap());
+    let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
+    let fee_recipient_before =
+        get_token_account_amount(&svm.get_account(&fee_recipient_ata).unwrap());
+    let vault_before =
+        VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
+
+    let result = redeem(
+        &mut svm,
+        &user,
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        vault_pubkey,
+        fee_recipient_ata,
+        user_asset_ata,
+        user_share_ata,
+        redeem_shares,
+        min_assets,
+        token::ID,
+        token::ID,
+    );
+
+    assert_error_code(
+        &result.unwrap_err(),
+        6013, // SlippageExceeded
+        "Slippage exceeded.",
+    );
+
+    // ensure state did not change
+    let user_assets_after = get_token_account_amount(&svm.get_account(&user_asset_ata).unwrap());
+    let user_shares_after = get_token_account_amount(&svm.get_account(&user_share_ata).unwrap());
+    let reserve_after = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
+    let fee_recipient_after =
+        get_token_account_amount(&svm.get_account(&fee_recipient_ata).unwrap());
+    let vault_after =
+        VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
+
+    assert_eq!(user_assets_after, user_assets_before);
+    assert_eq!(user_shares_after, user_shares_before);
+    assert_eq!(reserve_after, reserve_before);
+    assert_eq!(fee_recipient_after, fee_recipient_before);
+    assert_eq!(
+        vault_after.total_asset_balance,
+        vault_before.total_asset_balance
+    );
 }

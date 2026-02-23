@@ -121,6 +121,7 @@ impl Default for WithdrawInstructionData {
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct WithdrawInstructionArgs {
     pub assets: u64,
+    pub max_shares: u64,
 }
 
 impl WithdrawInstructionArgs {
@@ -159,6 +160,7 @@ pub struct WithdrawBuilder {
     asset_token_program: Option<solana_pubkey::Pubkey>,
     associated_token_program: Option<solana_pubkey::Pubkey>,
     assets: Option<u64>,
+    max_shares: Option<u64>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -251,6 +253,12 @@ impl WithdrawBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn max_shares(&mut self, max_shares: u64) -> &mut Self {
+        self.max_shares = Some(max_shares);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -295,6 +303,7 @@ impl WithdrawBuilder {
         };
         let args = WithdrawInstructionArgs {
             assets: self.assets.clone().expect("assets is not set"),
+            max_shares: self.max_shares.clone().expect("max_shares is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -522,6 +531,7 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
             asset_token_program: None,
             associated_token_program: None,
             assets: None,
+            max_shares: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -631,6 +641,12 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
         self
     }
 
+    #[inline(always)]
+    pub fn max_shares(&mut self, max_shares: u64) -> &mut Self {
+        self.instruction.max_shares = Some(max_shares);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -671,6 +687,11 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
         let args = WithdrawInstructionArgs {
             assets: self.instruction.assets.clone().expect("assets is not set"),
+            max_shares: self
+                .instruction
+                .max_shares
+                .clone()
+                .expect("max_shares is not set"),
         };
         let instruction = WithdrawCpi {
             __program: self.instruction.__program,
@@ -738,6 +759,7 @@ struct WithdrawCpiBuilderInstruction<'a, 'b> {
     asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     associated_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     assets: Option<u64>,
+    max_shares: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

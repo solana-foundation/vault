@@ -10,8 +10,9 @@ use solana_sdk::{
 use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
 
 use crate::vault::helper_functions::{
-    create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, get_mint_supply,
-    get_token_account_amount, helper_mint_to, recv_amount_from_params, set_up_vault, withdraw,
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee,
+    get_mint_supply, get_token_account_amount, helper_mint_to, recv_amount_from_params,
+    set_up_vault, withdraw,
 };
 use test_case::test_case;
 
@@ -151,6 +152,7 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_progra
         user_asset_ata,
         user_share_ata,
         deposit_amount,
+        0, // no slippage protection
         token_program,
         token_program,
     );
@@ -227,7 +229,8 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_progra
         fee_recipient_ata,
         user_asset_ata,
         user_share_ata,
-        assets_out, // NET to user
+        assets_out, // NET to user,
+        u64::MAX,   // no slippage protection
         token_program,
         token_program,
     );
@@ -294,6 +297,7 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_progra
         user_asset_ata,
         user_share_ata,
         failing_assets_out,
+        u64::MAX, // no slippage protection
         token_program,
         token_program,
     );
@@ -318,4 +322,129 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_progra
             spl_token_2022::error::TokenError::InsufficientFunds as u32
         );
     }
+}
+
+#[test]
+fn test_withdraw_slippage_protection() {
+    let mut svm = LiteSVM::new();
+    let program_bytes = include_bytes!("../../../target/deploy/vault.so");
+    svm.add_program(program_id(), program_bytes);
+
+    let asset_mint = Keypair::new();
+    let share_mint = Keypair::new();
+    let mint_authority = Keypair::new();
+
+    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
+        .unwrap();
+    create_mint(&mut svm, &mint_authority, &asset_mint);
+    create_mint(&mut svm, &mint_authority, &share_mint);
+
+    // keep it simple: token-keg, deposit fee 1%, withdraw fee 0.5%
+    let deposit_fee = FeeType::Percentage { bps: 100 };
+    let withdraw_fee = FeeType::Percentage { bps: 50 };
+
+    let (_, user, _, mint_authority, fee_recipient, reserve_pubkey, vault_pubkey) = set_up_vault(
+        &mut svm,
+        mint_authority,
+        &asset_mint,
+        &share_mint,
+        token::ID,
+        token::ID,
+        &deposit_fee,
+        &withdraw_fee,
+    );
+
+    let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
+    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
+    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &token::ID);
+
+    // fund user
+    let user_asset_amount = 100_000_000;
+    helper_mint_to(
+        &mut svm,
+        &asset_mint.pubkey(),
+        &user_asset_ata,
+        &mint_authority,
+        user_asset_amount,
+        &token::ID,
+    );
+
+    // --- deposit first (no slippage) ---
+    let deposit_amount = 500_000;
+    deposit(
+        &mut svm,
+        &user,
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        vault_pubkey,
+        fee_recipient_ata,
+        user_asset_ata,
+        user_share_ata,
+        deposit_amount,
+        0, // no slippage protection
+        token::ID,
+        token::ID,
+    )
+    .expect("deposit failed unexpectedly");
+
+    // withdraw with forced slippage failure
+    // assets_out is NET to user, fee is extra out of reserve (gross = assets_out + fee)
+    let assets_out: u64 = 100_000;
+
+    // force slippage failure: require burning fewer shares than needed (max_shares too small)
+    let withdraw_fee_amt = get_fee(withdraw_fee.clone(), assets_out);
+    let gross_needed = assets_out.checked_add(withdraw_fee_amt).unwrap();
+
+    // withdraw burns shares for gross (with rounding). make max_shares definitely too small.
+    let max_shares = gross_needed - 1;
+
+    // snapshot state before failing withdraw
+    let fee_recipient_before =
+        get_token_account_amount(&svm.get_account(&fee_recipient_ata).unwrap());
+    let user_assets_before = get_token_account_amount(&svm.get_account(&user_asset_ata).unwrap());
+    let user_shares_before = get_token_account_amount(&svm.get_account(&user_share_ata).unwrap());
+    let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
+    let vault_before =
+        VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
+
+    let result = withdraw(
+        &mut svm,
+        &user,
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        vault_pubkey,
+        fee_recipient_ata,
+        user_asset_ata,
+        user_share_ata,
+        assets_out,
+        max_shares, // <-- slippage protection triggers
+        token::ID,
+        token::ID,
+    );
+
+    assert_error_code(
+        &result.unwrap_err(),
+        6013, // SlippageExceeded
+        "Slippage exceeded.",
+    );
+
+    // ensure state did not change
+    let fee_recipient_after =
+        get_token_account_amount(&svm.get_account(&fee_recipient_ata).unwrap());
+    let user_assets_after = get_token_account_amount(&svm.get_account(&user_asset_ata).unwrap());
+    let user_shares_after = get_token_account_amount(&svm.get_account(&user_share_ata).unwrap());
+    let reserve_after = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
+    let vault_after =
+        VaultConfig::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
+
+    assert_eq!(fee_recipient_after, fee_recipient_before);
+    assert_eq!(user_assets_after, user_assets_before);
+    assert_eq!(user_shares_after, user_shares_before);
+    assert_eq!(reserve_after, reserve_before);
+    assert_eq!(
+        vault_after.total_asset_balance,
+        vault_before.total_asset_balance
+    );
 }
