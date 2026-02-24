@@ -583,6 +583,6 @@ pub fn get_vault_asset_balance(svm: &LiteSVM, vault_pubkey: &Pubkey) -> u64 {
 
     let reserve_acc = svm
         .get_account(&vault_config.vault_token_account)
-        .expect("could nto fetch vault_token_account");
+        .expect("could not fetch vault_token_account");
     get_token_account_amount(&reserve_acc)
 }
