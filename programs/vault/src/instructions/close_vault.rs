@@ -19,8 +19,6 @@ pub struct CloseVault<'info> {
     #[account(mut)]
     pub rent_destination: AccountInfo<'info>,
 
-    pub asset_mint: InterfaceAccount<'info, Mint>,
-
     #[account(mut)]
     pub share_mint: InterfaceAccount<'info, Mint>,
 

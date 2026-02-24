@@ -15,8 +15,6 @@ pub const UPDATE_VAULT_DISCRIMINATOR: [u8; 8] = [67, 229, 185, 188, 226, 11, 210
 pub struct UpdateVault {
     pub authority: solana_pubkey::Pubkey,
 
-    pub asset_mint: solana_pubkey::Pubkey,
-
     pub share_mint: solana_pubkey::Pubkey,
 
     pub vault: solana_pubkey::Pubkey,
@@ -34,14 +32,10 @@ impl UpdateVault {
         args: UpdateVaultInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.authority,
             true,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.asset_mint,
-            false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.share_mint,
@@ -106,13 +100,11 @@ impl UpdateVaultInstructionArgs {
 /// ### Accounts:
 ///
 ///   0. `[signer]` authority
-///   1. `[]` asset_mint
-///   2. `[]` share_mint
-///   3. `[writable]` vault
+///   1. `[]` share_mint
+///   2. `[writable]` vault
 #[derive(Clone, Debug, Default)]
 pub struct UpdateVaultBuilder {
     authority: Option<solana_pubkey::Pubkey>,
-    asset_mint: Option<solana_pubkey::Pubkey>,
     share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     new_authority: Option<Pubkey>,
@@ -131,12 +123,6 @@ impl UpdateVaultBuilder {
     #[inline(always)]
     pub fn authority(&mut self, authority: solana_pubkey::Pubkey) -> &mut Self {
         self.authority = Some(authority);
-        self
-    }
-
-    #[inline(always)]
-    pub fn asset_mint(&mut self, asset_mint: solana_pubkey::Pubkey) -> &mut Self {
-        self.asset_mint = Some(asset_mint);
         self
     }
 
@@ -208,7 +194,6 @@ impl UpdateVaultBuilder {
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let accounts = UpdateVault {
             authority: self.authority.expect("authority is not set"),
-            asset_mint: self.asset_mint.expect("asset_mint is not set"),
             share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
         };
@@ -228,8 +213,6 @@ impl UpdateVaultBuilder {
 pub struct UpdateVaultCpiAccounts<'a, 'b> {
     pub authority: &'b solana_account_info::AccountInfo<'a>,
 
-    pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
@@ -241,8 +224,6 @@ pub struct UpdateVaultCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
     pub authority: &'b solana_account_info::AccountInfo<'a>,
-
-    pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
@@ -260,7 +241,6 @@ impl<'a, 'b> UpdateVaultCpi<'a, 'b> {
         Self {
             __program: program,
             authority: accounts.authority,
-            asset_mint: accounts.asset_mint,
             share_mint: accounts.share_mint,
             vault: accounts.vault,
             __args: args,
@@ -293,14 +273,10 @@ impl<'a, 'b> UpdateVaultCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.authority.key,
             true,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.asset_mint.key,
-            false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.share_mint.key,
@@ -323,10 +299,9 @@ impl<'a, 'b> UpdateVaultCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.authority.clone());
-        account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
         remaining_accounts
@@ -346,9 +321,8 @@ impl<'a, 'b> UpdateVaultCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[signer]` authority
-///   1. `[]` asset_mint
-///   2. `[]` share_mint
-///   3. `[writable]` vault
+///   1. `[]` share_mint
+///   2. `[writable]` vault
 #[derive(Clone, Debug)]
 pub struct UpdateVaultCpiBuilder<'a, 'b> {
     instruction: Box<UpdateVaultCpiBuilderInstruction<'a, 'b>>,
@@ -359,7 +333,6 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
         let instruction = Box::new(UpdateVaultCpiBuilderInstruction {
             __program: program,
             authority: None,
-            asset_mint: None,
             share_mint: None,
             vault: None,
             new_authority: None,
@@ -375,15 +348,6 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn authority(&mut self, authority: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.authority = Some(authority);
-        self
-    }
-
-    #[inline(always)]
-    pub fn asset_mint(
-        &mut self,
-        asset_mint: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.asset_mint = Some(asset_mint);
         self
     }
 
@@ -487,8 +451,6 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
 
             authority: self.instruction.authority.expect("authority is not set"),
 
-            asset_mint: self.instruction.asset_mint.expect("asset_mint is not set"),
-
             share_mint: self.instruction.share_mint.expect("share_mint is not set"),
 
             vault: self.instruction.vault.expect("vault is not set"),
@@ -505,7 +467,6 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
 struct UpdateVaultCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
     authority: Option<&'b solana_account_info::AccountInfo<'a>>,
-    asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     new_authority: Option<Pubkey>,

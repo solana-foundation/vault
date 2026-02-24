@@ -93,7 +93,6 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
         &mut svm,
         &authority,
         &payer,
-        asset_mint.pubkey(),
         share_mint.pubkey(),
         reserve_pubkey,
         vault_pubkey,

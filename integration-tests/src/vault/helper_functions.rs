@@ -86,7 +86,6 @@ pub fn close_vault(
     svm: &mut LiteSVM,
     authority: &Keypair,
     payer: &Keypair,
-    asset_mint: Pubkey,
     share_mint: Pubkey,
     reserve: Pubkey,
     vault: Pubkey,
@@ -94,7 +93,6 @@ pub fn close_vault(
     let ix = CloseVaultBuilder::new()
         .authority(authority.pubkey())
         .payer(payer.pubkey())
-        .asset_mint(asset_mint)
         .share_mint(share_mint)
         .reserve(reserve)
         .vault(vault)
@@ -115,7 +113,6 @@ pub fn close_vault(
 pub fn update_vault(
     svm: &mut LiteSVM,
     authority: &Keypair,
-    asset_mint: Pubkey,
     share_mint: Pubkey,
     vault: Pubkey,
     deposit_fees: FeeType,
@@ -126,7 +123,6 @@ pub fn update_vault(
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = UpdateVaultBuilder::new()
         .authority(authority.pubkey())
-        .asset_mint(asset_mint)
         .share_mint(share_mint)
         .vault(vault)
         .deposit_fees(deposit_fees)
@@ -451,7 +447,6 @@ pub fn set_up_vault(
     let _ = update_vault(
         svm,
         &authority,
-        asset_mint.pubkey(),
         share_mint.pubkey(),
         vault_pubkey,
         deposit_fees.clone(),

@@ -21,8 +21,6 @@ pub struct UpdateVaultArgs {
 pub struct UpdateVault<'info> {
     pub authority: Signer<'info>,
 
-    pub asset_mint: InterfaceAccount<'info, Mint>,
-
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(

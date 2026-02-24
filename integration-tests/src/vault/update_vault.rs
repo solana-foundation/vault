@@ -66,7 +66,6 @@ fn test_update_vault(
     let update_result = update_vault(
         &mut svm,
         &authority,
-        asset_mint.pubkey(),
         share_mint.pubkey(),
         vault_pubkey,
         updated_deposit_fee.clone(),
