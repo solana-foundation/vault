@@ -14,7 +14,8 @@ use spl_token_2022::state::Account as TokenAccount2022;
 use vault_client::{sdk::program_id, FeeType};
 
 use crate::vault::helper_functions::{
-    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, get_vault_asset_balance, helper_mint_to, set_up_vault
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee,
+    get_vault_asset_balance, helper_mint_to, set_up_vault,
 };
 
 #[test]

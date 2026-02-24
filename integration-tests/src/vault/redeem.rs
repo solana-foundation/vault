@@ -10,7 +10,9 @@ use solana_sdk::{
 use vault_client::{sdk::program_id, FeeType, Pubkey};
 
 use crate::vault::helper_functions::{
-    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee, get_mint_supply, get_token_account_amount, get_vault_asset_balance, helper_mint_to, recv_amount_from_params, redeem, set_up_vault
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee,
+    get_mint_supply, get_token_account_amount, get_vault_asset_balance, helper_mint_to,
+    recv_amount_from_params, redeem, set_up_vault,
 };
 use test_case::test_case;
 
@@ -209,9 +211,9 @@ fn test_redeem_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program:
 
     let total_assets_out = assets_from_shares_formula(
         vault_asset_balance_after_deposit, // total_assets
-        share_supply_after_deposit,                  // shares_supply
-        redeem_shares,                               // share_amount
-        false,                                       // Rounding::Down
+        share_supply_after_deposit,        // shares_supply
+        redeem_shares,                     // share_amount
+        false,                             // Rounding::Down
     );
 
     let redeem_fee_amount = redeem_fee_from_gross(withdraw_fee.clone(), total_assets_out);
@@ -463,8 +465,5 @@ fn test_redeem_slippage_protection() {
     assert_eq!(user_shares_after, user_shares_before);
     assert_eq!(reserve_after, reserve_before);
     assert_eq!(fee_recipient_after, fee_recipient_before);
-    assert_eq!(
-        vault_asset_balance_after,
-        vault_asset_balance_before
-    );
+    assert_eq!(vault_asset_balance_after, vault_asset_balance_before);
 }

@@ -11,7 +11,8 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use vault_client::{
-    CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType, MintBuilder, Pubkey, RedeemBuilder, UpdateVaultBuilder, VaultConfig, WithdrawBuilder, sdk::IntoSdkInstruction
+    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
+    MintBuilder, Pubkey, RedeemBuilder, UpdateVaultBuilder, VaultConfig, WithdrawBuilder,
 };
 
 use anchor_spl::{
@@ -580,7 +581,8 @@ pub fn get_vault_asset_balance(svm: &LiteSVM, vault_pubkey: &Pubkey) -> u64 {
         .expect("Vault account should exist");
     let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
 
-    let reserve_acc = svm.get_account(&vault_config.vault_token_account)
+    let reserve_acc = svm
+        .get_account(&vault_config.vault_token_account)
         .expect("could nto fetch vault_token_account");
     get_token_account_amount(&reserve_acc)
 }

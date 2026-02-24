@@ -14,7 +14,8 @@ use spl_token_2022::state::Account as TokenAccount2022;
 use vault_client::{sdk::program_id, FeeType, VaultConfig};
 
 use crate::vault::helper_functions::{
-    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, get_vault_asset_balance, helper_mint_to, mint, set_up_vault
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee,
+    get_vault_asset_balance, helper_mint_to, mint, set_up_vault,
 };
 
 #[test]
@@ -348,7 +349,8 @@ fn test_mint_vault_with_transfer_fees() {
 
     // expected_assets is computed from the bootstrap fixed-price rule (shares * initial_price).
     // With the current +1 virtual-share denominator in assets_from_shares (share_supply + 1),
-    // the real reserve balance ends up 1 unit lower than that fixed-price expectation in this test case.
+    // the real reserve balance ends up 1 unit lower than that fixed-price expectation in this test
+    // case.
     let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
     assert_eq!(vault_asset_balance + 1, expected_assets);
 }
@@ -417,7 +419,6 @@ fn test_mint_vault_slippage_protection_fails() {
         .unwrap()
         .amount;
     let vault_asset_balance_before = get_vault_asset_balance(&svm, &vault_pubkey);
-
 
     let result = mint(
         &mut svm,

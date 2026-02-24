@@ -129,7 +129,6 @@ pub struct VaultConfig {
 }
 
 impl VaultConfig {
-
     pub fn get_shares_from_assets(
         self,
         reserve_balance: u64,
@@ -295,7 +294,8 @@ mod tests {
     ) {
         let vault = create_vault_config(initial_price);
 
-        let result = vault.get_shares_from_assets(total_asset_balance, supply, asset_amount, rounding);
+        let result =
+            vault.get_shares_from_assets(total_asset_balance, supply, asset_amount, rounding);
         assert!(result.is_err());
     }
 
@@ -395,7 +395,8 @@ mod tests {
         expected_amount: u64,
     ) {
         let vault = create_vault_config(initial_price);
-        let result = vault.get_assets_from_shares(total_asset_amount, supply, asset_amount, rounding);
+        let result =
+            vault.get_assets_from_shares(total_asset_amount, supply, asset_amount, rounding);
 
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), expected_amount);
@@ -412,7 +413,8 @@ mod tests {
         rounding: Rounding,
     ) {
         let vault = create_vault_config(initial_price);
-        let result = vault.get_assets_from_shares(total_asset_amount, supply, asset_amount, rounding);
+        let result =
+            vault.get_assets_from_shares(total_asset_amount, supply, asset_amount, rounding);
 
         assert!(result.is_err());
     }
