@@ -49,7 +49,7 @@ fn assets_from_shares_formula(
         .checked_mul(u128::from(total_assets))
         .expect("overflow");
 
-    let denominator = u128::from(shares_supply + 1);
+    let denominator = u128::from(shares_supply);
 
     let q = if round_up {
         numerator.div_ceil(denominator)

@@ -107,12 +107,6 @@ fn test_deposit_vault() {
         token::ID,
         token::ID,
     );
-    match &result {
-        Ok(_) => (),
-        Err(e) => {
-            println!("error: {}", e.meta.pretty_logs());
-        }
-    };
 
     assert_eq!(result.is_ok(), true, "Unexpected result for test case");
 

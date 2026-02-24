@@ -15,7 +15,7 @@ use vault_client::{sdk::program_id, FeeType, VaultConfig};
 
 use crate::vault::helper_functions::{
     assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee,
-    get_vault_asset_balance, helper_mint_to, mint, set_up_vault,
+    get_vault_asset_balance, helper_mint_to, mint, recv_amount_from_params, set_up_vault,
 };
 
 #[test]
@@ -341,18 +341,20 @@ fn test_mint_vault_with_transfer_fees() {
         .expect("Vault account should exist");
     let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
 
-    let expected_assets: u64 = (mint_amount as u128)
+    let assets: u64 = (mint_amount as u128)
         .checked_mul(vault_config.initial_price as u128)
         .unwrap()
         .try_into()
         .unwrap();
 
-    // expected_assets is computed from the bootstrap fixed-price rule (shares * initial_price).
-    // With the current +1 virtual-share denominator in assets_from_shares (share_supply + 1),
-    // the real reserve balance ends up 1 unit lower than that fixed-price expectation in this test
-    // case.
+    // Token2022 withholds its fee on the gross amount (assets + our estimate),
+    // so the reserve receives slightly less than `assets`
+    let fee_estimate = (assets as u128 * transfer_fee as u128).div_ceil(10_000) as u64;
+    let gross = assets + fee_estimate;
+    let expected_assets = recv_amount_from_params(gross, transfer_fee, 1000);
+
     let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
-    assert_eq!(vault_asset_balance + 1, expected_assets);
+    assert_eq!(vault_asset_balance, expected_assets);
 }
 
 #[test]

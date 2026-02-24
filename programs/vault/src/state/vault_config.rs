@@ -193,11 +193,7 @@ impl VaultConfig {
             .checked_mul(u128::from(total_assets))
             .ok_or(VaultProgramError::ArithmeticError)?;
 
-        let denominator = u128::from(
-            share_supply
-                .checked_add(1)
-                .ok_or(VaultProgramError::ArithmeticError)?,
-        );
+        let denominator = u128::from(share_supply);
 
         let result = match rounding {
             Rounding::Up => numerator.div_ceil(denominator),
@@ -356,35 +352,35 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[test_case(1000,1,500,100,Rounding::Down,199;"Basic calculation rounding down")]
+    #[test_case(1000,1,500,100,Rounding::Down,200;"Basic calculation rounding down")]
     #[test_case(1000,1,500,100,Rounding::Up,200;"Basic calculation rounding up")]
     #[test_case(1000,1,0,100,Rounding::Down,100;"Zero supply")]
     #[test_case(0,1,500,100,Rounding::Down,0;"Zero assets")]
     #[test_case(0,1,0,0,Rounding::Down,0;"All zeros")]
-    #[test_case(1000,1,1000,500,Rounding::Down,499;"Equal supply and total assets")]
-    #[test_case(1_000_000_000,1,1_000_000_000,1_000_000,Rounding::Down,999_999;"Large values within bounds")]
+    #[test_case(1000,1,1000,500,Rounding::Down,500;"Equal supply and total assets")]
+    #[test_case(1_000_000_000,1,1_000_000_000,1_000_000,Rounding::Down,1_000_000;"Large values within bounds")]
     #[test_case(3,1,10,1,Rounding::Down,0;"Precision loss rounding down")]
     #[test_case(3,1,10,1,Rounding::Up,1;"Precision loss rounding up")]
-    #[test_case(1,1,1,1,Rounding::Down,0;"Single unit")]
+    #[test_case(1,1,1,1,Rounding::Down,1;"Single unit")]
     #[test_case(1,1_000_000, 3, 1, Rounding::Down, 0; "ceil differs: 1*1/3 down")]
     #[test_case(1,1_000_000, 3, 1, Rounding::Up, 1; "ceil differs: 1*1/3 up")]
-    #[test_case(10_000,1_000_000, 3, 2, Rounding::Down, 5000; "non-clean division down")]
-    #[test_case(10_000,1_000_000, 3, 2, Rounding::Up, 5000; "non-clean division up")]
+    #[test_case(10_000,1_000_000, 3, 2, Rounding::Down, 6666; "non-clean division down")]
+    #[test_case(10_000,1_000_000, 3, 2, Rounding::Up, 6667; "non-clean division up")]
     #[test_case(0,1_000_000, 1_000, 100, Rounding::Down, 0; "Zero assets, positive supply, down")]
     #[test_case(0,1_000_000, 1_000, 100, Rounding::Up, 0; "Zero assets, positive supply, up")]
-    #[test_case(10_000,1_000_000, 10_000, 100, Rounding::Down, 99; "1:1 ratio down")]
+    #[test_case(10_000,1_000_000, 10_000, 100, Rounding::Down, 100; "1:1 ratio down")]
     #[test_case(10_000,1_000_000, 10_000, 100, Rounding::Up, 100; "1:1 ratio up")]
-    #[test_case(2_000,1_000_000, 1_000, 100, Rounding::Down, 199; "2:1 assets:supply down")]
+    #[test_case(2_000,1_000_000, 1_000, 100, Rounding::Down, 200; "2:1 assets:supply down")]
     #[test_case(2_000,1_000_000, 1_000, 100, Rounding::Up, 200; "2:1 assets:supply up")]
     #[test_case(9_999,1_000_000, 10_000, 100, Rounding::Down, 99; "Rounding edge down")]
     #[test_case(9_999,1_000_000, 10_000, 100, Rounding::Up, 100; "Rounding edge up")]
     #[test_case(10_000,1_000_000, 10_000, 0, Rounding::Down, 0; "Zero share_amount returns 0")]
-    #[test_case(1_000_000_000,1_000_000, 1_000_000_000, 1_000_000, Rounding::Down, 999_999; "Large values 1:1")]
-    #[test_case(1_000_000,1_000_000, 1_000_000, 1, Rounding::Down, 0; "Precision small amounts")]
+    #[test_case(1_000_000_000,1_000_000, 1_000_000_000, 1_000_000, Rounding::Down, 1_000_000; "Large values 1:1")]
+    #[test_case(1_000_000,1_000_000, 1_000_000, 1, Rounding::Down, 1; "Precision small amounts")]
     #[test_case(100,1_000_000, 1_000_000_000, 10, Rounding::Down, 0; "Asymmetric small assets/share down")]
     #[test_case(100,1_000_000, 1_000_000_000, 10, Rounding::Up, 1; "Asymmetric small assets/share up")]
-    #[test_case(1_000_000_000,1_000_000, 100, 10, Rounding::Down, 99_009_900; "Asymmetric huge assets/share down")]
-    #[test_case(1_000_000_000,1_000_000, 100, 10, Rounding::Up, 99_009_901; "Asymmetric huge assets/share up")]
+    #[test_case(1_000_000_000,1_000_000, 100, 10, Rounding::Down, 100_000_000; "Asymmetric huge assets/share down")]
+    #[test_case(1_000_000_000,1_000_000, 100, 10, Rounding::Up, 100_000_000; "Asymmetric huge assets/share up")]
 
     fn test_get_assets_from_shares(
         total_asset_amount: u64,
@@ -402,9 +398,9 @@ mod tests {
         assert_eq!(result.unwrap(), expected_amount);
     }
 
-    #[test_case(1000,1,u64::MAX,100,Rounding::Down;"Error: Overflow")]
-    #[test_case(1,1_000_000, u64::MAX, u64::MAX, Rounding::Down; "ERROR: result overflows u64 (down)")]
-    #[test_case(1,1_000_000, u64::MAX, u64::MAX, Rounding::Up;   "ERROR: result overflows u64 (up)")]
+    #[test_case(u64::MAX, 1_000_000, 1, 2, Rounding::Down; "ERROR: result overflows u64")]
+    #[test_case(u64::MAX, 1_000_000, 1, u64::MAX, Rounding::Down; "ERROR: result overflows u64 (down)")]
+    #[test_case(u64::MAX, 1_000_000, 1, u64::MAX, Rounding::Up; "ERROR: result overflows u64(up)")]
     fn test_get_assets_from_shares_error(
         total_asset_amount: u64,
         initial_price: u64,
