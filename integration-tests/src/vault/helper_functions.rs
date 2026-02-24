@@ -423,19 +423,11 @@ pub fn set_up_vault(
     svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
 
     let (reserve_pubkey, _) = Pubkey::find_program_address(
-        &[
-            b"reserve",
-            asset_mint.pubkey().as_ref(),
-            share_mint.pubkey().as_ref(),
-        ],
+        &[b"reserve", share_mint.pubkey().as_ref()],
         &vault_client::sdk::program_id(),
     );
     let (vault_pubkey, _) = Pubkey::find_program_address(
-        &[
-            b"vault",
-            asset_mint.pubkey().as_ref(),
-            share_mint.pubkey().as_ref(),
-        ],
+        &[b"vault", share_mint.pubkey().as_ref()],
         &vault_client::sdk::program_id(),
     );
     create_vault(

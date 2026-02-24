@@ -27,7 +27,7 @@ pub struct Redeem<'info> {
         token::mint = asset_mint,
         token::authority = vault,
         token::token_program = asset_token_program,
-        seeds = [RESERVE_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
+        seeds = [RESERVE_CONFIG_SEED, share_mint.key().as_ref()],
         bump,
     )]
     pub reserve: InterfaceAccount<'info, TokenAccount>,
@@ -35,7 +35,7 @@ pub struct Redeem<'info> {
     /// Vault configuration account (PDA)
     #[account(
         mut,
-        seeds = [VAULT_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
+        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
     pub vault: Account<'info, VaultConfig>,
@@ -73,7 +73,6 @@ pub struct Redeem<'info> {
 
 impl<'info> Redeem<'info> {
     pub fn transfer_assets_to_fee_recipient(&mut self, fee: u64) -> Result<()> {
-        let asset_mint = self.asset_mint.key();
         let share_mint = self.share_mint.key();
 
         let cpi_accounts = TransferChecked {
@@ -83,12 +82,7 @@ impl<'info> Redeem<'info> {
             authority: self.vault.to_account_info(),
         };
 
-        let seeds: &[&[&[u8]]] = &[&[
-            VAULT_CONFIG_SEED,
-            asset_mint.as_ref(),
-            share_mint.as_ref(),
-            &[self.vault.bump],
-        ]];
+        let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
 
         let cpi_ctx = CpiContext::new_with_signer(
             self.asset_token_program.to_account_info(),
@@ -101,7 +95,6 @@ impl<'info> Redeem<'info> {
 
     /// Transfers `asset_amount` tokens to the user token account
     pub fn transfer_assets_to_user(&mut self, asset_amount: u64) -> Result<()> {
-        let asset_mint = self.asset_mint.key();
         let share_mint = self.share_mint.key();
 
         let cpi_accounts = TransferChecked {
@@ -111,12 +104,7 @@ impl<'info> Redeem<'info> {
             authority: self.vault.to_account_info(),
         };
 
-        let seeds: &[&[&[u8]]] = &[&[
-            VAULT_CONFIG_SEED,
-            asset_mint.as_ref(),
-            share_mint.as_ref(),
-            &[self.vault.bump],
-        ]];
+        let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
 
         let cpi_ctx = CpiContext::new_with_signer(
             self.asset_token_program.to_account_info(),

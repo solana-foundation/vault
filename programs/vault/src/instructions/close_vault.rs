@@ -26,7 +26,7 @@ pub struct CloseVault<'info> {
 
     #[account(
         mut,
-        seeds = [RESERVE_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
+        seeds = [RESERVE_CONFIG_SEED, share_mint.key().as_ref()],
         bump,
     )]
     pub reserve: InterfaceAccount<'info, TokenAccount>,
@@ -35,7 +35,7 @@ pub struct CloseVault<'info> {
         mut,
         close = rent_destination,
         constraint = authority.key() == vault.authority @ VaultProgramError::UnauthorizedSigner,
-        seeds = [VAULT_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
+        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
     pub vault: Account<'info, VaultConfig>,
@@ -46,15 +46,9 @@ pub struct CloseVault<'info> {
 
 impl<'info> CloseVault<'info> {
     pub fn close_reserve_account(&mut self) -> Result<()> {
-        let asset_mint = self.asset_mint.key().to_bytes();
         let share_mint = self.share_mint.key().to_bytes();
 
-        let seeds: &[&[u8]] = &[
-            VAULT_CONFIG_SEED,
-            asset_mint.as_ref(),
-            share_mint.as_ref(),
-            &[self.vault.bump],
-        ];
+        let seeds: &[&[u8]] = &[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]];
         let signer_seeds: &[&[&[u8]]] = &[&seeds[..]];
 
         let close_account_cpi_accounts = CloseAccount {

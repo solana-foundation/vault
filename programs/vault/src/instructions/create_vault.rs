@@ -37,7 +37,7 @@ pub struct CreateVault<'info> {
         token::mint = asset_mint,
         token::token_program = asset_token_program,
         payer = payer,
-        seeds = [RESERVE_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
+        seeds = [RESERVE_CONFIG_SEED, share_mint.key().as_ref()],
         bump,
     )]
     pub reserve: InterfaceAccount<'info, TokenAccount>,
@@ -46,7 +46,7 @@ pub struct CreateVault<'info> {
         init,
         space = 8 + VaultConfig::INIT_SPACE,
         payer = payer,
-        seeds = [VAULT_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
+        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
     pub vault: Account<'info, VaultConfig>,

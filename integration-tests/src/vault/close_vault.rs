@@ -35,19 +35,11 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
     create_mint(&mut svm, &mint_authority, &asset_mint);
     create_mint(&mut svm, &mint_authority, &share_mint);
     let (reserve_pubkey, _) = Pubkey::find_program_address(
-        &[
-            RESERVE_CONFIG_SEED,
-            asset_mint.pubkey().as_ref(),
-            share_mint.pubkey().as_ref(),
-        ],
+        &[RESERVE_CONFIG_SEED, share_mint.pubkey().as_ref()],
         &vault_client::sdk::program_id(),
     );
     let (vault_pubkey, _) = Pubkey::find_program_address(
-        &[
-            VAULT_CONFIG_SEED,
-            asset_mint.pubkey().as_ref(),
-            share_mint.pubkey().as_ref(),
-        ],
+        &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
         &vault_client::sdk::program_id(),
     );
     if !supply_is_zero {

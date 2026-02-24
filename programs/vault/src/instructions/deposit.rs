@@ -29,14 +29,14 @@ pub struct DepositAndMint<'info> {
         token::mint = asset_mint,
         token::authority = vault,
         token::token_program = asset_token_program,
-        seeds = [RESERVE_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
+        seeds = [RESERVE_CONFIG_SEED, share_mint.key().as_ref()],
         bump,
     )]
     pub reserve: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
-        seeds = [VAULT_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
+        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
     pub vault: Account<'info, VaultConfig>,
@@ -102,7 +102,6 @@ impl<'info> DepositAndMint<'info> {
     }
 
     pub fn mint_shares_to_user(&mut self, amount: u64) -> Result<()> {
-        let asset_mint = self.asset_mint.key();
         let share_mint = self.share_mint.key();
         let mint_to_cpi_accounts = MintTo {
             mint: self.share_mint.to_account_info(),
@@ -110,12 +109,7 @@ impl<'info> DepositAndMint<'info> {
             authority: self.vault.to_account_info(),
         };
 
-        let seeds: &[&[&[u8]]] = &[&[
-            VAULT_CONFIG_SEED,
-            asset_mint.as_ref(),
-            share_mint.as_ref(),
-            &[self.vault.bump],
-        ]];
+        let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
 
         let mint_cpi_ctx = CpiContext::new_with_signer(
             self.share_token_program.to_account_info(),

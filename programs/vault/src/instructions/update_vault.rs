@@ -28,7 +28,7 @@ pub struct UpdateVault<'info> {
     #[account(
         mut,
         constraint = authority.key() == vault.authority @ VaultProgramError::UnauthorizedSigner,
-        seeds = [VAULT_CONFIG_SEED, asset_mint.key().as_ref(), share_mint.key().as_ref()],
+        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
     pub vault: Account<'info, VaultConfig>,
