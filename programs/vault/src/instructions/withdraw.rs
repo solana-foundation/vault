@@ -1,8 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    associated_token::AssociatedToken,
-    token_interface::{self, burn, Burn, Mint, TokenAccount, TokenInterface, TransferChecked},
-};
+use anchor_spl::token_interface::{self, burn, Burn, Mint, TokenAccount, TokenInterface, TransferChecked};
 
 use crate::{
     error::VaultProgramError,
@@ -44,33 +41,32 @@ pub struct Withdraw<'info> {
     /// Fee recipient token account
     #[account(
         mut,
-        associated_token::authority = vault.fee_recipient,
-        associated_token::mint = asset_mint,
-        associated_token::token_program = asset_token_program,
+        token::authority = vault.fee_recipient,
+        token::mint = asset_mint,
+        token::token_program = asset_token_program,
     )]
     pub fee_recipient: InterfaceAccount<'info, TokenAccount>,
 
     /// User's asset token account
     #[account(
         mut,
-        associated_token::authority = user,
-        associated_token::mint = asset_mint,
-        associated_token::token_program = asset_token_program,
+        token::authority = user,
+        token::mint = asset_mint,
+        token::token_program = asset_token_program,
     )]
     pub user_assets_account: InterfaceAccount<'info, TokenAccount>,
 
     /// User's share token account
     #[account(
         mut,
-        associated_token::authority = user,
-        associated_token::mint = share_mint,
-        associated_token::token_program = share_token_program,
+        token::authority = user,
+        token::mint = share_mint,
+        token::token_program = share_token_program,
     )]
     pub user_shares_account: InterfaceAccount<'info, TokenAccount>,
 
     pub share_token_program: Interface<'info, TokenInterface>,
     pub asset_token_program: Interface<'info, TokenInterface>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 impl<'info> Withdraw<'info> {

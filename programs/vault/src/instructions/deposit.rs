@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    associated_token::AssociatedToken,
     token::spl_token,
     token_2022::spl_token_2022::{
         self,
@@ -44,31 +43,30 @@ pub struct DepositAndMint<'info> {
 
     #[account(
         mut,
-        associated_token::authority = vault.fee_recipient,
-        associated_token::mint = asset_mint,
-        associated_token::token_program = asset_token_program,
+        token::authority = vault.fee_recipient,
+        token::mint = asset_mint,
+        token::token_program = asset_token_program,
     )]
     pub fee_recipient: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
-        associated_token::authority = user,
-        associated_token::mint = asset_mint,
-        associated_token::token_program = asset_token_program,
+        token::authority = user,
+        token::mint = asset_mint,
+        token::token_program = asset_token_program,
     )]
     pub user_assets_account: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
-        associated_token::authority = user,
-        associated_token::mint = share_mint,
-        associated_token::token_program = share_token_program,
+        token::authority = user,
+        token::mint = share_mint,
+        token::token_program = share_token_program,
     )]
     pub user_shares_account: InterfaceAccount<'info, TokenAccount>,
 
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub share_token_program: Interface<'info, TokenInterface>,
-    pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
 }
 

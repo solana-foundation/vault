@@ -31,8 +31,6 @@ pub struct Withdraw {
     pub share_token_program: solana_pubkey::Pubkey,
 
     pub asset_token_program: solana_pubkey::Pubkey,
-
-    pub associated_token_program: solana_pubkey::Pubkey,
 }
 
 impl Withdraw {
@@ -47,7 +45,7 @@ impl Withdraw {
         args: WithdrawInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.user, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
@@ -74,10 +72,6 @@ impl Withdraw {
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_token_program,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.associated_token_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -144,8 +138,6 @@ impl WithdrawInstructionArgs {
 ///   7. `[writable]` user_shares_account
 ///   8. `[]` share_token_program
 ///   9. `[]` asset_token_program
-///   10. `[optional]` associated_token_program (default to
-///       `ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL`)
 #[derive(Clone, Debug, Default)]
 pub struct WithdrawBuilder {
     user: Option<solana_pubkey::Pubkey>,
@@ -158,7 +150,6 @@ pub struct WithdrawBuilder {
     user_shares_account: Option<solana_pubkey::Pubkey>,
     share_token_program: Option<solana_pubkey::Pubkey>,
     asset_token_program: Option<solana_pubkey::Pubkey>,
-    associated_token_program: Option<solana_pubkey::Pubkey>,
     assets: Option<u64>,
     max_shares: Option<u64>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
@@ -237,16 +228,6 @@ impl WithdrawBuilder {
         self
     }
 
-    /// `[optional account, default to 'ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL']`
-    #[inline(always)]
-    pub fn associated_token_program(
-        &mut self,
-        associated_token_program: solana_pubkey::Pubkey,
-    ) -> &mut Self {
-        self.associated_token_program = Some(associated_token_program);
-        self
-    }
-
     #[inline(always)]
     pub fn assets(&mut self, assets: u64) -> &mut Self {
         self.assets = Some(assets);
@@ -297,9 +278,6 @@ impl WithdrawBuilder {
             asset_token_program: self
                 .asset_token_program
                 .expect("asset_token_program is not set"),
-            associated_token_program: self.associated_token_program.unwrap_or(
-                solana_pubkey::pubkey!("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"),
-            ),
         };
         let args = WithdrawInstructionArgs {
             assets: self.assets.clone().expect("assets is not set"),
@@ -332,8 +310,6 @@ pub struct WithdrawCpiAccounts<'a, 'b> {
     pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
-
-    pub associated_token_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
 /// `withdraw` CPI instruction.
@@ -360,8 +336,6 @@ pub struct WithdrawCpi<'a, 'b> {
     pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
-
-    pub associated_token_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
     pub __args: WithdrawInstructionArgs,
 }
@@ -384,7 +358,6 @@ impl<'a, 'b> WithdrawCpi<'a, 'b> {
             user_shares_account: accounts.user_shares_account,
             share_token_program: accounts.share_token_program,
             asset_token_program: accounts.asset_token_program,
-            associated_token_program: accounts.associated_token_program,
             __args: args,
         }
     }
@@ -415,7 +388,7 @@ impl<'a, 'b> WithdrawCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.user.key, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
@@ -450,10 +423,6 @@ impl<'a, 'b> WithdrawCpi<'a, 'b> {
             *self.asset_token_program.key,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.associated_token_program.key,
-            false,
-        ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -470,7 +439,7 @@ impl<'a, 'b> WithdrawCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(12 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(11 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.user.clone());
         account_infos.push(self.asset_mint.clone());
@@ -482,7 +451,6 @@ impl<'a, 'b> WithdrawCpi<'a, 'b> {
         account_infos.push(self.user_shares_account.clone());
         account_infos.push(self.share_token_program.clone());
         account_infos.push(self.asset_token_program.clone());
-        account_infos.push(self.associated_token_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -509,7 +477,6 @@ impl<'a, 'b> WithdrawCpi<'a, 'b> {
 ///   7. `[writable]` user_shares_account
 ///   8. `[]` share_token_program
 ///   9. `[]` asset_token_program
-///   10. `[]` associated_token_program
 #[derive(Clone, Debug)]
 pub struct WithdrawCpiBuilder<'a, 'b> {
     instruction: Box<WithdrawCpiBuilderInstruction<'a, 'b>>,
@@ -529,7 +496,6 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
             user_shares_account: None,
             share_token_program: None,
             asset_token_program: None,
-            associated_token_program: None,
             assets: None,
             max_shares: None,
             __remaining_accounts: Vec::new(),
@@ -623,15 +589,6 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
         asset_token_program: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.asset_token_program = Some(asset_token_program);
-        self
-    }
-
-    #[inline(always)]
-    pub fn associated_token_program(
-        &mut self,
-        associated_token_program: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.associated_token_program = Some(associated_token_program);
         self
     }
 
@@ -730,11 +687,6 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
                 .instruction
                 .asset_token_program
                 .expect("asset_token_program is not set"),
-
-            associated_token_program: self
-                .instruction
-                .associated_token_program
-                .expect("associated_token_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -757,7 +709,6 @@ struct WithdrawCpiBuilderInstruction<'a, 'b> {
     user_shares_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
-    associated_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     assets: Option<u64>,
     max_shares: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
