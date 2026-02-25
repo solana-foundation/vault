@@ -93,10 +93,19 @@ pub mod vault {
         instructions::redeem::handler(ctx, shares, min_assets)
     }
 
+    /// Marks the vault as initialized (locks further pre-init configuration).
+    /// Once initialized, fee extension initialization is no longer allowed.
+    /// Only the vault authority can call this.
     pub fn initialize_vault(ctx: Context<InitializeVault>) -> Result<()> {
         instructions::initialize_vault::handler(ctx)
     }
 
+    /// Initializes the deposit fee extension for a vault (one-time, pre-init only).
+    /// Stores the provided fee config inside `vault.extensions` as `VaultExtension::DepositFee`.
+    /// Only the vault authority can call this.
+    ///
+    /// # Arguments
+    /// * `deposit_fee` - The fee configuration to apply on deposits
     pub fn initialize_deposit_fees(
         ctx: Context<InitDepositFees>,
         args: InitDepositFeesArgs,
@@ -104,6 +113,12 @@ pub mod vault {
         instructions::initialize_deposit_fees::handler(ctx, args)
     }
 
+    /// Initializes the withdrawal fee extension for a vault (one-time, pre-init only).
+    /// Stores the provided fee config inside `vault.extensions` as `VaultExtension::WithdrawalFee`.
+    /// Only the vault authority can call this.
+    ///
+    /// # Arguments
+    /// * `withdrawal_fee` - The fee configuration to apply on withdrawals
     pub fn initialize_withdrawal_fees(
         ctx: Context<InitWithdrawalFees>,
         args: InitWithdrawalFeesArgs,
@@ -111,6 +126,12 @@ pub mod vault {
         instructions::initialize_withdrawal_fees::handler(ctx, args)
     }
 
+    /// Updates the deposit fee configuration for an already-initialized deposit fee extension.
+    /// Finds the existing `VaultExtension::DepositFee` entry and replaces it in-place.
+    /// Only the vault authority can call this.
+    ///
+    /// # Arguments
+    /// * `new_deposit_fee` - The new fee configuration to apply on deposits
     pub fn update_deposit_fees(
         ctx: Context<UpdateDepositFees>,
         args: UpdateDepositFeesArgs,
@@ -118,6 +139,12 @@ pub mod vault {
         instructions::update_deposit_fees::handler(ctx, args)
     }
 
+    /// Updates the withdrawal fee configuration for an already-initialized withdrawal fee
+    /// extension. Finds the existing `VaultExtension::WithdrawalFee` entry and replaces it
+    /// in-place. Only the vault authority can call this.
+    ///
+    /// # Arguments
+    /// * `new_withdrawal_fee` - The new fee configuration to apply on withdrawals
     pub fn update_withdrawal_fees(
         ctx: Context<UpdateWithdrawalFees>,
         args: UpdateWithdrawalFeesArgs,

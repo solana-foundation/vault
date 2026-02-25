@@ -84,6 +84,7 @@ fn test_update_vault(
         assert_eq!(vault_config.share_mint_address, share_mint.pubkey());
         assert_eq!(vault_config.initial_price, 100_000);
         assert_eq!(vault_config.paused, updated_paused_status);
+        assert_eq!(vault_config.initialized, false);
         assert_eq!(vault_config.vault_asset_cap, updated_vault_asset_cap);
         assert_eq!(vault_config.vault_token_account, reserve_pubkey);
     }
