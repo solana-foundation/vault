@@ -12,7 +12,9 @@ use solana_sdk::{
 };
 use vault_client::{
     sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
-    MintBuilder, Pubkey, RedeemBuilder, UpdateVaultBuilder, VaultConfig, WithdrawBuilder,
+    InitializeDepositFeesBuilder, InitializeVaultBuilder, InitializeWithdrawalFeesBuilder,
+    MintBuilder, Pubkey, RedeemBuilder, UpdateDepositFeesBuilder, UpdateVaultBuilder,
+    UpdateWithdrawalFeesBuilder, VaultConfig, WithdrawBuilder,
 };
 
 use anchor_spl::{
@@ -45,8 +47,6 @@ pub fn create_vault(
     share_mint: Pubkey,
     reserve: Pubkey,
     vault: Pubkey,
-    deposit_fees: FeeType,
-    withdraw_fees: FeeType,
     vault_asset_cap: u64,
     initial_price: u64,
     fee_recipient: Pubkey,
@@ -61,8 +61,6 @@ pub fn create_vault(
         .share_mint(share_mint)
         .reserve(reserve)
         .vault(vault)
-        .deposit_fees(deposit_fees)
-        .withdraw_fees(withdraw_fees)
         .vault_asset_cap(vault_asset_cap)
         .initial_price(initial_price)
         .fee_recipient(fee_recipient)
@@ -115,8 +113,6 @@ pub fn update_vault(
     authority: &Keypair,
     share_mint: Pubkey,
     vault: Pubkey,
-    deposit_fees: FeeType,
-    withdraw_fees: FeeType,
     vault_asset_cap: u64,
     paused: bool,
     new_authority: Pubkey,
@@ -125,8 +121,6 @@ pub fn update_vault(
         .authority(authority.pubkey())
         .share_mint(share_mint)
         .vault(vault)
-        .deposit_fees(deposit_fees)
-        .withdraw_fees(withdraw_fees)
         .vault_asset_cap(vault_asset_cap)
         .paused(paused)
         .new_authority(new_authority)
@@ -288,6 +282,134 @@ pub fn redeem(
     return svm.send_transaction(tx);
 }
 
+pub fn init_deposit_fees(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: &Pubkey,
+    vault: &Pubkey,
+    deposit_fee: &FeeType,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = InitializeDepositFeesBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(*share_mint)
+        .vault(*vault)
+        .deposit_fee(deposit_fee.clone())
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[&authority],
+        blockhash,
+    );
+
+    return svm.send_transaction(tx);
+}
+
+pub fn update_deposit_fees(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: &Pubkey,
+    vault: &Pubkey,
+    new_deposit_fee: &FeeType,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = UpdateDepositFeesBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(*share_mint)
+        .vault(*vault)
+        .new_deposit_fee(new_deposit_fee.clone())
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[&authority],
+        blockhash,
+    );
+
+    return svm.send_transaction(tx);
+}
+
+pub fn init_withdrawal_fees(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: &Pubkey,
+    vault: &Pubkey,
+    withdrawal_fee: &FeeType,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = InitializeWithdrawalFeesBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(*share_mint)
+        .vault(*vault)
+        .withdrawal_fee(withdrawal_fee.clone())
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[&authority],
+        blockhash,
+    );
+
+    return svm.send_transaction(tx);
+}
+
+pub fn update_withdrawal_fees(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: &Pubkey,
+    vault: &Pubkey,
+    new_withdrawal_fee: &FeeType,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = UpdateWithdrawalFeesBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(*share_mint)
+        .vault(*vault)
+        .new_withdrawal_fee(new_withdrawal_fee.clone())
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[&authority],
+        blockhash,
+    );
+
+    return svm.send_transaction(tx);
+}
+
+pub fn init_vault(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: &Pubkey,
+    vault: &Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = InitializeVaultBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(*share_mint)
+        .vault(*vault)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[&authority],
+        blockhash,
+    );
+
+    return svm.send_transaction(tx);
+}
+
 pub fn create_mint(svm: &mut LiteSVM, signer: &Keypair, mint: &Keypair) {
     let rent = svm.minimum_balance_for_rent_exemption(Mint::LEN);
     let init_account_ix: solana_sdk::instruction::Instruction = create_account(
@@ -381,9 +503,9 @@ pub fn assert_error_code(
     );
 }
 
-pub fn get_fee(fee: FeeType, total_amount: u64) -> u64 {
+pub fn get_fee(fee: Option<FeeType>, total_amount: u64) -> u64 {
     match fee {
-        FeeType::Percentage { bps } => {
+        Some(FeeType::Percentage { bps }) => {
             let fee = total_amount
                 .checked_mul(bps.into())
                 .expect("overflow")
@@ -393,8 +515,8 @@ pub fn get_fee(fee: FeeType, total_amount: u64) -> u64 {
                 .expect("overflow");
             return fee;
         }
-        FeeType::FixedAmount { amount } => return amount,
-        FeeType::NoFee => return 0,
+        Some(FeeType::FixedAmount { amount }) => return amount,
+        None => 0,
     }
 }
 
@@ -405,8 +527,8 @@ pub fn set_up_vault(
     share_mint: &Keypair,
     asset_token_program: Pubkey,
     share_token_program: Pubkey,
-    deposit_fees: &FeeType,
-    withdraw_fees: &FeeType,
+    deposit_fee_opt: Option<FeeType>,
+    withdrawal_fee_opt: Option<FeeType>,
 ) -> (Keypair, Keypair, Keypair, Keypair, Keypair, Pubkey, Pubkey) {
     let authority = Keypair::new();
     let user = Keypair::new();
@@ -435,8 +557,6 @@ pub fn set_up_vault(
         share_mint.pubkey(),
         reserve_pubkey,
         vault_pubkey,
-        deposit_fees.clone(),
-        withdraw_fees.clone(),
         100_000_000,
         1,
         fee_recipient.pubkey(),
@@ -444,17 +564,48 @@ pub fn set_up_vault(
         share_token_program,
     )
     .expect("Failed to create vault");
+
     let _ = update_vault(
         svm,
         &authority,
         share_mint.pubkey(),
         vault_pubkey,
-        deposit_fees.clone(),
-        withdraw_fees.clone(),
         100_000_000,
         false,
         authority.pubkey(),
     );
+
+    match deposit_fee_opt {
+        Some(deposit_fee) => {
+            init_deposit_fees(
+                svm,
+                &authority,
+                &share_mint.pubkey(),
+                &vault_pubkey,
+                &deposit_fee,
+            )
+            .expect("Failed to initialize deposit fees");
+        }
+        None => (),
+    }
+
+    match withdrawal_fee_opt {
+        Some(withdrawal_fee) => {
+            init_withdrawal_fees(
+                svm,
+                &authority,
+                &share_mint.pubkey(),
+                &vault_pubkey,
+                &withdrawal_fee,
+            )
+            .expect("Failed to initialize withdrawal fees");
+        }
+        None => (),
+    }
+
+    init_vault(svm, &authority, &share_mint.pubkey(), &vault_pubkey)
+        .expect("Failed to initialize vault");
+
     return (
         authority,
         user,

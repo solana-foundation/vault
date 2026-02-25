@@ -51,6 +51,18 @@ pub enum VaultError {
     /// 6013 - Slippage exceeded.
     #[error("Slippage exceeded.")]
     SlippageExceeded = 0x177D,
+    /// 6014 - Vault is already initialized.
+    #[error("Vault is already initialized.")]
+    VaultAlreadyInitialized = 0x177E,
+    /// 6015 - The extension is already initialized.
+    #[error("The extension is already initialized.")]
+    ExtensionAlreadyInitialized = 0x177F,
+    /// 6016 - The vault is not initialized.
+    #[error("The vault is not initialized.")]
+    UninitializedVault = 0x1780,
+    /// 6017 - The extension is not initialized.
+    #[error("The extension is not initialized.")]
+    UninitializedExtension = 0x1781,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

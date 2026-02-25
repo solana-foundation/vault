@@ -140,7 +140,8 @@ impl<'info> DepositAndMint<'info> {
 }
 
 pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64) -> Result<()> {
-    require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
+    ctx.accounts.vault.assert_unpaused_and_initialized()?;
+
     let fee = ctx.accounts.vault.get_deposit_fee(assets)?;
     // current vault amount
     let reserve_amount_before = ctx.accounts.reserve.amount;

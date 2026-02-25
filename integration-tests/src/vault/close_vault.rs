@@ -1,7 +1,7 @@
 use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{signature::Keypair, signer::Signer};
-use vault_client::{sdk::program_id, FeeType, Pubkey};
+use vault_client::{sdk::program_id, Pubkey};
 
 use crate::vault::{
     constants::{RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
@@ -63,8 +63,6 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
         share_mint.pubkey(),
         reserve_pubkey,
         vault_pubkey,
-        FeeType::NoFee,
-        FeeType::NoFee,
         0,
         100_000,
         fee_recipient.pubkey(),

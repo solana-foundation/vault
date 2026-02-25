@@ -5,5 +5,6 @@
 //! <https://github.com/codama-idl/codama>
 
 pub(crate) mod r#fee_type;
+pub(crate) mod r#vault_extension;
 
-pub use self::r#fee_type::*;
+pub use self::{r#fee_type::*, r#vault_extension::*};

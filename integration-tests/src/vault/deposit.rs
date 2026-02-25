@@ -37,8 +37,8 @@ fn test_deposit_vault() {
         &share_mint,
         token::ID,
         token::ID,
-        &FeeType::Percentage { bps: 100 },
-        &FeeType::NoFee,
+        Some(FeeType::Percentage { bps: 100 }),
+        None,
     );
     let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
     let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
@@ -117,7 +117,7 @@ fn test_deposit_vault() {
     let fee_recipient_balance_after = TokenAccount::unpack(fee_recipient_ata_account.data())
         .unwrap()
         .amount;
-    let fee = get_fee(FeeType::Percentage { bps: 100 }, deposit_amount);
+    let fee = get_fee(Some(FeeType::Percentage { bps: 100 }), deposit_amount);
     let deposit_amount_minus_fee = deposit_amount.checked_sub(fee).expect("overflow");
     assert_eq!(fee_recipient_balance_after, fee);
 
@@ -183,8 +183,8 @@ fn test_deposit_vault_with_transfer_fees() {
         &share_mint,
         token_2022::ID,
         token::ID,
-        &FeeType::Percentage { bps: 100 },
-        &FeeType::NoFee,
+        Some(FeeType::Percentage { bps: 100 }),
+        None,
     );
     let fee_recipient_ata = create_ata(
         &mut svm,
@@ -277,7 +277,7 @@ fn test_deposit_vault_with_transfer_fees() {
             .unwrap()
             .base
             .amount;
-    let fee = get_fee(FeeType::Percentage { bps: 100 }, deposit_amount);
+    let fee = get_fee(Some(FeeType::Percentage { bps: 100 }), deposit_amount);
     let transfer_fee_amount = fee
         .checked_mul(transfer_fee.into())
         .unwrap()
@@ -381,8 +381,8 @@ fn test_deposit_slippage_protection() {
         &share_mint,
         token::ID,
         token::ID,
-        &FeeType::Percentage { bps: 100 },
-        &FeeType::NoFee,
+        Some(FeeType::Percentage { bps: 100 }),
+        None,
     );
 
     let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
@@ -400,7 +400,7 @@ fn test_deposit_slippage_protection() {
     );
 
     let deposit_amount = 500_000;
-    let fee = get_fee(FeeType::Percentage { bps: 100 }, deposit_amount);
+    let fee = get_fee(Some(FeeType::Percentage { bps: 100 }), deposit_amount);
     let expected_shares = deposit_amount.checked_sub(fee).unwrap();
 
     // force slippage failure: ask for more shares than can be minted

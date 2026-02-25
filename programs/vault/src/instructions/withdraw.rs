@@ -130,7 +130,7 @@ impl<'info> Withdraw<'info> {
 }
 
 pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64, max_shares: u64) -> Result<()> {
-    require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
+    ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
     // assets is NET to receiver/user.
     let amount_assets_out = assets;

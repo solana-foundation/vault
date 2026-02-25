@@ -1,0 +1,34 @@
+use anchor_lang::prelude::*;
+use anchor_spl::token_interface::Mint;
+
+use crate::{
+    error::VaultProgramError,
+    state::{VaultConfig, VAULT_CONFIG_SEED},
+};
+
+#[derive(Accounts)]
+pub struct InitializeVault<'info> {
+    pub authority: Signer<'info>,
+
+    pub share_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        mut,
+        constraint = authority.key() == vault.authority @ VaultProgramError::UnauthorizedSigner,
+        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
+        bump
+    )]
+    pub vault: Account<'info, VaultConfig>,
+}
+
+pub fn handler<'info>(ctx: Context<InitializeVault>) -> Result<()> {
+    let is_initialized = ctx.accounts.vault.initialized;
+
+    if is_initialized {
+        return Err(VaultProgramError::VaultAlreadyInitialized.into());
+    }
+
+    ctx.accounts.vault.initialized = true;
+
+    Ok(())
+}

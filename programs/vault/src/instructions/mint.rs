@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::{error::VaultProgramError, instructions::DepositAndMint, state::Rounding};
 
 pub fn handler<'info>(ctx: Context<DepositAndMint>, shares: u64, max_assets: u64) -> Result<()> {
-    require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
+    ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
     let assets = ctx.accounts.vault.get_assets_from_shares(
         ctx.accounts.reserve.amount,

@@ -130,7 +130,8 @@ impl<'info> Redeem<'info> {
 }
 
 pub fn handler<'info>(ctx: Context<Redeem>, shares: u64, min_assets: u64) -> Result<()> {
-    require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
+    ctx.accounts.vault.assert_unpaused_and_initialized()?;
+
     require!(shares > 0, VaultProgramError::InsufficientRedeemAmount);
     require!(
         ctx.accounts.share_mint.supply > 0,

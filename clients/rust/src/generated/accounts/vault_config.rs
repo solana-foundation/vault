@@ -4,7 +4,7 @@
 //!
 //! <https://github.com/codama-idl/codama>
 
-use crate::generated::types::FeeType;
+use crate::generated::types::VaultExtension;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_pubkey::Pubkey;
 
@@ -37,12 +37,10 @@ pub struct VaultConfig {
     pub authority: Pubkey,
     /// initial price of shares in asset units (scaled by asset mint decimals)
     pub initial_price: u64,
-    /// deposit fees
-    pub deposit_fees: FeeType,
-    /// withdraw fees
-    pub withdraw_fees: FeeType,
     /// paused
     pub paused: bool,
+    /// once a vault is initialized, no extensions can be added
+    pub initialized: bool,
     /// max balance allowed in vault
     pub vault_asset_cap: u64,
     /// pubkey that is required to own the TokenAccount fees are sent to
@@ -51,6 +49,8 @@ pub struct VaultConfig {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub fee_recipient: Pubkey,
+    /// vault extensions
+    pub extensions: Vec<VaultExtension>,
     pub reserve_bump: u8,
     pub bump: u8,
 }

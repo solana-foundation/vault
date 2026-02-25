@@ -6,15 +6,13 @@ use anchor_spl::{
 
 use crate::{
     error::VaultProgramError,
-    state::{FeeType, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    state::{VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct VaultArgs {
     authority: Pubkey,
     initial_price: u64,
-    deposit_fees: Option<FeeType>,
-    withdraw_fees: Option<FeeType>,
     vault_asset_cap: Option<u64>,
     fee_recipient: Pubkey,
 }
@@ -72,12 +70,6 @@ impl<'info> CreateVault<'info> {
 }
 
 pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> {
-    if let Some(fee) = args.deposit_fees {
-        fee.validate()?;
-    }
-    if let Some(fee) = args.withdraw_fees {
-        fee.validate()?;
-    }
     require!(
         args.initial_price != 0,
         VaultProgramError::InvalidInitialPrice
@@ -89,11 +81,11 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
         vault_token_account: ctx.accounts.reserve.key(),
         authority: args.authority,
         initial_price: args.initial_price,
-        deposit_fees: args.deposit_fees.unwrap_or(FeeType::NoFee),
-        withdraw_fees: args.withdraw_fees.unwrap_or(FeeType::NoFee),
         paused: true,
+        initialized: false,
         vault_asset_cap: args.vault_asset_cap.unwrap_or(0),
         fee_recipient: args.fee_recipient,
+        extensions: vec![],
         reserve_bump: ctx.bumps.reserve,
         bump: ctx.bumps.vault,
     });

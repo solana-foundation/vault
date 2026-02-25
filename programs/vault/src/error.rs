@@ -43,4 +43,16 @@ pub enum VaultProgramError {
 
     #[msg("Slippage exceeded.")]
     SlippageExceeded,
+
+    #[msg("Vault is already initialized.")]
+    VaultAlreadyInitialized,
+
+    #[msg("The extension is already initialized.")]
+    ExtensionAlreadyInitialized,
+
+    #[msg("The vault is not initialized.")]
+    UninitializedVault,
+
+    #[msg("The extension is not initialized.")]
+    UninitializedExtension,
 }

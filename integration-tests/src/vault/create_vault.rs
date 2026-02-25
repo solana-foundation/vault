@@ -1,23 +1,16 @@
 use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
-use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
+use vault_client::{sdk::program_id, Pubkey, VaultConfig};
 
 use crate::vault::{
     constants::{RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
-    helper_functions::{assert_error_code, create_mint, create_vault},
+    helper_functions::{create_mint, create_vault},
 };
-use test_case::test_case;
 
-#[test_case(FeeType::NoFee, FeeType::NoFee, 100_000_000,true; "No Fees")]
-#[test_case(FeeType::Percentage { bps: 10_001 }, FeeType::NoFee,100_000_000, false; "Deposit fee limit exceeded")]
-#[test_case(FeeType::Percentage { bps: 9000 }, FeeType::Percentage { bps: 10_001 },100_000_000,false; "Withdraw fee limit exceeded")]
-fn test_create_vault(
-    deposit_fee: FeeType,
-    withdraw_fee: FeeType,
-    initial_price: u64,
-    should_succeed: bool,
-) {
+#[test]
+fn test_create_vault() {
+    let initial_price = 100_000_000;
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
@@ -44,7 +37,7 @@ fn test_create_vault(
         &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
         &vault_client::sdk::program_id(),
     );
-    let result = create_vault(
+    create_vault(
         &mut svm,
         &authority,
         &payer,
@@ -53,42 +46,27 @@ fn test_create_vault(
         share_mint.pubkey(),
         reserve_pubkey,
         vault_pubkey,
-        deposit_fee.clone(),
-        withdraw_fee.clone(),
         0,
         initial_price,
         fee_recipient.pubkey(),
         token::ID,
         token::ID,
-    );
-    assert_eq!(
-        result.is_ok(),
-        should_succeed,
-        "Unexpected result for test case"
-    );
-    if should_succeed {
-        // Verify vault was created
-        let vault_account = svm
-            .get_account(&vault_pubkey)
-            .expect("Vault account should exist");
-        assert!(!vault_account.data.is_empty(), "Vault should have data");
+    )
+    .expect("vault creation should succeed");
 
-        let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
-        assert_eq!(vault_config.authority, authority.pubkey());
-        assert_eq!(vault_config.asset_mint_address, asset_mint.pubkey());
-        assert_eq!(vault_config.share_mint_address, share_mint.pubkey());
-        assert_eq!(vault_config.deposit_fees, deposit_fee);
-        assert_eq!(vault_config.withdraw_fees, withdraw_fee);
-        assert_eq!(vault_config.initial_price, initial_price);
-        assert_eq!(vault_config.paused, true);
-        assert_eq!(vault_config.vault_asset_cap, 0);
-        assert_eq!(vault_config.vault_token_account, reserve_pubkey);
-    } else {
-        let failed_tx = result.unwrap_err();
-        assert_error_code(
-            &failed_tx,
-            6000,
-            "The provided fee must not exceed 100% (10,000 bps).",
-        )
-    }
+    // Verify vault was created
+    let vault_account = svm
+        .get_account(&vault_pubkey)
+        .expect("Vault account should exist");
+    assert!(!vault_account.data.is_empty(), "Vault should have data");
+
+    let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
+    assert_eq!(vault_config.authority, authority.pubkey());
+    assert_eq!(vault_config.asset_mint_address, asset_mint.pubkey());
+    assert_eq!(vault_config.share_mint_address, share_mint.pubkey());
+    assert!(vault_config.extensions.is_empty());
+    assert_eq!(vault_config.initial_price, initial_price);
+    assert_eq!(vault_config.paused, true);
+    assert_eq!(vault_config.vault_asset_cap, 0);
+    assert_eq!(vault_config.vault_token_account, reserve_pubkey);
 }

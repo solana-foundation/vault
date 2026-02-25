@@ -4,7 +4,6 @@
 //!
 //! <https://github.com/codama-idl/codama>
 
-use crate::generated::types::FeeType;
 use borsh::{BorshDeserialize, BorshSerialize};
 use solana_pubkey::Pubkey;
 
@@ -111,8 +110,6 @@ impl Default for CreateVaultInstructionData {
 pub struct CreateVaultInstructionArgs {
     pub authority: Pubkey,
     pub initial_price: u64,
-    pub deposit_fees: Option<FeeType>,
-    pub withdraw_fees: Option<FeeType>,
     pub vault_asset_cap: Option<u64>,
     pub fee_recipient: Pubkey,
 }
@@ -149,8 +146,6 @@ pub struct CreateVaultBuilder {
     system_program: Option<solana_pubkey::Pubkey>,
     authority: Option<Pubkey>,
     initial_price: Option<u64>,
-    deposit_fees: Option<FeeType>,
-    withdraw_fees: Option<FeeType>,
     vault_asset_cap: Option<u64>,
     fee_recipient: Option<Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
@@ -230,20 +225,6 @@ impl CreateVaultBuilder {
 
     /// `[optional argument]`
     #[inline(always)]
-    pub fn deposit_fees(&mut self, deposit_fees: FeeType) -> &mut Self {
-        self.deposit_fees = Some(deposit_fees);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn withdraw_fees(&mut self, withdraw_fees: FeeType) -> &mut Self {
-        self.withdraw_fees = Some(withdraw_fees);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
     pub fn vault_asset_cap(&mut self, vault_asset_cap: u64) -> &mut Self {
         self.vault_asset_cap = Some(vault_asset_cap);
         self
@@ -297,8 +278,6 @@ impl CreateVaultBuilder {
                 .initial_price
                 .clone()
                 .expect("initial_price is not set"),
-            deposit_fees: self.deposit_fees.clone(),
-            withdraw_fees: self.withdraw_fees.clone(),
             vault_asset_cap: self.vault_asset_cap.clone(),
             fee_recipient: self
                 .fee_recipient
@@ -507,8 +486,6 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
             system_program: None,
             authority: None,
             initial_price: None,
-            deposit_fees: None,
-            withdraw_fees: None,
             vault_asset_cap: None,
             fee_recipient: None,
             __remaining_accounts: Vec::new(),
@@ -602,20 +579,6 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
 
     /// `[optional argument]`
     #[inline(always)]
-    pub fn deposit_fees(&mut self, deposit_fees: FeeType) -> &mut Self {
-        self.instruction.deposit_fees = Some(deposit_fees);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn withdraw_fees(&mut self, withdraw_fees: FeeType) -> &mut Self {
-        self.instruction.withdraw_fees = Some(withdraw_fees);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
     pub fn vault_asset_cap(&mut self, vault_asset_cap: u64) -> &mut Self {
         self.instruction.vault_asset_cap = Some(vault_asset_cap);
         self
@@ -676,8 +639,6 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
                 .initial_price
                 .clone()
                 .expect("initial_price is not set"),
-            deposit_fees: self.instruction.deposit_fees.clone(),
-            withdraw_fees: self.instruction.withdraw_fees.clone(),
             vault_asset_cap: self.instruction.vault_asset_cap.clone(),
             fee_recipient: self
                 .instruction
@@ -740,8 +701,6 @@ struct CreateVaultCpiBuilderInstruction<'a, 'b> {
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     authority: Option<Pubkey>,
     initial_price: Option<u64>,
-    deposit_fees: Option<FeeType>,
-    withdraw_fees: Option<FeeType>,
     vault_asset_cap: Option<u64>,
     fee_recipient: Option<Pubkey>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

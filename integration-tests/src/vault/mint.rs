@@ -48,8 +48,8 @@ fn test_mint_vault() {
         &share_mint,
         token::ID,
         token::ID,
-        &FeeType::Percentage { bps: 100 },
-        &FeeType::NoFee,
+        Some(FeeType::Percentage { bps: 100 }),
+        None,
     );
     let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
     let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
@@ -176,8 +176,8 @@ fn test_mint_vault_with_transfer_fees() {
         &share_mint,
         token_2022::ID,
         token::ID,
-        &FeeType::Percentage { bps: 100 },
-        &FeeType::NoFee,
+        Some(FeeType::Percentage { bps: 100 }),
+        None,
     );
     let fee_recipient_ata = create_ata(
         &mut svm,
@@ -380,8 +380,8 @@ fn test_mint_vault_slippage_protection_fails() {
         &share_mint,
         token::ID,
         token::ID,
-        &FeeType::Percentage { bps: 100 },
-        &FeeType::NoFee,
+        Some(FeeType::Percentage { bps: 100 }),
+        None,
     );
 
     let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);

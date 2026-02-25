@@ -1,20 +1,14 @@
 use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
-use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig};
+use vault_client::{sdk::program_id, Pubkey, VaultConfig};
 
-use crate::vault::helper_functions::{assert_error_code, create_mint, create_vault, update_vault};
+use crate::vault::helper_functions::{create_mint, create_vault, update_vault};
 use test_case::test_case;
 
-#[test_case(FeeType::NoFee, FeeType::NoFee, true,  FeeType::Percentage { bps: 10_000 },FeeType::Percentage { bps: 10_000 }, false, 100_000,Keypair::new().pubkey(); "No Fees, Change fee percentage, unpause and vault cap")]
-#[test_case(FeeType::NoFee, FeeType::NoFee, true,  FeeType::FixedAmount { amount: 10_000 },FeeType::Percentage { bps: 10_000 }, false, 100_000,Keypair::new().pubkey(); "No Fees, Change fee fixed amount, unpause and vault cap")]
-#[test_case(FeeType::NoFee, FeeType::NoFee, false,  FeeType::Percentage { bps: 10_001 },FeeType::Percentage { bps: 10_000 }, false, 100_000,Keypair::new().pubkey(); "No Fees, Change fee, Error from exceeded fee")]
+#[test_case(true, false, 100_000,Keypair::new().pubkey(); "unpause and vault cap")]
 fn test_update_vault(
-    deposit_fee: FeeType,
-    withdraw_fee: FeeType,
     should_succeed: bool,
-    updated_deposit_fee: FeeType,
-    updated_withdraw_fee: FeeType,
     updated_paused_status: bool,
     updated_vault_asset_cap: u64,
     updated_authority: Pubkey,
@@ -54,8 +48,6 @@ fn test_update_vault(
         share_mint.pubkey(),
         reserve_pubkey,
         vault_pubkey,
-        deposit_fee.clone(),
-        withdraw_fee.clone(),
         0,
         100_000,
         fee_recipient.pubkey(),
@@ -68,8 +60,6 @@ fn test_update_vault(
         &authority,
         share_mint.pubkey(),
         vault_pubkey,
-        updated_deposit_fee.clone(),
-        updated_withdraw_fee.clone(),
         updated_vault_asset_cap,
         updated_paused_status,
         updated_authority,
@@ -92,18 +82,9 @@ fn test_update_vault(
         assert_eq!(vault_config.authority, updated_authority);
         assert_eq!(vault_config.asset_mint_address, asset_mint.pubkey());
         assert_eq!(vault_config.share_mint_address, share_mint.pubkey());
-        assert_eq!(vault_config.deposit_fees, updated_deposit_fee);
-        assert_eq!(vault_config.withdraw_fees, updated_withdraw_fee);
         assert_eq!(vault_config.initial_price, 100_000);
         assert_eq!(vault_config.paused, updated_paused_status);
         assert_eq!(vault_config.vault_asset_cap, updated_vault_asset_cap);
         assert_eq!(vault_config.vault_token_account, reserve_pubkey);
-    } else {
-        let failed_tx = update_result.unwrap_err();
-        assert_error_code(
-            &failed_tx,
-            6000,
-            "The provided fee must not exceed 100% (10,000 bps).",
-        )
     }
 }

@@ -92,4 +92,36 @@ pub mod vault {
     pub fn redeem(ctx: Context<Redeem>, shares: u64, min_assets: u64) -> Result<()> {
         instructions::redeem::handler(ctx, shares, min_assets)
     }
+
+    pub fn initialize_vault(ctx: Context<InitializeVault>) -> Result<()> {
+        instructions::initialize_vault::handler(ctx)
+    }
+
+    pub fn initialize_deposit_fees(
+        ctx: Context<InitDepositFees>,
+        args: InitDepositFeesArgs,
+    ) -> Result<()> {
+        instructions::initialize_deposit_fees::handler(ctx, args)
+    }
+
+    pub fn initialize_withdrawal_fees(
+        ctx: Context<InitWithdrawalFees>,
+        args: InitWithdrawalFeesArgs,
+    ) -> Result<()> {
+        instructions::initialize_withdrawal_fees::handler(ctx, args)
+    }
+
+    pub fn update_deposit_fees(
+        ctx: Context<UpdateDepositFees>,
+        args: UpdateDepositFeesArgs,
+    ) -> Result<()> {
+        instructions::update_deposit_fees::handler(ctx, args)
+    }
+
+    pub fn update_withdrawal_fees(
+        ctx: Context<UpdateWithdrawalFees>,
+        args: UpdateWithdrawalFeesArgs,
+    ) -> Result<()> {
+        instructions::update_withdrawal_fees::handler(ctx, args)
+    }
 }

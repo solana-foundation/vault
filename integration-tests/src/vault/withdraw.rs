@@ -17,30 +17,34 @@ use crate::vault::helper_functions::{
 use test_case::test_case;
 
 #[test_case(
-    FeeType::Percentage { bps: 100 },  // 1% deposit fee
-    FeeType::Percentage { bps: 50 },
+    Some(FeeType::Percentage { bps: 100 }),  // 1% deposit fee
+    Some(FeeType::Percentage { bps: 50 }),
     token::ID;   // 0.5% withdraw fee
     "Withdraw successfully (percentage fees) token keg"
 )]
 #[test_case(
-    FeeType::NoFee,
-    FeeType::NoFee,
+    None,
+    None,
     token::ID;
     "Withdraw successfully (no fees) token keg"
 )]
 #[test_case(
-    FeeType::Percentage { bps: 100 },  // 1% deposit fee
-    FeeType::Percentage { bps: 50 },
+    Some(FeeType::Percentage { bps: 100 }),  // 1% deposit fee
+    Some(FeeType::Percentage { bps: 50 }),
     token_2022::ID;
     "Withdraw successfully (percentage fees) token 2022 and transfer fee"
 )]
 #[test_case(
-    FeeType::NoFee,
-    FeeType::NoFee,
+    None,
+    None,
     token_2022::ID;
     "Withdraw successfully (no fees) token 2022 and transfer fee"
 )]
-fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program: Pubkey) {
+fn test_withdraw_vault(
+    deposit_fee: Option<FeeType>,
+    withdraw_fee: Option<FeeType>,
+    token_program: Pubkey,
+) {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
@@ -84,8 +88,8 @@ fn test_withdraw_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_progra
         &share_mint,
         token_program,
         token_program,
-        &deposit_fee,
-        &withdraw_fee,
+        deposit_fee.clone(),
+        withdraw_fee.clone(),
     );
 
     let fee_recipient_ata = create_ata(
@@ -328,8 +332,8 @@ fn test_withdraw_slippage_protection() {
     create_mint(&mut svm, &mint_authority, &share_mint);
 
     // keep it simple: token-keg, deposit fee 1%, withdraw fee 0.5%
-    let deposit_fee = FeeType::Percentage { bps: 100 };
-    let withdraw_fee = FeeType::Percentage { bps: 50 };
+    let deposit_fee = Some(FeeType::Percentage { bps: 100 });
+    let withdraw_fee = Some(FeeType::Percentage { bps: 50 });
 
     let (_, user, _, mint_authority, fee_recipient, reserve_pubkey, vault_pubkey) = set_up_vault(
         &mut svm,
@@ -338,8 +342,8 @@ fn test_withdraw_slippage_protection() {
         &share_mint,
         token::ID,
         token::ID,
-        &deposit_fee,
-        &withdraw_fee,
+        deposit_fee.clone(),
+        withdraw_fee.clone(),
     );
 
     let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);

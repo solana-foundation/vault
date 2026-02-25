@@ -18,9 +18,9 @@ use test_case::test_case;
 
 /// Mirrors get_withdraw_fee_when_redeeming formula:
 /// fee = ceil(gross * bps / (MAX_BPS + bps))
-fn redeem_fee_from_gross(fee: FeeType, gross: u64) -> u64 {
+fn redeem_fee_from_gross(fee: Option<FeeType>, gross: u64) -> u64 {
     match fee {
-        FeeType::Percentage { bps } => {
+        Some(FeeType::Percentage { bps }) => {
             if bps == 0 {
                 return 0;
             }
@@ -28,8 +28,8 @@ fn redeem_fee_from_gross(fee: FeeType, gross: u64) -> u64 {
             let numerator = gross as u128 * bps as u128;
             u64::try_from(numerator.div_ceil(denominator)).expect("overflow")
         }
-        FeeType::FixedAmount { amount } => amount,
-        FeeType::NoFee => 0,
+        Some(FeeType::FixedAmount { amount }) => amount,
+        None => 0,
     }
 }
 
@@ -61,30 +61,34 @@ fn assets_from_shares_formula(
 }
 
 #[test_case(
-    FeeType::Percentage { bps: 100 },  // 1% deposit fee
-    FeeType::Percentage { bps: 50 },
+    Some(FeeType::Percentage { bps: 100 }),  // 1% deposit fee
+    Some(FeeType::Percentage { bps: 50 }),
     token::ID; // 0.5% withdraw/redeem fee
     "Redeem successfully (percentage fees) token keg"
 )]
 #[test_case(
-    FeeType::NoFee,
-    FeeType::NoFee,
+    None,
+    None,
     token::ID;
     "Redeem successfully (no fees) token keg"
 )]
 #[test_case(
-    FeeType::Percentage { bps: 100 },  // 1% deposit fee
-    FeeType::Percentage { bps: 50 },
+    Some(FeeType::Percentage { bps: 100 }),  // 1% deposit fee
+    Some(FeeType::Percentage { bps: 50 }),
     token_2022::ID; // 0.5% withdraw/redeem fee
     "Redeem successfully (percentage fees) token 2022 and transfer fee"
 )]
 #[test_case(
-    FeeType::NoFee,
-    FeeType::NoFee,
+    None,
+    None,
     token_2022::ID;
     "Redeem successfully (no fees) token 2022 and transfer fee"
 )]
-fn test_redeem_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program: Pubkey) {
+fn test_redeem_vault(
+    deposit_fee: Option<FeeType>,
+    withdraw_fee: Option<FeeType>,
+    token_program: Pubkey,
+) {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
@@ -128,8 +132,8 @@ fn test_redeem_vault(deposit_fee: FeeType, withdraw_fee: FeeType, token_program:
         &share_mint,
         token_program,
         token_program,
-        &deposit_fee,
-        &withdraw_fee,
+        deposit_fee.clone(),
+        withdraw_fee.clone(),
     );
 
     let fee_recipient_ata = create_ata(
@@ -354,8 +358,8 @@ fn test_redeem_slippage_protection() {
     create_mint(&mut svm, &mint_authority, &share_mint);
 
     // deposit fee 1%, redeem fee 0.5% (so redeem output is predictable)
-    let deposit_fee = FeeType::Percentage { bps: 100 };
-    let redeem_fee = FeeType::Percentage { bps: 50 };
+    let deposit_fee = Some(FeeType::Percentage { bps: 100 });
+    let redeem_fee = Some(FeeType::Percentage { bps: 50 });
 
     let (_, user, _, mint_authority, fee_recipient, reserve_pubkey, vault_pubkey) = set_up_vault(
         &mut svm,
@@ -364,8 +368,8 @@ fn test_redeem_slippage_protection() {
         &share_mint,
         token::ID,
         token::ID,
-        &deposit_fee,
-        &redeem_fee,
+        deposit_fee.clone(),
+        deposit_fee.clone(),
     );
 
     let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);

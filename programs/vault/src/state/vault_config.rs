@@ -4,12 +4,33 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, InitSpace, Copy)]
+pub enum VaultExtension {
+    DepositFee(FeeType),
+    WithdrawalFee(FeeType),
+}
+
+impl VaultExtension {
+    pub fn as_deposit_fee(&self) -> Option<FeeType> {
+        match self {
+            VaultExtension::DepositFee(fee) => Some(*fee),
+            _ => None,
+        }
+    }
+
+    pub fn as_withdrawal_fee(&self) -> Option<FeeType> {
+        match self {
+            VaultExtension::WithdrawalFee(fee) => Some(*fee),
+            _ => None,
+        }
+    }
+}
+
 /// The fee types:
 /// FixedAmount: a fixed fee is applied (ex 0.1 asset)
 /// Percentage: the fee is a % of the transfer amount
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, InitSpace, Copy)]
 pub enum FeeType {
-    NoFee,
     FixedAmount { amount: u64 },
     Percentage { bps: u16 },
 }
@@ -20,7 +41,7 @@ impl FeeType {
             FeeType::Percentage { bps } => {
                 require!(bps <= MAX_BPS, VaultProgramError::FeeBPSLimitReached);
             }
-            FeeType::NoFee | FeeType::FixedAmount { .. } => {}
+            FeeType::FixedAmount { .. } => {}
         }
         Ok(())
     }
@@ -38,7 +59,6 @@ impl FeeType {
                 return Ok(fee);
             }
             FeeType::FixedAmount { amount } => return Ok(amount),
-            FeeType::NoFee => return Ok(0),
         }
     }
 
@@ -60,7 +80,6 @@ impl FeeType {
                 Ok(u64::try_from(fee)?)
             }
             FeeType::FixedAmount { amount } => Ok(*amount),
-            FeeType::NoFee => Ok(0),
         }
     }
 
@@ -95,7 +114,6 @@ impl FeeType {
                 Ok(u64::try_from(fee)?)
             }
             FeeType::FixedAmount { amount } => return Ok(*amount),
-            FeeType::NoFee => return Ok(0),
         }
     }
 }
@@ -103,7 +121,7 @@ impl FeeType {
 /// Core state of the Vault account necessary for common
 /// logic across configuration types.
 #[account]
-#[derive(InitSpace, Copy)]
+#[derive(InitSpace)]
 pub struct VaultConfig {
     pub asset_mint_address: Pubkey,
     /// share mint address
@@ -114,23 +132,24 @@ pub struct VaultConfig {
     pub authority: Pubkey,
     /// initial price of shares in asset units (scaled by asset mint decimals)
     pub initial_price: u64,
-    /// deposit fees
-    pub deposit_fees: FeeType,
-    /// withdraw fees
-    pub withdraw_fees: FeeType,
     /// paused
     pub paused: bool,
+    /// once a vault is initialized, no extensions can be added
+    pub initialized: bool,
     /// max balance allowed in vault
     pub vault_asset_cap: u64,
     /// pubkey that is required to own the TokenAccount fees are sent to
     pub fee_recipient: Pubkey,
+    /// vault extensions
+    #[max_len(10)]
+    pub extensions: Vec<VaultExtension>,
     pub reserve_bump: u8,
     pub bump: u8,
 }
 
 impl VaultConfig {
     pub fn get_shares_from_assets(
-        self,
+        &self,
         reserve_balance: u64,
         share_supply: u64,
         asset_amount: u64,
@@ -168,7 +187,7 @@ impl VaultConfig {
     }
 
     pub fn get_assets_from_shares(
-        self,
+        &self,
         reserve_balance: u64,
         share_supply: u64,
         share_amount: u64,
@@ -205,21 +224,55 @@ impl VaultConfig {
         u64::try_from(result).map_err(|_| VaultProgramError::ArithmeticError.into())
     }
 
-    pub fn get_deposit_fee_when_minting(self, assets: u64) -> Result<u64> {
-        self.deposit_fees.get_deposit_fee_when_minting(assets)
+    pub fn get_deposit_fee_when_minting(&self, assets: u64) -> Result<u64> {
+        self.deposit_fee_type()
+            .map_or(Ok(0), |(_, fee)| fee.get_deposit_fee_when_minting(assets))
     }
 
-    pub fn get_withdraw_fee_when_redeeming(self, gross_assets: u64) -> Result<u64> {
-        self.withdraw_fees
-            .get_withdraw_fee_when_redeeming(gross_assets)
+    pub fn get_withdraw_fee_when_redeeming(&self, gross_assets: u64) -> Result<u64> {
+        self.withdrawal_fee_type().map_or(Ok(0), |(_, fee)| {
+            fee.get_withdraw_fee_when_redeeming(gross_assets)
+        })
     }
 
-    pub fn get_deposit_fee(self, deposit_amount: u64) -> Result<u64> {
-        self.deposit_fees.get_fee(deposit_amount)
+    pub fn get_deposit_fee(&self, deposit_amount: u64) -> Result<u64> {
+        self.deposit_fee_type()
+            .map_or(Ok(0), |(_, fee)| fee.get_fee(deposit_amount))
     }
 
-    pub fn get_withdraw_fee(self, withdraw_amount: u64) -> Result<u64> {
-        self.withdraw_fees.get_fee(withdraw_amount)
+    pub fn get_withdraw_fee(&self, withdraw_amount: u64) -> Result<u64> {
+        self.withdrawal_fee_type()
+            .map_or(Ok(0), |(_, fee)| fee.get_fee(withdraw_amount))
+    }
+
+    pub fn deposit_fee_type(&self) -> Option<(usize, FeeType)> {
+        self.extensions
+            .iter()
+            .enumerate()
+            .find_map(|(index, extension)| {
+                VaultExtension::as_deposit_fee(extension).map(|fee| (index, fee))
+            })
+    }
+
+    pub fn withdrawal_fee_type(&self) -> Option<(usize, FeeType)> {
+        self.extensions
+            .iter()
+            .enumerate()
+            .find_map(|(index, extension)| {
+                VaultExtension::as_withdrawal_fee(extension).map(|fee| (index, fee))
+            })
+    }
+
+    pub fn assert_unpaused_and_initialized(&self) -> Result<()> {
+        if !self.initialized {
+            return Err(VaultProgramError::UninitializedVault.into());
+        }
+
+        if self.paused {
+            return Err(VaultProgramError::PausedVault.into());
+        }
+
+        Ok(())
     }
 }
 
@@ -235,11 +288,11 @@ mod tests {
             vault_token_account: Pubkey::new_unique(),
             authority: Pubkey::new_unique(),
             initial_price,
-            deposit_fees: FeeType::NoFee,
-            withdraw_fees: FeeType::NoFee,
             paused: false,
+            initialized: true,
             vault_asset_cap: u64::MAX,
             fee_recipient: Pubkey::new_unique(),
+            extensions: vec![],
             reserve_bump: 255,
             bump: 254,
         }
@@ -311,10 +364,6 @@ mod tests {
         assert_eq!(shares_low, 1_000_000);
     }
 
-    #[test_case(FeeType::NoFee, 0, 0; "NoFee with zero amount")]
-    #[test_case(FeeType::NoFee, 100, 0; "NoFee with small amount")]
-    #[test_case(FeeType::NoFee, 1_000_000, 0; "NoFee with large amount")]
-    #[test_case(FeeType::NoFee, u64::MAX, 0; "NoFee with max amount")]
     #[test_case(FeeType::FixedAmount { amount: 0 }, 0, 0; "FixedAmount zero fee zero amount")]
     #[test_case(FeeType::FixedAmount { amount: 0 }, 1_000_000, 0; "FixedAmount zero fee large amount")]
     #[test_case(FeeType::FixedAmount { amount: 50 }, 0, 50; "FixedAmount fee with zero amount")]
@@ -432,8 +481,6 @@ mod tests {
 
     // get_withdraw_fee_when_redeeming: fee = ceil(gross * bps / (MAX_BPS + bps))
     // such that fee/net = bps/MAX_BPS (same rate as withdraw uses on net)
-    #[test_case(FeeType::NoFee, 0, 0; "NoFee zero gross")]
-    #[test_case(FeeType::NoFee, 1_000_000, 0; "NoFee large gross")]
     #[test_case(FeeType::FixedAmount { amount: 50 }, 1_000, 50; "FixedAmount fee")]
     #[test_case(FeeType::Percentage { bps: 0 }, 1_000, 0; "Percentage zero bps")]
     #[test_case(FeeType::Percentage { bps: 100 }, 1_010, 10; "1% on gross=1010 gives fee=10 net=1000")]
