@@ -27,9 +27,7 @@ pub struct InitDepositFees<'info> {
 }
 
 pub fn handler<'info>(ctx: Context<InitDepositFees>, args: InitDepositFeesArgs) -> Result<()> {
-    if ctx.accounts.vault.initialized {
-        return Err(VaultProgramError::VaultAlreadyInitialized.into());
-    }
+    ctx.accounts.vault.assert_uninitialized()?;
 
     let is_deposit_fee_present = ctx.accounts.vault.deposit_fee_type().is_some();
 

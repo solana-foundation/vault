@@ -30,9 +30,7 @@ pub fn handler<'info>(
     ctx: Context<InitWithdrawalFees>,
     args: InitWithdrawalFeesArgs,
 ) -> Result<()> {
-    if ctx.accounts.vault.initialized {
-        return Err(VaultProgramError::VaultAlreadyInitialized.into());
-    }
+    ctx.accounts.vault.assert_uninitialized()?;
 
     let is_withdrawal_fee_present = ctx.accounts.vault.withdrawal_fee_type().is_some();
 

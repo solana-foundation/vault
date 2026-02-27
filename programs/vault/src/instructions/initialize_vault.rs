@@ -22,11 +22,7 @@ pub struct InitializeVault<'info> {
 }
 
 pub fn handler<'info>(ctx: Context<InitializeVault>) -> Result<()> {
-    let is_initialized = ctx.accounts.vault.initialized;
-
-    if is_initialized {
-        return Err(VaultProgramError::VaultAlreadyInitialized.into());
-    }
+    ctx.accounts.vault.assert_uninitialized()?;
 
     ctx.accounts.vault.initialized = true;
 

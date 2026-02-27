@@ -274,6 +274,14 @@ impl VaultConfig {
 
         Ok(())
     }
+
+    pub fn assert_uninitialized(&self) -> Result<()> {
+        if self.initialized {
+            return Err(VaultProgramError::VaultAlreadyInitialized.into());
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
