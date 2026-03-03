@@ -1,4 +1,4 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, solana_program::program::invoke};
 use anchor_spl::{
     token::spl_token,
     token_2022::spl_token_2022::{
@@ -10,7 +10,10 @@ use anchor_spl::{
 
 use crate::{
     error::VaultProgramError,
-    state::{Rounding, VaultConfig, MAX_BPS, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    state::{
+        deposit_hook, Rounding, VaultConfig, DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED,
+        MAX_BPS, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
+    },
 };
 
 #[derive(Accounts)]
@@ -65,8 +68,16 @@ pub struct DepositAndMint<'info> {
     )]
     pub user_shares_account: InterfaceAccount<'info, TokenAccount>,
 
+    #[account(
+        seeds = [EXTRA_ACCOUNT_METAS_SEED,DEPOSIT_ACCOUNT_METAS_SEED, share_mint.key().as_ref()],
+        bump
+    )]
+    pub extra_metas: Option<AccountInfo<'info>>,
+
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub share_token_program: Interface<'info, TokenInterface>,
+    /// CHECK: This is the hook program ID
+    pub hook_program: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -137,6 +148,23 @@ impl<'info> DepositAndMint<'info> {
             .ok_or(VaultProgramError::ArithmeticError)?
             .div_ceil(MAX_BPS.into()))
     }
+    pub fn deposit_hook(&mut self) -> Result<()> {
+        let deposit_hook_ix = deposit_hook(
+            &self.hook_program.key(),
+            &self.user.key(),
+            &self.share_mint.key(),
+            &self.vault.key(),
+        );
+        invoke(
+            &deposit_hook_ix,
+            &[
+                self.user.to_account_info(),
+                self.share_mint.to_account_info(),
+                self.system_program.to_account_info(),
+            ],
+        )?;
+        Ok(())
+    }
 }
 
 pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64) -> Result<()> {
@@ -152,6 +180,12 @@ pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64
     ctx.accounts
         .transfer_asset_token_to_vault(remaining_amount)?;
     ctx.accounts.reserve.reload()?;
+
+    let is_deposit_hook_present = ctx.accounts.vault.deposit_hook_type().is_some();
+
+    if is_deposit_hook_present {
+        ctx.accounts.deposit_hook()?;
+    }
 
     let updated_reserve_amount = ctx.accounts.reserve.amount;
 
