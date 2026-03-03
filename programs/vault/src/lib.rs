@@ -126,6 +126,13 @@ pub mod vault {
         instructions::initialize_withdrawal_fees::handler(ctx, args)
     }
 
+    /// Initializes the deposit hook extension for a vault (one-time, pre-init only).
+    /// Stores the provided extension inside `vault.extensions` as `VaultExtension::DepositHook`.
+    /// Only the vault authority can call this.
+    pub fn initialize_deposit_hook(ctx: Context<InitializeDepositHook>) -> Result<()> {
+        instructions::initialize_deposit_hook_extension::handler(ctx)
+    }
+
     /// Updates the deposit fee configuration for an already-initialized deposit fee extension.
     /// Finds the existing `VaultExtension::DepositFee` entry and replaces it in-place.
     /// Only the vault authority can call this.
@@ -150,5 +157,14 @@ pub mod vault {
         args: UpdateWithdrawalFeesArgs,
     ) -> Result<()> {
         instructions::update_withdrawal_fees::handler(ctx, args)
+    }
+
+    // Extra Meta Accounts
+
+    /// Initializes the deposit hook extra meta accounts needed for the deposit hook
+    pub fn initialize_deposit_extra_meta_accounts(
+        ctx: Context<InitializeDepositExtraMetaAccounts>,
+    ) -> Result<()> {
+        instructions::initialize_deposit_extra_meta_accounts::handler(ctx)
     }
 }

@@ -1,12 +1,12 @@
 [package]
-name = "vault"
+name = "hook_program"
 version = "0.1.0"
 description = "Created with Anchor"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "vault"
+name = "hook_program"
 
 [features]
 default = []
@@ -15,7 +15,6 @@ no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
-
 anchor-debug = []
 custom-heap = []
 custom-panic = []
@@ -24,11 +23,7 @@ custom-panic = []
 [dependencies]
 anchor-lang.workspace = true
 anchor-spl.workspace = true
-spl-tlv-account-resolution.workspace = true
-spl-discriminator.workspace = true
-test-case.workspace = true
-# Pin blake3 to fix edition error
-blake3.workspace = true
+
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

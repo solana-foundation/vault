@@ -55,4 +55,7 @@ pub enum VaultProgramError {
 
     #[msg("The extension is not initialized.")]
     UninitializedExtension,
+
+    #[msg("The provided vault and mint mismatch.")]
+    VaultShareMintMismatch,
 }

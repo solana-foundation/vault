@@ -1,0 +1,76 @@
+use anchor_lang::prelude::*;
+use anchor_spl::token_interface::Mint;
+use anchor_spl::token_interface::TokenInterface;
+use spl_tlv_account_resolution::{
+    account::ExtraAccountMeta, seeds::Seed, state::ExtraAccountMetaList,
+};
+
+use crate::state::DepositHookInstruction;
+use crate::state::VaultConfig;
+use crate::{
+    error::VaultProgramError,
+    state::{DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED},
+};
+
+#[derive(Accounts)]
+pub struct InitializeDepositExtraMetaAccounts<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub asset_mint: InterfaceAccount<'info, Mint>,
+
+    pub share_mint_address: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        has_one = share_mint_address @ VaultProgramError::VaultShareMintMismatch,
+    )]
+    pub vault: Account<'info, VaultConfig>,
+
+    /// CHECK: extra metas, it's checked by seeds
+    #[account(
+        init,
+        payer = payer,
+        space = get_extra_metas_size(),
+        seeds = [EXTRA_ACCOUNT_METAS_SEED,DEPOSIT_ACCOUNT_METAS_SEED, share_mint_address.key().as_ref()],
+        bump
+    )]
+    pub extra_metas: AccountInfo<'info>,
+
+    pub token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>,
+}
+
+impl InitializeDepositExtraMetaAccounts<'_> {
+    pub fn create_extra_account_meta(&mut self) -> Result<()> {
+        let extra_metas_account = &self.extra_metas;
+        let metas = get_extra_metas();
+        let mut data = extra_metas_account.try_borrow_mut_data().unwrap();
+        ExtraAccountMetaList::init::<DepositHookInstruction>(&mut data, &metas?).unwrap();
+        Ok(())
+    }
+}
+
+pub fn handler<'info>(ctx: Context<InitializeDepositExtraMetaAccounts>) -> Result<()> {
+    ctx.accounts.create_extra_account_meta()
+}
+
+fn get_extra_metas() -> Result<Vec<ExtraAccountMeta>> {
+    let vault_state_meta = ExtraAccountMeta::new_with_seeds(
+        &[
+            Seed::AccountKey { index: 5 },
+            Seed::AccountData {
+                account_index: 1,
+                data_index: 32,
+                length: 32,
+            },
+        ],
+        false,
+        false,
+    )?;
+
+    Ok([vault_state_meta].to_vec())
+}
+
+fn get_extra_metas_size() -> usize {
+    ExtraAccountMetaList::size_of(1).unwrap()
+}
