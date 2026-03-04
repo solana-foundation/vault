@@ -63,6 +63,9 @@ pub enum VaultError {
     /// 6017 - The extension is not initialized.
     #[error("The extension is not initialized.")]
     UninitializedExtension = 0x1781,
+    /// 6018 - The provided vault and mint mismatch.
+    #[error("The provided vault and mint mismatch.")]
+    VaultShareMintMismatch = 0x1782,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

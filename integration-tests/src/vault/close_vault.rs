@@ -1,6 +1,6 @@
 use anchor_spl::token;
 use litesvm::LiteSVM;
-use solana_sdk::{signature::Keypair, signer::Signer};
+use solana_sdk::{msg, signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, Pubkey};
 
 use crate::vault::{
@@ -82,10 +82,11 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
     }
 
     // Verify vault was created
-    let mut vault_account = svm
-        .get_account(&vault_pubkey)
-        .expect("Vault account should exist");
-    assert!(!vault_account.data.is_empty(), "Vault should have data");
+    let mut vault_account = svm.get_account(&vault_pubkey);
+    assert!(
+        !vault_account.unwrap().data.is_empty(),
+        "Vault should have data"
+    );
 
     let result = close_vault(
         &mut svm,
@@ -97,16 +98,13 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
     );
 
     if supply_is_zero && reserve_is_empty {
-        vault_account = svm
-            .get_account(&vault_pubkey)
-            .expect("Vault account should exist");
-        assert!(vault_account.data.is_empty(), "Vault should not have data");
+        vault_account = svm.get_account(&vault_pubkey);
+        assert!(vault_account.is_none(), "Vault should not have data");
 
-        let reserve_ata_account = svm
-            .get_account(&reserve_pubkey)
-            .expect("Reserve account should exist but be zeroed");
+        let reserve_ata_account = svm.get_account(&reserve_pubkey);
+
         assert!(
-            reserve_ata_account.data.is_empty(),
+            reserve_ata_account.is_none(),
             "Reserve ATA should not have data"
         );
     } else {

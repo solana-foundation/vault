@@ -10,7 +10,7 @@ resolver = "2"
 anchor-lang = "0.31.1"
 anchor-spl = "0.31.1"
 borsh = "1.5"
-litesvm = "0.8.1"
+litesvm = "0.7.1"
 solana-sdk = "2.2.1"
 sha2 = "0.10"
 # Pin blake3 to fix edition error
@@ -18,7 +18,12 @@ blake3 = "=1.5.5"
 test-case = "3.3.1"
 spl-discriminator = "0.4.0"
 spl-tlv-account-resolution = "0.10.0"
-
+solana-account-info = "2.0"
+solana-pubkey = { version = "2.0", features = ["borsh"] }
+spl-token = "8.0.0"
+num-derive = "0.4.2"
+num-traits = "0.2.19"
+thiserror = "2.0.12"
 
 [profile.release]
 overflow-checks = true

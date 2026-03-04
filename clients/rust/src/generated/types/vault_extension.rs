@@ -12,4 +12,5 @@ use borsh::{BorshDeserialize, BorshSerialize};
 pub enum VaultExtension {
     DepositFee(FeeType),
     WithdrawalFee(FeeType),
+    DepositHook(bool),
 }

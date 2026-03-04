@@ -8,6 +8,7 @@ use solana_sdk::{
     signature::Keypair,
     signer::Signer,
     system_instruction::create_account,
+    system_program,
     transaction::Transaction,
 };
 use vault_client::{
@@ -166,6 +167,7 @@ pub fn deposit(
         .min_shares(min_shares)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
+        .hook_program(system_program::id())
         .instruction()
         .into_sdk_instruction();
 
@@ -202,6 +204,7 @@ pub fn mint(
         .max_assets(max_assets)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
+        .hook_program(system_program::ID)
         .instruction()
         .into_sdk_instruction();
 
