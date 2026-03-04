@@ -25,6 +25,7 @@ impl VaultExtension {
             _ => None,
         }
     }
+
     pub fn as_deposit_hook(&self) -> Option<bool> {
         match self {
             VaultExtension::DepositHook(status) => Some(*status),

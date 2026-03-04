@@ -1,15 +1,14 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
-use anchor_spl::token_interface::TokenInterface;
+use anchor_spl::token_interface::{Mint, TokenInterface};
 use spl_tlv_account_resolution::{
     account::ExtraAccountMeta, seeds::Seed, state::ExtraAccountMetaList,
 };
 
-use crate::state::DepositHookInstruction;
-use crate::state::VaultConfig;
 use crate::{
     error::VaultProgramError,
-    state::{DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED},
+    state::{
+        DepositHookInstruction, VaultConfig, DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED,
+    },
 };
 
 #[derive(Accounts)]

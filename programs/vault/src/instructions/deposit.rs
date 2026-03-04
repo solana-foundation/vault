@@ -148,6 +148,7 @@ impl<'info> DepositAndMint<'info> {
             .ok_or(VaultProgramError::ArithmeticError)?
             .div_ceil(MAX_BPS.into()))
     }
+
     pub fn deposit_hook(&mut self) -> Result<()> {
         let deposit_hook_ix = deposit_hook(
             &self.hook_program.key(),
