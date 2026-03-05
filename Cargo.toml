@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "clients/rust",
+    "clients/rust/hook",
+    "clients/rust/vault",
     "integration-tests",
     "programs/*"
 ]

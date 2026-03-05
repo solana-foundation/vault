@@ -12,14 +12,28 @@ const projectRoot = join(__dirname, "..");
 const idlPath = join(projectRoot, "target/idl/vault.json");
 const idl = JSON.parse(readFileSync(idlPath, "utf-8"));
 
+const hookidlPath = join(projectRoot, "target/idl/vault.json");
+const hookIdl = JSON.parse(readFileSync(hookidlPath, "utf-8"));
+
 // Create Codama tree from Anchor IDL
 const codama = createFromRoot(rootNodeFromAnchor(idl));
+const hookCodama = createFromRoot(rootNodeFromAnchor(hookIdl));
 
 // Generate Rust client
-const rustClientPath = join(projectRoot, "clients/rust/src/generated");
+const rustClientPath = join(projectRoot, "clients/rust/vault/src/generated");
+const hookRustClientPath = join(projectRoot, "clients/rust/hook/src/generated");
+
 
 codama.accept(
   renderVisitor(rustClientPath, {
+    crateFolder: join(projectRoot, "clients/rust"),
+    formatCode: true,
+    toolchain: "+nightly",
+  })
+);
+
+hookCodama.accept(
+  renderVisitor(hookRustClientPath, {
     crateFolder: join(projectRoot, "clients/rust"),
     formatCode: true,
     toolchain: "+nightly",

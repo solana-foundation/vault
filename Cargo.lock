@@ -1417,6 +1417,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "hook-client"
+version = "0.1.0"
+dependencies = [
+ "borsh 1.6.0",
+ "num-derive",
+ "num-traits",
+ "serde",
+ "solana-account-info",
+ "solana-cpi",
+ "solana-instruction",
+ "solana-program-error",
+ "solana-pubkey",
+ "solana-sdk",
+ "thiserror 2.0.18",
+]
+
+[[package]]
 name = "hook_program"
 version = "0.1.0"
 dependencies = [

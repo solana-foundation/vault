@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dev-dependencies]
-vault-client = { path = "../clients/rust", features = ["solana-sdk"] }
+vault-client = { path = "../clients/rust/vault", features = ["solana-sdk"] }
 litesvm.workspace = true
 solana-sdk.workspace = true
 anchor-spl.workspace = true
