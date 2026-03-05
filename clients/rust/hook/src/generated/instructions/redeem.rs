@@ -3,702 +3,714 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
-//!
 
-use borsh::BorshSerialize;
-use borsh::BorshDeserialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 
 pub const REDEEM_DISCRIMINATOR: [u8; 8] = [184, 12, 86, 149, 70, 196, 97, 225];
 
 /// Accounts.
 #[derive(Debug)]
 pub struct Redeem {
-            /// `User` that is redeeming shares from `Vault`
+    /// `User` that is redeeming shares from `Vault`
+    pub user: solana_pubkey::Pubkey,
+    /// Mint of the underlying asset
+    pub asset_mint: solana_pubkey::Pubkey,
+    /// Share mint
+    pub share_mint: solana_pubkey::Pubkey,
+    /// Vault reserve token account holding underlying assets
+    pub reserve: solana_pubkey::Pubkey,
+    /// Vault configuration account (PDA)
+    pub vault: solana_pubkey::Pubkey,
+    /// Fee recipient token account
+    pub fee_recipient: solana_pubkey::Pubkey,
+    /// User's asset token account
+    pub user_assets_account: solana_pubkey::Pubkey,
+    /// User's share token account
+    pub user_shares_account: solana_pubkey::Pubkey,
 
-    
-              
-          pub user: solana_pubkey::Pubkey,
-                /// Mint of the underlying asset
+    pub share_token_program: solana_pubkey::Pubkey,
 
-    
-              
-          pub asset_mint: solana_pubkey::Pubkey,
-                /// Share mint
-
-    
-              
-          pub share_mint: solana_pubkey::Pubkey,
-                /// Vault reserve token account holding underlying assets
-
-    
-              
-          pub reserve: solana_pubkey::Pubkey,
-                /// Vault configuration account (PDA)
-
-    
-              
-          pub vault: solana_pubkey::Pubkey,
-                /// Fee recipient token account
-
-    
-              
-          pub fee_recipient: solana_pubkey::Pubkey,
-                /// User's asset token account
-
-    
-              
-          pub user_assets_account: solana_pubkey::Pubkey,
-                /// User's share token account
-
-    
-              
-          pub user_shares_account: solana_pubkey::Pubkey,
-          
-              
-          pub share_token_program: solana_pubkey::Pubkey,
-          
-              
-          pub asset_token_program: solana_pubkey::Pubkey,
-      }
+    pub asset_token_program: solana_pubkey::Pubkey,
+}
 
 impl Redeem {
-  pub fn instruction(&self, args: RedeemInstructionArgs) -> solana_instruction::Instruction {
-    self.instruction_with_remaining_accounts(args, &[])
-  }
-  #[allow(clippy::arithmetic_side_effects)]
-  #[allow(clippy::vec_init_then_push)]
-  pub fn instruction_with_remaining_accounts(&self, args: RedeemInstructionArgs, remaining_accounts: &[solana_instruction::AccountMeta]) -> solana_instruction::Instruction {
-    let mut accounts = Vec::with_capacity(10+ remaining_accounts.len());
-                            accounts.push(solana_instruction::AccountMeta::new(
-            self.user,
-            true
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.asset_mint,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            self.share_mint,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            self.reserve,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            self.vault,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            self.fee_recipient,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            self.user_assets_account,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            self.user_shares_account,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.share_token_program,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.asset_token_program,
-            false
-          ));
-                      accounts.extend_from_slice(remaining_accounts);
-    let mut data = RedeemInstructionData::new().try_to_vec().unwrap();
-          let mut args = args.try_to_vec().unwrap();
-      data.append(&mut args);
-    
-    solana_instruction::Instruction {
-      program_id: crate::VAULT_ID,
-      accounts,
-      data,
+    pub fn instruction(&self, args: RedeemInstructionArgs) -> solana_instruction::Instruction {
+        self.instruction_with_remaining_accounts(args, &[])
     }
-  }
+
+    #[allow(clippy::arithmetic_side_effects)]
+    #[allow(clippy::vec_init_then_push)]
+    pub fn instruction_with_remaining_accounts(
+        &self,
+        args: RedeemInstructionArgs,
+        remaining_accounts: &[solana_instruction::AccountMeta],
+    ) -> solana_instruction::Instruction {
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        accounts.push(solana_instruction::AccountMeta::new(self.user, true));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.asset_mint,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(self.share_mint, false));
+        accounts.push(solana_instruction::AccountMeta::new(self.reserve, false));
+        accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.fee_recipient,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.user_assets_account,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.user_shares_account,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.share_token_program,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.asset_token_program,
+            false,
+        ));
+        accounts.extend_from_slice(remaining_accounts);
+        let mut data = RedeemInstructionData::new().try_to_vec().unwrap();
+        let mut args = args.try_to_vec().unwrap();
+        data.append(&mut args);
+
+        solana_instruction::Instruction {
+            program_id: crate::VAULT_ID,
+            accounts,
+            data,
+        }
+    }
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
- pub struct RedeemInstructionData {
-            discriminator: [u8; 8],
-                  }
+pub struct RedeemInstructionData {
+    discriminator: [u8; 8],
+}
 
 impl RedeemInstructionData {
-  pub fn new() -> Self {
-    Self {
-                        discriminator: [184, 12, 86, 149, 70, 196, 97, 225],
-                                              }
-  }
+    pub fn new() -> Self {
+        Self {
+            discriminator: [184, 12, 86, 149, 70, 196, 97, 225],
+        }
+    }
 
     pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error> {
-    borsh::to_vec(self)
-  }
-  }
+        borsh::to_vec(self)
+    }
+}
 
 impl Default for RedeemInstructionData {
-  fn default() -> Self {
-    Self::new()
-  }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
- pub struct RedeemInstructionArgs {
-                  pub shares: u64,
-                pub min_assets: u64,
-      }
-
-impl RedeemInstructionArgs {
-  pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error> {
-    borsh::to_vec(self)
-  }
+pub struct RedeemInstructionArgs {
+    pub shares: u64,
+    pub min_assets: u64,
 }
 
+impl RedeemInstructionArgs {
+    pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error> {
+        borsh::to_vec(self)
+    }
+}
 
 /// Instruction builder for `Redeem`.
 ///
 /// ### Accounts:
 ///
-                      ///   0. `[writable, signer]` user
-          ///   1. `[]` asset_mint
-                ///   2. `[writable]` share_mint
-                ///   3. `[writable]` reserve
-                ///   4. `[writable]` vault
-                ///   5. `[writable]` fee_recipient
-                ///   6. `[writable]` user_assets_account
-                ///   7. `[writable]` user_shares_account
-          ///   8. `[]` share_token_program
-          ///   9. `[]` asset_token_program
+///   0. `[writable, signer]` user
+///   1. `[]` asset_mint
+///   2. `[writable]` share_mint
+///   3. `[writable]` reserve
+///   4. `[writable]` vault
+///   5. `[writable]` fee_recipient
+///   6. `[writable]` user_assets_account
+///   7. `[writable]` user_shares_account
+///   8. `[]` share_token_program
+///   9. `[]` asset_token_program
 #[derive(Clone, Debug, Default)]
 pub struct RedeemBuilder {
-            user: Option<solana_pubkey::Pubkey>,
-                asset_mint: Option<solana_pubkey::Pubkey>,
-                share_mint: Option<solana_pubkey::Pubkey>,
-                reserve: Option<solana_pubkey::Pubkey>,
-                vault: Option<solana_pubkey::Pubkey>,
-                fee_recipient: Option<solana_pubkey::Pubkey>,
-                user_assets_account: Option<solana_pubkey::Pubkey>,
-                user_shares_account: Option<solana_pubkey::Pubkey>,
-                share_token_program: Option<solana_pubkey::Pubkey>,
-                asset_token_program: Option<solana_pubkey::Pubkey>,
-                        shares: Option<u64>,
-                min_assets: Option<u64>,
-        __remaining_accounts: Vec<solana_instruction::AccountMeta>,
+    user: Option<solana_pubkey::Pubkey>,
+    asset_mint: Option<solana_pubkey::Pubkey>,
+    share_mint: Option<solana_pubkey::Pubkey>,
+    reserve: Option<solana_pubkey::Pubkey>,
+    vault: Option<solana_pubkey::Pubkey>,
+    fee_recipient: Option<solana_pubkey::Pubkey>,
+    user_assets_account: Option<solana_pubkey::Pubkey>,
+    user_shares_account: Option<solana_pubkey::Pubkey>,
+    share_token_program: Option<solana_pubkey::Pubkey>,
+    asset_token_program: Option<solana_pubkey::Pubkey>,
+    shares: Option<u64>,
+    min_assets: Option<u64>,
+    __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
 impl RedeemBuilder {
-  pub fn new() -> Self {
-    Self::default()
-  }
-            /// `User` that is redeeming shares from `Vault`
-#[inline(always)]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// `User` that is redeeming shares from `Vault`
+    #[inline(always)]
     pub fn user(&mut self, user: solana_pubkey::Pubkey) -> &mut Self {
-                        self.user = Some(user);
-                    self
+        self.user = Some(user);
+        self
     }
-            /// Mint of the underlying asset
-#[inline(always)]
+
+    /// Mint of the underlying asset
+    #[inline(always)]
     pub fn asset_mint(&mut self, asset_mint: solana_pubkey::Pubkey) -> &mut Self {
-                        self.asset_mint = Some(asset_mint);
-                    self
+        self.asset_mint = Some(asset_mint);
+        self
     }
-            /// Share mint
-#[inline(always)]
+
+    /// Share mint
+    #[inline(always)]
     pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
-                        self.share_mint = Some(share_mint);
-                    self
+        self.share_mint = Some(share_mint);
+        self
     }
-            /// Vault reserve token account holding underlying assets
-#[inline(always)]
+
+    /// Vault reserve token account holding underlying assets
+    #[inline(always)]
     pub fn reserve(&mut self, reserve: solana_pubkey::Pubkey) -> &mut Self {
-                        self.reserve = Some(reserve);
-                    self
+        self.reserve = Some(reserve);
+        self
     }
-            /// Vault configuration account (PDA)
-#[inline(always)]
+
+    /// Vault configuration account (PDA)
+    #[inline(always)]
     pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-                        self.vault = Some(vault);
-                    self
+        self.vault = Some(vault);
+        self
     }
-            /// Fee recipient token account
-#[inline(always)]
+
+    /// Fee recipient token account
+    #[inline(always)]
     pub fn fee_recipient(&mut self, fee_recipient: solana_pubkey::Pubkey) -> &mut Self {
-                        self.fee_recipient = Some(fee_recipient);
-                    self
+        self.fee_recipient = Some(fee_recipient);
+        self
     }
-            /// User's asset token account
-#[inline(always)]
+
+    /// User's asset token account
+    #[inline(always)]
     pub fn user_assets_account(&mut self, user_assets_account: solana_pubkey::Pubkey) -> &mut Self {
-                        self.user_assets_account = Some(user_assets_account);
-                    self
+        self.user_assets_account = Some(user_assets_account);
+        self
     }
-            /// User's share token account
-#[inline(always)]
+
+    /// User's share token account
+    #[inline(always)]
     pub fn user_shares_account(&mut self, user_shares_account: solana_pubkey::Pubkey) -> &mut Self {
-                        self.user_shares_account = Some(user_shares_account);
-                    self
+        self.user_shares_account = Some(user_shares_account);
+        self
     }
-            #[inline(always)]
+
+    #[inline(always)]
     pub fn share_token_program(&mut self, share_token_program: solana_pubkey::Pubkey) -> &mut Self {
-                        self.share_token_program = Some(share_token_program);
-                    self
+        self.share_token_program = Some(share_token_program);
+        self
     }
-            #[inline(always)]
+
+    #[inline(always)]
     pub fn asset_token_program(&mut self, asset_token_program: solana_pubkey::Pubkey) -> &mut Self {
-                        self.asset_token_program = Some(asset_token_program);
-                    self
+        self.asset_token_program = Some(asset_token_program);
+        self
     }
-                    #[inline(always)]
-      pub fn shares(&mut self, shares: u64) -> &mut Self {
+
+    #[inline(always)]
+    pub fn shares(&mut self, shares: u64) -> &mut Self {
         self.shares = Some(shares);
         self
-      }
-                #[inline(always)]
-      pub fn min_assets(&mut self, min_assets: u64) -> &mut Self {
+    }
+
+    #[inline(always)]
+    pub fn min_assets(&mut self, min_assets: u64) -> &mut Self {
         self.min_assets = Some(min_assets);
         self
-      }
-        /// Add an additional account to the instruction.
-  #[inline(always)]
-  pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
-    self.__remaining_accounts.push(account);
-    self
-  }
-  /// Add additional accounts to the instruction.
-  #[inline(always)]
-  pub fn add_remaining_accounts(&mut self, accounts: &[solana_instruction::AccountMeta]) -> &mut Self {
-    self.__remaining_accounts.extend_from_slice(accounts);
-    self
-  }
-  #[allow(clippy::clone_on_copy)]
-  pub fn instruction(&self) -> solana_instruction::Instruction {
-    let accounts = Redeem {
-                              user: self.user.expect("user is not set"),
-                                        asset_mint: self.asset_mint.expect("asset_mint is not set"),
-                                        share_mint: self.share_mint.expect("share_mint is not set"),
-                                        reserve: self.reserve.expect("reserve is not set"),
-                                        vault: self.vault.expect("vault is not set"),
-                                        fee_recipient: self.fee_recipient.expect("fee_recipient is not set"),
-                                        user_assets_account: self.user_assets_account.expect("user_assets_account is not set"),
-                                        user_shares_account: self.user_shares_account.expect("user_shares_account is not set"),
-                                        share_token_program: self.share_token_program.expect("share_token_program is not set"),
-                                        asset_token_program: self.asset_token_program.expect("asset_token_program is not set"),
-                      };
-          let args = RedeemInstructionArgs {
-                                                              shares: self.shares.clone().expect("shares is not set"),
-                                                                  min_assets: self.min_assets.clone().expect("min_assets is not set"),
-                                    };
-    
-    accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
-  }
+    }
+
+    /// Add an additional account to the instruction.
+    #[inline(always)]
+    pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
+        self.__remaining_accounts.push(account);
+        self
+    }
+
+    /// Add additional accounts to the instruction.
+    #[inline(always)]
+    pub fn add_remaining_accounts(
+        &mut self,
+        accounts: &[solana_instruction::AccountMeta],
+    ) -> &mut Self {
+        self.__remaining_accounts.extend_from_slice(accounts);
+        self
+    }
+
+    #[allow(clippy::clone_on_copy)]
+    pub fn instruction(&self) -> solana_instruction::Instruction {
+        let accounts = Redeem {
+            user: self.user.expect("user is not set"),
+            asset_mint: self.asset_mint.expect("asset_mint is not set"),
+            share_mint: self.share_mint.expect("share_mint is not set"),
+            reserve: self.reserve.expect("reserve is not set"),
+            vault: self.vault.expect("vault is not set"),
+            fee_recipient: self.fee_recipient.expect("fee_recipient is not set"),
+            user_assets_account: self
+                .user_assets_account
+                .expect("user_assets_account is not set"),
+            user_shares_account: self
+                .user_shares_account
+                .expect("user_shares_account is not set"),
+            share_token_program: self
+                .share_token_program
+                .expect("share_token_program is not set"),
+            asset_token_program: self
+                .asset_token_program
+                .expect("asset_token_program is not set"),
+        };
+        let args = RedeemInstructionArgs {
+            shares: self.shares.clone().expect("shares is not set"),
+            min_assets: self.min_assets.clone().expect("min_assets is not set"),
+        };
+
+        accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
+    }
 }
 
-  /// `redeem` CPI accounts.
-  pub struct RedeemCpiAccounts<'a, 'b> {
-                  /// `User` that is redeeming shares from `Vault`
+/// `redeem` CPI accounts.
+pub struct RedeemCpiAccounts<'a, 'b> {
+    /// `User` that is redeeming shares from `Vault`
+    pub user: &'b solana_account_info::AccountInfo<'a>,
+    /// Mint of the underlying asset
+    pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
+    /// Share mint
+    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
+    /// Vault reserve token account holding underlying assets
+    pub reserve: &'b solana_account_info::AccountInfo<'a>,
+    /// Vault configuration account (PDA)
+    pub vault: &'b solana_account_info::AccountInfo<'a>,
+    /// Fee recipient token account
+    pub fee_recipient: &'b solana_account_info::AccountInfo<'a>,
+    /// User's asset token account
+    pub user_assets_account: &'b solana_account_info::AccountInfo<'a>,
+    /// User's share token account
+    pub user_shares_account: &'b solana_account_info::AccountInfo<'a>,
 
-      
-                    
-              pub user: &'b solana_account_info::AccountInfo<'a>,
-                        /// Mint of the underlying asset
+    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
-      
-                    
-              pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
-                        /// Share mint
-
-      
-                    
-              pub share_mint: &'b solana_account_info::AccountInfo<'a>,
-                        /// Vault reserve token account holding underlying assets
-
-      
-                    
-              pub reserve: &'b solana_account_info::AccountInfo<'a>,
-                        /// Vault configuration account (PDA)
-
-      
-                    
-              pub vault: &'b solana_account_info::AccountInfo<'a>,
-                        /// Fee recipient token account
-
-      
-                    
-              pub fee_recipient: &'b solana_account_info::AccountInfo<'a>,
-                        /// User's asset token account
-
-      
-                    
-              pub user_assets_account: &'b solana_account_info::AccountInfo<'a>,
-                        /// User's share token account
-
-      
-                    
-              pub user_shares_account: &'b solana_account_info::AccountInfo<'a>,
-                
-                    
-              pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
-                
-                    
-              pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
-            }
+    pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
+}
 
 /// `redeem` CPI instruction.
 pub struct RedeemCpi<'a, 'b> {
-  /// The program to invoke.
-  pub __program: &'b solana_account_info::AccountInfo<'a>,
-            /// `User` that is redeeming shares from `Vault`
+    /// The program to invoke.
+    pub __program: &'b solana_account_info::AccountInfo<'a>,
+    /// `User` that is redeeming shares from `Vault`
+    pub user: &'b solana_account_info::AccountInfo<'a>,
+    /// Mint of the underlying asset
+    pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
+    /// Share mint
+    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
+    /// Vault reserve token account holding underlying assets
+    pub reserve: &'b solana_account_info::AccountInfo<'a>,
+    /// Vault configuration account (PDA)
+    pub vault: &'b solana_account_info::AccountInfo<'a>,
+    /// Fee recipient token account
+    pub fee_recipient: &'b solana_account_info::AccountInfo<'a>,
+    /// User's asset token account
+    pub user_assets_account: &'b solana_account_info::AccountInfo<'a>,
+    /// User's share token account
+    pub user_shares_account: &'b solana_account_info::AccountInfo<'a>,
 
-    
-              
-          pub user: &'b solana_account_info::AccountInfo<'a>,
-                /// Mint of the underlying asset
+    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
-    
-              
-          pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
-                /// Share mint
-
-    
-              
-          pub share_mint: &'b solana_account_info::AccountInfo<'a>,
-                /// Vault reserve token account holding underlying assets
-
-    
-              
-          pub reserve: &'b solana_account_info::AccountInfo<'a>,
-                /// Vault configuration account (PDA)
-
-    
-              
-          pub vault: &'b solana_account_info::AccountInfo<'a>,
-                /// Fee recipient token account
-
-    
-              
-          pub fee_recipient: &'b solana_account_info::AccountInfo<'a>,
-                /// User's asset token account
-
-    
-              
-          pub user_assets_account: &'b solana_account_info::AccountInfo<'a>,
-                /// User's share token account
-
-    
-              
-          pub user_shares_account: &'b solana_account_info::AccountInfo<'a>,
-          
-              
-          pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
-          
-              
-          pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
-            /// The arguments for the instruction.
+    pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
+    /// The arguments for the instruction.
     pub __args: RedeemInstructionArgs,
-  }
+}
 
 impl<'a, 'b> RedeemCpi<'a, 'b> {
-  pub fn new(
-    program: &'b solana_account_info::AccountInfo<'a>,
-          accounts: RedeemCpiAccounts<'a, 'b>,
-              args: RedeemInstructionArgs,
-      ) -> Self {
-    Self {
-      __program: program,
-              user: accounts.user,
-              asset_mint: accounts.asset_mint,
-              share_mint: accounts.share_mint,
-              reserve: accounts.reserve,
-              vault: accounts.vault,
-              fee_recipient: accounts.fee_recipient,
-              user_assets_account: accounts.user_assets_account,
-              user_shares_account: accounts.user_shares_account,
-              share_token_program: accounts.share_token_program,
-              asset_token_program: accounts.asset_token_program,
-                    __args: args,
-          }
-  }
-  #[inline(always)]
-  pub fn invoke(&self) -> solana_program_error::ProgramResult {
-    self.invoke_signed_with_remaining_accounts(&[], &[])
-  }
-  #[inline(always)]
-  pub fn invoke_with_remaining_accounts(&self, remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)]) -> solana_program_error::ProgramResult {
-    self.invoke_signed_with_remaining_accounts(&[], remaining_accounts)
-  }
-  #[inline(always)]
-  pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
-    self.invoke_signed_with_remaining_accounts(signers_seeds, &[])
-  }
-  #[allow(clippy::arithmetic_side_effects)]
-  #[allow(clippy::clone_on_copy)]
-  #[allow(clippy::vec_init_then_push)]
-  pub fn invoke_signed_with_remaining_accounts(
-    &self,
-    signers_seeds: &[&[&[u8]]],
-    remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)]
-  ) -> solana_program_error::ProgramResult {
-    let mut accounts = Vec::with_capacity(10+ remaining_accounts.len());
-                            accounts.push(solana_instruction::AccountMeta::new(
-            *self.user.key,
-            true
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.asset_mint.key,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            *self.share_mint.key,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            *self.reserve.key,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            *self.vault.key,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            *self.fee_recipient.key,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            *self.user_assets_account.key,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            *self.user_shares_account.key,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.share_token_program.key,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.asset_token_program.key,
-            false
-          ));
-                      remaining_accounts.iter().for_each(|remaining_account| {
-      accounts.push(solana_instruction::AccountMeta {
-          pubkey: *remaining_account.0.key,
-          is_signer: remaining_account.1,
-          is_writable: remaining_account.2,
-      })
-    });
-    let mut data = RedeemInstructionData::new().try_to_vec().unwrap();
-          let mut args = self.__args.try_to_vec().unwrap();
-      data.append(&mut args);
-    
-    let instruction = solana_instruction::Instruction {
-      program_id: crate::VAULT_ID,
-      accounts,
-      data,
-    };
-    let mut account_infos = Vec::with_capacity(11 + remaining_accounts.len());
-    account_infos.push(self.__program.clone());
-                  account_infos.push(self.user.clone());
-                        account_infos.push(self.asset_mint.clone());
-                        account_infos.push(self.share_mint.clone());
-                        account_infos.push(self.reserve.clone());
-                        account_infos.push(self.vault.clone());
-                        account_infos.push(self.fee_recipient.clone());
-                        account_infos.push(self.user_assets_account.clone());
-                        account_infos.push(self.user_shares_account.clone());
-                        account_infos.push(self.share_token_program.clone());
-                        account_infos.push(self.asset_token_program.clone());
-              remaining_accounts.iter().for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
-
-    if signers_seeds.is_empty() {
-      solana_cpi::invoke(&instruction, &account_infos)
-    } else {
-      solana_cpi::invoke_signed(&instruction, &account_infos, signers_seeds)
+    pub fn new(
+        program: &'b solana_account_info::AccountInfo<'a>,
+        accounts: RedeemCpiAccounts<'a, 'b>,
+        args: RedeemInstructionArgs,
+    ) -> Self {
+        Self {
+            __program: program,
+            user: accounts.user,
+            asset_mint: accounts.asset_mint,
+            share_mint: accounts.share_mint,
+            reserve: accounts.reserve,
+            vault: accounts.vault,
+            fee_recipient: accounts.fee_recipient,
+            user_assets_account: accounts.user_assets_account,
+            user_shares_account: accounts.user_shares_account,
+            share_token_program: accounts.share_token_program,
+            asset_token_program: accounts.asset_token_program,
+            __args: args,
+        }
     }
-  }
+
+    #[inline(always)]
+    pub fn invoke(&self) -> solana_program_error::ProgramResult {
+        self.invoke_signed_with_remaining_accounts(&[], &[])
+    }
+
+    #[inline(always)]
+    pub fn invoke_with_remaining_accounts(
+        &self,
+        remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
+    ) -> solana_program_error::ProgramResult {
+        self.invoke_signed_with_remaining_accounts(&[], remaining_accounts)
+    }
+
+    #[inline(always)]
+    pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
+        self.invoke_signed_with_remaining_accounts(signers_seeds, &[])
+    }
+
+    #[allow(clippy::arithmetic_side_effects)]
+    #[allow(clippy::clone_on_copy)]
+    #[allow(clippy::vec_init_then_push)]
+    pub fn invoke_signed_with_remaining_accounts(
+        &self,
+        signers_seeds: &[&[&[u8]]],
+        remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
+    ) -> solana_program_error::ProgramResult {
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        accounts.push(solana_instruction::AccountMeta::new(*self.user.key, true));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.asset_mint.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.share_mint.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.reserve.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.fee_recipient.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.user_assets_account.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.user_shares_account.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.share_token_program.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.asset_token_program.key,
+            false,
+        ));
+        remaining_accounts.iter().for_each(|remaining_account| {
+            accounts.push(solana_instruction::AccountMeta {
+                pubkey: *remaining_account.0.key,
+                is_signer: remaining_account.1,
+                is_writable: remaining_account.2,
+            })
+        });
+        let mut data = RedeemInstructionData::new().try_to_vec().unwrap();
+        let mut args = self.__args.try_to_vec().unwrap();
+        data.append(&mut args);
+
+        let instruction = solana_instruction::Instruction {
+            program_id: crate::VAULT_ID,
+            accounts,
+            data,
+        };
+        let mut account_infos = Vec::with_capacity(11 + remaining_accounts.len());
+        account_infos.push(self.__program.clone());
+        account_infos.push(self.user.clone());
+        account_infos.push(self.asset_mint.clone());
+        account_infos.push(self.share_mint.clone());
+        account_infos.push(self.reserve.clone());
+        account_infos.push(self.vault.clone());
+        account_infos.push(self.fee_recipient.clone());
+        account_infos.push(self.user_assets_account.clone());
+        account_infos.push(self.user_shares_account.clone());
+        account_infos.push(self.share_token_program.clone());
+        account_infos.push(self.asset_token_program.clone());
+        remaining_accounts
+            .iter()
+            .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
+
+        if signers_seeds.is_empty() {
+            solana_cpi::invoke(&instruction, &account_infos)
+        } else {
+            solana_cpi::invoke_signed(&instruction, &account_infos, signers_seeds)
+        }
+    }
 }
 
 /// Instruction builder for `Redeem` via CPI.
 ///
 /// ### Accounts:
 ///
-                      ///   0. `[writable, signer]` user
-          ///   1. `[]` asset_mint
-                ///   2. `[writable]` share_mint
-                ///   3. `[writable]` reserve
-                ///   4. `[writable]` vault
-                ///   5. `[writable]` fee_recipient
-                ///   6. `[writable]` user_assets_account
-                ///   7. `[writable]` user_shares_account
-          ///   8. `[]` share_token_program
-          ///   9. `[]` asset_token_program
+///   0. `[writable, signer]` user
+///   1. `[]` asset_mint
+///   2. `[writable]` share_mint
+///   3. `[writable]` reserve
+///   4. `[writable]` vault
+///   5. `[writable]` fee_recipient
+///   6. `[writable]` user_assets_account
+///   7. `[writable]` user_shares_account
+///   8. `[]` share_token_program
+///   9. `[]` asset_token_program
 #[derive(Clone, Debug)]
 pub struct RedeemCpiBuilder<'a, 'b> {
-  instruction: Box<RedeemCpiBuilderInstruction<'a, 'b>>,
+    instruction: Box<RedeemCpiBuilderInstruction<'a, 'b>>,
 }
 
 impl<'a, 'b> RedeemCpiBuilder<'a, 'b> {
-  pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
-    let instruction = Box::new(RedeemCpiBuilderInstruction {
-      __program: program,
-              user: None,
-              asset_mint: None,
-              share_mint: None,
-              reserve: None,
-              vault: None,
-              fee_recipient: None,
-              user_assets_account: None,
-              user_shares_account: None,
-              share_token_program: None,
-              asset_token_program: None,
-                                            shares: None,
-                                min_assets: None,
-                    __remaining_accounts: Vec::new(),
-    });
-    Self { instruction }
-  }
-      /// `User` that is redeeming shares from `Vault`
-#[inline(always)]
+    pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
+        let instruction = Box::new(RedeemCpiBuilderInstruction {
+            __program: program,
+            user: None,
+            asset_mint: None,
+            share_mint: None,
+            reserve: None,
+            vault: None,
+            fee_recipient: None,
+            user_assets_account: None,
+            user_shares_account: None,
+            share_token_program: None,
+            asset_token_program: None,
+            shares: None,
+            min_assets: None,
+            __remaining_accounts: Vec::new(),
+        });
+        Self { instruction }
+    }
+
+    /// `User` that is redeeming shares from `Vault`
+    #[inline(always)]
     pub fn user(&mut self, user: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.user = Some(user);
-                    self
+        self.instruction.user = Some(user);
+        self
     }
-      /// Mint of the underlying asset
-#[inline(always)]
-    pub fn asset_mint(&mut self, asset_mint: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.asset_mint = Some(asset_mint);
-                    self
+
+    /// Mint of the underlying asset
+    #[inline(always)]
+    pub fn asset_mint(
+        &mut self,
+        asset_mint: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.asset_mint = Some(asset_mint);
+        self
     }
-      /// Share mint
-#[inline(always)]
-    pub fn share_mint(&mut self, share_mint: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.share_mint = Some(share_mint);
-                    self
+
+    /// Share mint
+    #[inline(always)]
+    pub fn share_mint(
+        &mut self,
+        share_mint: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.share_mint = Some(share_mint);
+        self
     }
-      /// Vault reserve token account holding underlying assets
-#[inline(always)]
+
+    /// Vault reserve token account holding underlying assets
+    #[inline(always)]
     pub fn reserve(&mut self, reserve: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.reserve = Some(reserve);
-                    self
+        self.instruction.reserve = Some(reserve);
+        self
     }
-      /// Vault configuration account (PDA)
-#[inline(always)]
+
+    /// Vault configuration account (PDA)
+    #[inline(always)]
     pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.vault = Some(vault);
-                    self
+        self.instruction.vault = Some(vault);
+        self
     }
-      /// Fee recipient token account
-#[inline(always)]
-    pub fn fee_recipient(&mut self, fee_recipient: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.fee_recipient = Some(fee_recipient);
-                    self
+
+    /// Fee recipient token account
+    #[inline(always)]
+    pub fn fee_recipient(
+        &mut self,
+        fee_recipient: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.fee_recipient = Some(fee_recipient);
+        self
     }
-      /// User's asset token account
-#[inline(always)]
-    pub fn user_assets_account(&mut self, user_assets_account: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.user_assets_account = Some(user_assets_account);
-                    self
+
+    /// User's asset token account
+    #[inline(always)]
+    pub fn user_assets_account(
+        &mut self,
+        user_assets_account: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.user_assets_account = Some(user_assets_account);
+        self
     }
-      /// User's share token account
-#[inline(always)]
-    pub fn user_shares_account(&mut self, user_shares_account: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.user_shares_account = Some(user_shares_account);
-                    self
+
+    /// User's share token account
+    #[inline(always)]
+    pub fn user_shares_account(
+        &mut self,
+        user_shares_account: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.user_shares_account = Some(user_shares_account);
+        self
     }
-      #[inline(always)]
-    pub fn share_token_program(&mut self, share_token_program: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.share_token_program = Some(share_token_program);
-                    self
+
+    #[inline(always)]
+    pub fn share_token_program(
+        &mut self,
+        share_token_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.share_token_program = Some(share_token_program);
+        self
     }
-      #[inline(always)]
-    pub fn asset_token_program(&mut self, asset_token_program: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.asset_token_program = Some(asset_token_program);
-                    self
+
+    #[inline(always)]
+    pub fn asset_token_program(
+        &mut self,
+        asset_token_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.asset_token_program = Some(asset_token_program);
+        self
     }
-                    #[inline(always)]
-      pub fn shares(&mut self, shares: u64) -> &mut Self {
+
+    #[inline(always)]
+    pub fn shares(&mut self, shares: u64) -> &mut Self {
         self.instruction.shares = Some(shares);
         self
-      }
-                #[inline(always)]
-      pub fn min_assets(&mut self, min_assets: u64) -> &mut Self {
+    }
+
+    #[inline(always)]
+    pub fn min_assets(&mut self, min_assets: u64) -> &mut Self {
         self.instruction.min_assets = Some(min_assets);
         self
-      }
-        /// Add an additional account to the instruction.
-  #[inline(always)]
-  pub fn add_remaining_account(&mut self, account: &'b solana_account_info::AccountInfo<'a>, is_writable: bool, is_signer: bool) -> &mut Self {
-    self.instruction.__remaining_accounts.push((account, is_writable, is_signer));
-    self
-  }
-  /// Add additional accounts to the instruction.
-  ///
-  /// Each account is represented by a tuple of the `AccountInfo`, a `bool` indicating whether the account is writable or not,
-  /// and a `bool` indicating whether the account is a signer or not.
-  #[inline(always)]
-  pub fn add_remaining_accounts(&mut self, accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)]) -> &mut Self {
-    self.instruction.__remaining_accounts.extend_from_slice(accounts);
-    self
-  }
-  #[inline(always)]
-  pub fn invoke(&self) -> solana_program_error::ProgramResult {
-    self.invoke_signed(&[])
-  }
-  #[allow(clippy::clone_on_copy)]
-  #[allow(clippy::vec_init_then_push)]
-  pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
-          let args = RedeemInstructionArgs {
-                                                              shares: self.instruction.shares.clone().expect("shares is not set"),
-                                                                  min_assets: self.instruction.min_assets.clone().expect("min_assets is not set"),
-                                    };
+    }
+
+    /// Add an additional account to the instruction.
+    #[inline(always)]
+    pub fn add_remaining_account(
+        &mut self,
+        account: &'b solana_account_info::AccountInfo<'a>,
+        is_writable: bool,
+        is_signer: bool,
+    ) -> &mut Self {
+        self.instruction
+            .__remaining_accounts
+            .push((account, is_writable, is_signer));
+        self
+    }
+
+    /// Add additional accounts to the instruction.
+    ///
+    /// Each account is represented by a tuple of the `AccountInfo`, a `bool` indicating whether the
+    /// account is writable or not, and a `bool` indicating whether the account is a signer or
+    /// not.
+    #[inline(always)]
+    pub fn add_remaining_accounts(
+        &mut self,
+        accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
+    ) -> &mut Self {
+        self.instruction
+            .__remaining_accounts
+            .extend_from_slice(accounts);
+        self
+    }
+
+    #[inline(always)]
+    pub fn invoke(&self) -> solana_program_error::ProgramResult {
+        self.invoke_signed(&[])
+    }
+
+    #[allow(clippy::clone_on_copy)]
+    #[allow(clippy::vec_init_then_push)]
+    pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
+        let args = RedeemInstructionArgs {
+            shares: self.instruction.shares.clone().expect("shares is not set"),
+            min_assets: self
+                .instruction
+                .min_assets
+                .clone()
+                .expect("min_assets is not set"),
+        };
         let instruction = RedeemCpi {
-        __program: self.instruction.__program,
-                  
-          user: self.instruction.user.expect("user is not set"),
-                  
-          asset_mint: self.instruction.asset_mint.expect("asset_mint is not set"),
-                  
-          share_mint: self.instruction.share_mint.expect("share_mint is not set"),
-                  
-          reserve: self.instruction.reserve.expect("reserve is not set"),
-                  
-          vault: self.instruction.vault.expect("vault is not set"),
-                  
-          fee_recipient: self.instruction.fee_recipient.expect("fee_recipient is not set"),
-                  
-          user_assets_account: self.instruction.user_assets_account.expect("user_assets_account is not set"),
-                  
-          user_shares_account: self.instruction.user_shares_account.expect("user_shares_account is not set"),
-                  
-          share_token_program: self.instruction.share_token_program.expect("share_token_program is not set"),
-                  
-          asset_token_program: self.instruction.asset_token_program.expect("asset_token_program is not set"),
-                          __args: args,
-            };
-    instruction.invoke_signed_with_remaining_accounts(signers_seeds, &self.instruction.__remaining_accounts)
-  }
+            __program: self.instruction.__program,
+
+            user: self.instruction.user.expect("user is not set"),
+
+            asset_mint: self.instruction.asset_mint.expect("asset_mint is not set"),
+
+            share_mint: self.instruction.share_mint.expect("share_mint is not set"),
+
+            reserve: self.instruction.reserve.expect("reserve is not set"),
+
+            vault: self.instruction.vault.expect("vault is not set"),
+
+            fee_recipient: self
+                .instruction
+                .fee_recipient
+                .expect("fee_recipient is not set"),
+
+            user_assets_account: self
+                .instruction
+                .user_assets_account
+                .expect("user_assets_account is not set"),
+
+            user_shares_account: self
+                .instruction
+                .user_shares_account
+                .expect("user_shares_account is not set"),
+
+            share_token_program: self
+                .instruction
+                .share_token_program
+                .expect("share_token_program is not set"),
+
+            asset_token_program: self
+                .instruction
+                .asset_token_program
+                .expect("asset_token_program is not set"),
+            __args: args,
+        };
+        instruction.invoke_signed_with_remaining_accounts(
+            signers_seeds,
+            &self.instruction.__remaining_accounts,
+        )
+    }
 }
 
 #[derive(Clone, Debug)]
 struct RedeemCpiBuilderInstruction<'a, 'b> {
-  __program: &'b solana_account_info::AccountInfo<'a>,
-            user: Option<&'b solana_account_info::AccountInfo<'a>>,
-                asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
-                share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
-                reserve: Option<&'b solana_account_info::AccountInfo<'a>>,
-                vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-                fee_recipient: Option<&'b solana_account_info::AccountInfo<'a>>,
-                user_assets_account: Option<&'b solana_account_info::AccountInfo<'a>>,
-                user_shares_account: Option<&'b solana_account_info::AccountInfo<'a>>,
-                share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
-                asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
-                        shares: Option<u64>,
-                min_assets: Option<u64>,
-        /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
-  __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
+    __program: &'b solana_account_info::AccountInfo<'a>,
+    user: Option<&'b solana_account_info::AccountInfo<'a>>,
+    asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
+    share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
+    reserve: Option<&'b solana_account_info::AccountInfo<'a>>,
+    vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    fee_recipient: Option<&'b solana_account_info::AccountInfo<'a>>,
+    user_assets_account: Option<&'b solana_account_info::AccountInfo<'a>>,
+    user_shares_account: Option<&'b solana_account_info::AccountInfo<'a>>,
+    share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
+    asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
+    shares: Option<u64>,
+    min_assets: Option<u64>,
+    /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
+    __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }
-

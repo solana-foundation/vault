@@ -3,11 +3,8 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
-//!
 
 use solana_pubkey::{pubkey, Pubkey};
 
-
-  /// `vault` program ID.
-  pub const VAULT_ID: Pubkey = pubkey!("ANXYYTDoEHooFjaN8M8pDHRj87d945Bj5QvAFGcpqakw");
-
+/// `vault` program ID.
+pub const VAULT_ID: Pubkey = pubkey!("ANXYYTDoEHooFjaN8M8pDHRj87d945Bj5QvAFGcpqakw");
