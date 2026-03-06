@@ -8,47 +8,40 @@
 use borsh::BorshSerialize;
 use borsh::BorshDeserialize;
 
-pub const INITIALIZE_VAULT_DISCRIMINATOR: [u8; 8] = [48, 191, 163, 44, 71, 129, 63, 164];
+pub const EXECUTE_DEPOSIT_DISCRIMINATOR: [u8; 8] = [247, 103, 46, 184, 88, 188, 56, 46];
 
 /// Accounts.
 #[derive(Debug)]
-pub struct InitializeVault {
+pub struct ExecuteDeposit {
       
-              
-          pub authority: solana_pubkey::Pubkey,
-          
               
           pub share_mint: solana_pubkey::Pubkey,
           
               
-          pub vault: solana_pubkey::Pubkey,
+          pub system_program: solana_pubkey::Pubkey,
       }
 
-impl InitializeVault {
+impl ExecuteDeposit {
   pub fn instruction(&self) -> solana_instruction::Instruction {
     self.instruction_with_remaining_accounts(&[])
   }
   #[allow(clippy::arithmetic_side_effects)]
   #[allow(clippy::vec_init_then_push)]
   pub fn instruction_with_remaining_accounts(&self, remaining_accounts: &[solana_instruction::AccountMeta]) -> solana_instruction::Instruction {
-    let mut accounts = Vec::with_capacity(3+ remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(2+ remaining_accounts.len());
                             accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.authority,
-            true
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.share_mint,
             false
           ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            self.vault,
+                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.system_program,
             false
           ));
                       accounts.extend_from_slice(remaining_accounts);
-    let data = InitializeVaultInstructionData::new().try_to_vec().unwrap();
+    let data = ExecuteDepositInstructionData::new().try_to_vec().unwrap();
     
     solana_instruction::Instruction {
-      program_id: crate::VAULT_ID,
+      program_id: crate::HOOK_PROGRAM_ID,
       accounts,
       data,
     }
@@ -57,14 +50,14 @@ impl InitializeVault {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
- pub struct InitializeVaultInstructionData {
+ pub struct ExecuteDepositInstructionData {
             discriminator: [u8; 8],
       }
 
-impl InitializeVaultInstructionData {
+impl ExecuteDepositInstructionData {
   pub fn new() -> Self {
     Self {
-                        discriminator: [48, 191, 163, 44, 71, 129, 63, 164],
+                        discriminator: [247, 103, 46, 184, 88, 188, 56, 46],
                   }
   }
 
@@ -73,7 +66,7 @@ impl InitializeVaultInstructionData {
   }
   }
 
-impl Default for InitializeVaultInstructionData {
+impl Default for ExecuteDepositInstructionData {
   fn default() -> Self {
     Self::new()
   }
@@ -81,38 +74,32 @@ impl Default for InitializeVaultInstructionData {
 
 
 
-/// Instruction builder for `InitializeVault`.
+/// Instruction builder for `ExecuteDeposit`.
 ///
 /// ### Accounts:
 ///
-                ///   0. `[signer]` authority
-          ///   1. `[]` share_mint
-                ///   2. `[writable]` vault
+          ///   0. `[]` share_mint
+                ///   1. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
-pub struct InitializeVaultBuilder {
-            authority: Option<solana_pubkey::Pubkey>,
-                share_mint: Option<solana_pubkey::Pubkey>,
-                vault: Option<solana_pubkey::Pubkey>,
+pub struct ExecuteDepositBuilder {
+            share_mint: Option<solana_pubkey::Pubkey>,
+                system_program: Option<solana_pubkey::Pubkey>,
                 __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
-impl InitializeVaultBuilder {
+impl ExecuteDepositBuilder {
   pub fn new() -> Self {
     Self::default()
   }
-            #[inline(always)]
-    pub fn authority(&mut self, authority: solana_pubkey::Pubkey) -> &mut Self {
-                        self.authority = Some(authority);
-                    self
-    }
             #[inline(always)]
     pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
                         self.share_mint = Some(share_mint);
                     self
     }
-            #[inline(always)]
-    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-                        self.vault = Some(vault);
+            /// `[optional account, default to '11111111111111111111111111111111']`
+#[inline(always)]
+    pub fn system_program(&mut self, system_program: solana_pubkey::Pubkey) -> &mut Self {
+                        self.system_program = Some(system_program);
                     self
     }
             /// Add an additional account to the instruction.
@@ -129,54 +116,46 @@ impl InitializeVaultBuilder {
   }
   #[allow(clippy::clone_on_copy)]
   pub fn instruction(&self) -> solana_instruction::Instruction {
-    let accounts = InitializeVault {
-                              authority: self.authority.expect("authority is not set"),
-                                        share_mint: self.share_mint.expect("share_mint is not set"),
-                                        vault: self.vault.expect("vault is not set"),
+    let accounts = ExecuteDeposit {
+                              share_mint: self.share_mint.expect("share_mint is not set"),
+                                        system_program: self.system_program.unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
                       };
     
     accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
   }
 }
 
-  /// `initialize_vault` CPI accounts.
-  pub struct InitializeVaultCpiAccounts<'a, 'b> {
+  /// `execute_deposit` CPI accounts.
+  pub struct ExecuteDepositCpiAccounts<'a, 'b> {
           
-                    
-              pub authority: &'b solana_account_info::AccountInfo<'a>,
-                
                     
               pub share_mint: &'b solana_account_info::AccountInfo<'a>,
                 
                     
-              pub vault: &'b solana_account_info::AccountInfo<'a>,
+              pub system_program: &'b solana_account_info::AccountInfo<'a>,
             }
 
-/// `initialize_vault` CPI instruction.
-pub struct InitializeVaultCpi<'a, 'b> {
+/// `execute_deposit` CPI instruction.
+pub struct ExecuteDepositCpi<'a, 'b> {
   /// The program to invoke.
   pub __program: &'b solana_account_info::AccountInfo<'a>,
       
               
-          pub authority: &'b solana_account_info::AccountInfo<'a>,
-          
-              
           pub share_mint: &'b solana_account_info::AccountInfo<'a>,
           
               
-          pub vault: &'b solana_account_info::AccountInfo<'a>,
+          pub system_program: &'b solana_account_info::AccountInfo<'a>,
         }
 
-impl<'a, 'b> InitializeVaultCpi<'a, 'b> {
+impl<'a, 'b> ExecuteDepositCpi<'a, 'b> {
   pub fn new(
     program: &'b solana_account_info::AccountInfo<'a>,
-          accounts: InitializeVaultCpiAccounts<'a, 'b>,
+          accounts: ExecuteDepositCpiAccounts<'a, 'b>,
           ) -> Self {
     Self {
       __program: program,
-              authority: accounts.authority,
               share_mint: accounts.share_mint,
-              vault: accounts.vault,
+              system_program: accounts.system_program,
                 }
   }
   #[inline(always)]
@@ -199,17 +178,13 @@ impl<'a, 'b> InitializeVaultCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program_error::ProgramResult {
-    let mut accounts = Vec::with_capacity(3+ remaining_accounts.len());
+    let mut accounts = Vec::with_capacity(2+ remaining_accounts.len());
                             accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.authority.key,
-            true
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.share_mint.key,
             false
           ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
-            *self.vault.key,
+                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.system_program.key,
             false
           ));
                       remaining_accounts.iter().for_each(|remaining_account| {
@@ -219,18 +194,17 @@ impl<'a, 'b> InitializeVaultCpi<'a, 'b> {
           is_writable: remaining_account.2,
       })
     });
-    let data = InitializeVaultInstructionData::new().try_to_vec().unwrap();
+    let data = ExecuteDepositInstructionData::new().try_to_vec().unwrap();
     
     let instruction = solana_instruction::Instruction {
-      program_id: crate::VAULT_ID,
+      program_id: crate::HOOK_PROGRAM_ID,
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(3 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
-                  account_infos.push(self.authority.clone());
-                        account_infos.push(self.share_mint.clone());
-                        account_infos.push(self.vault.clone());
+                  account_infos.push(self.share_mint.clone());
+                        account_infos.push(self.system_program.clone());
               remaining_accounts.iter().for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
 
     if signers_seeds.is_empty() {
@@ -241,42 +215,35 @@ impl<'a, 'b> InitializeVaultCpi<'a, 'b> {
   }
 }
 
-/// Instruction builder for `InitializeVault` via CPI.
+/// Instruction builder for `ExecuteDeposit` via CPI.
 ///
 /// ### Accounts:
 ///
-                ///   0. `[signer]` authority
-          ///   1. `[]` share_mint
-                ///   2. `[writable]` vault
+          ///   0. `[]` share_mint
+          ///   1. `[]` system_program
 #[derive(Clone, Debug)]
-pub struct InitializeVaultCpiBuilder<'a, 'b> {
-  instruction: Box<InitializeVaultCpiBuilderInstruction<'a, 'b>>,
+pub struct ExecuteDepositCpiBuilder<'a, 'b> {
+  instruction: Box<ExecuteDepositCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> InitializeVaultCpiBuilder<'a, 'b> {
+impl<'a, 'b> ExecuteDepositCpiBuilder<'a, 'b> {
   pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
-    let instruction = Box::new(InitializeVaultCpiBuilderInstruction {
+    let instruction = Box::new(ExecuteDepositCpiBuilderInstruction {
       __program: program,
-              authority: None,
               share_mint: None,
-              vault: None,
+              system_program: None,
                                 __remaining_accounts: Vec::new(),
     });
     Self { instruction }
   }
-      #[inline(always)]
-    pub fn authority(&mut self, authority: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.authority = Some(authority);
-                    self
-    }
       #[inline(always)]
     pub fn share_mint(&mut self, share_mint: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.share_mint = Some(share_mint);
                     self
     }
       #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.vault = Some(vault);
+    pub fn system_program(&mut self, system_program: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.system_program = Some(system_program);
                     self
     }
             /// Add an additional account to the instruction.
@@ -301,25 +268,22 @@ impl<'a, 'b> InitializeVaultCpiBuilder<'a, 'b> {
   #[allow(clippy::clone_on_copy)]
   #[allow(clippy::vec_init_then_push)]
   pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
-        let instruction = InitializeVaultCpi {
+        let instruction = ExecuteDepositCpi {
         __program: self.instruction.__program,
-                  
-          authority: self.instruction.authority.expect("authority is not set"),
                   
           share_mint: self.instruction.share_mint.expect("share_mint is not set"),
                   
-          vault: self.instruction.vault.expect("vault is not set"),
+          system_program: self.instruction.system_program.expect("system_program is not set"),
                     };
     instruction.invoke_signed_with_remaining_accounts(signers_seeds, &self.instruction.__remaining_accounts)
   }
 }
 
 #[derive(Clone, Debug)]
-struct InitializeVaultCpiBuilderInstruction<'a, 'b> {
+struct ExecuteDepositCpiBuilderInstruction<'a, 'b> {
   __program: &'b solana_account_info::AccountInfo<'a>,
-            authority: Option<&'b solana_account_info::AccountInfo<'a>>,
-                share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
-                vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+            share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
+                system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
                 /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
   __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

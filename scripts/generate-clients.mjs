@@ -12,7 +12,7 @@ const projectRoot = join(__dirname, "..");
 const idlPath = join(projectRoot, "target/idl/vault.json");
 const idl = JSON.parse(readFileSync(idlPath, "utf-8"));
 
-const hookidlPath = join(projectRoot, "target/idl/vault.json");
+const hookidlPath = join(projectRoot, "target/idl/hook_program.json");
 const hookIdl = JSON.parse(readFileSync(hookidlPath, "utf-8"));
 
 // Create Codama tree from Anchor IDL

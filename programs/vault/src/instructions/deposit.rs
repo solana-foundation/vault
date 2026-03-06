@@ -154,7 +154,7 @@ impl<'info> DepositAndMint<'info> {
             &self.hook_program.key(),
             &self.user.key(),
             &self.share_mint.key(),
-            &self.vault.key(),
+            &self.system_program.key(),
         );
         invoke(
             &deposit_hook_ix,

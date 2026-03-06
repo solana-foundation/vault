@@ -13,7 +13,8 @@ use solana_sdk::{
 };
 use vault_client::{
     sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
-    InitializeDepositFeesBuilder, InitializeVaultBuilder, InitializeWithdrawalFeesBuilder,
+    InitializeDepositExtraMetaAccountsBuilder, InitializeDepositFeesBuilder,
+    InitializeDepositHookBuilder, InitializeVaultBuilder, InitializeWithdrawalFeesBuilder,
     MintBuilder, Pubkey, RedeemBuilder, UpdateDepositFeesBuilder, UpdateVaultBuilder,
     UpdateWithdrawalFeesBuilder, VaultConfig, WithdrawBuilder,
 };
@@ -713,6 +714,62 @@ fn transfer_fee_from_params(amount: u64, bps: u16, max_fee: u64) -> u64 {
 /// calculates the amount to receive after transfer fees (from token2022) are substracted
 pub fn recv_amount_from_params(amount: u64, bps: u16, max_fee: u64) -> u64 {
     amount.saturating_sub(transfer_fee_from_params(amount, bps, max_fee))
+}
+
+pub fn init_deposit_hook(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: &Pubkey,
+    vault: &Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = InitializeDepositHookBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(*share_mint)
+        .vault(*vault)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[&authority],
+        blockhash,
+    );
+
+    return svm.send_transaction(tx);
+}
+
+pub fn init_deposit_extra_meta_accounts(
+    svm: &mut LiteSVM,
+    payer: &Keypair,
+    asset_mint: &Pubkey,
+    share_mint: &Pubkey,
+    vault: &Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let (extra_metas, _) = Pubkey::find_program_address(
+        &[b"extra_account_metas", b"deposit", share_mint.as_ref()],
+        &vault_client::sdk::program_id(),
+    );
+
+    let ix = InitializeDepositExtraMetaAccountsBuilder::new()
+        .payer(payer.pubkey())
+        .asset_mint(*asset_mint)
+        .share_mint_address(*share_mint)
+        .vault(*vault)
+        .extra_metas(extra_metas)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&payer.pubkey()),
+        &[payer],
+        blockhash,
+    );
+
+    return svm.send_transaction(tx);
 }
 
 /// gets the assets held in VaultConfig's reserve account

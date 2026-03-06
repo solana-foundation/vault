@@ -1439,6 +1439,8 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
+ "spl-discriminator",
+ "spl-tlv-account-resolution 0.10.0",
 ]
 
 [[package]]
@@ -1679,6 +1681,7 @@ name = "integration-tests"
 version = "0.1.0"
 dependencies = [
  "anchor-spl",
+ "hook-client",
  "litesvm",
  "solana-sdk",
  "spl-token 8.0.0",

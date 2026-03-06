@@ -2,6 +2,7 @@ mod close_vault;
 mod constants;
 mod create_vault;
 mod deposit;
+mod deposit_hook;
 mod fee_extensions;
 mod helper_functions;
 mod mint;

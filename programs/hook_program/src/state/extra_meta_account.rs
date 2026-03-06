@@ -2,11 +2,8 @@ use anchor_lang::{
     prelude::{AccountMeta, ProgramError, Pubkey},
     solana_program::instruction::Instruction,
 };
+
 use spl_discriminator::{ArrayDiscriminator, SplDiscriminate};
-
-pub const EXTRA_ACCOUNT_METAS_SEED: &[u8] = b"extra_account_metas";
-pub const DEPOSIT_ACCOUNT_METAS_SEED: &[u8] = b"deposit";
-
 pub enum VaultStandardInstruction {
     DepositHook,
 }
@@ -31,25 +28,5 @@ impl VaultStandardInstruction {
         match self {
             Self::DepositHook => DepositHookInstruction::SPL_DISCRIMINATOR_SLICE.to_vec(),
         }
-    }
-}
-pub fn deposit_hook(
-    program_id: &Pubkey,
-    signer: &Pubkey,
-    mint: &Pubkey,
-    system_program: &Pubkey,
-) -> Instruction {
-    let data = VaultStandardInstruction::DepositHook.pack();
-
-    // index 5, vault_state
-    let accounts = vec![
-        AccountMeta::new_readonly(*mint, false),
-        AccountMeta::new_readonly(*system_program, false),
-    ];
-
-    Instruction {
-        program_id: *program_id,
-        accounts,
-        data,
     }
 }

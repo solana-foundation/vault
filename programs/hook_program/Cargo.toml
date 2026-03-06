@@ -23,6 +23,8 @@ custom-panic = []
 [dependencies]
 anchor-lang.workspace = true
 anchor-spl.workspace = true
+spl-tlv-account-resolution.workspace = true
+spl-discriminator.workspace = true
 
 
 [lints.rust]

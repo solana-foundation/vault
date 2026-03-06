@@ -1,12 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    token::spl_token,
-    token_2022::spl_token_2022::{
-        self,
-        extension::{BaseStateWithExtensions, StateWithExtensions},
-    },
-    token_interface::{self, mint_to, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked},
-};
+use anchor_spl::token_interface::Mint;
 
 #[derive(Accounts)]
 pub struct DepositHook<'info> {
