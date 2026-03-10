@@ -185,6 +185,7 @@ fn test_deposit_with_hook() {
             .asset_token_program(token::ID)
             .share_token_program(token::ID)
             .hook_program(HOOK_PROGRAM_ID)
+            .protocol(Some(dummy_program_id()))
             .assets(deposit_amount)
             .min_shares(0)
             .instruction(),
