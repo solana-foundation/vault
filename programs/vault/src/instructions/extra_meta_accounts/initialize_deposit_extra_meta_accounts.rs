@@ -54,17 +54,16 @@ pub fn handler<'info>(ctx: Context<InitializeDepositExtraMetaAccounts>) -> Resul
 }
 
 fn get_extra_metas() -> Result<Vec<ExtraAccountMeta>> {
-    let vault_state_meta = ExtraAccountMeta::new_with_seeds(
+    let vault_state_meta = ExtraAccountMeta::new_external_pda_with_seeds(
+        2, // external protocol token program index
         &[
-            Seed::AccountKey { index: 5 },
-            Seed::AccountData {
-                account_index: 1,
-                data_index: 32,
-                length: 32,
+            Seed::Literal {
+                bytes: "vault".as_bytes().to_vec(),
             },
+            Seed::AccountKey { index: 1 }, // share mint
         ],
         false,
-        false,
+        true,
     )?;
 
     Ok([vault_state_meta].to_vec())

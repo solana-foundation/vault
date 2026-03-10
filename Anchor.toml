@@ -6,6 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
+dummy_protocol = "BTNuRUYMNxqg9XfndGm2DiSjrc14QLfNt7BbhMnLZaV"
 hook_program = "4QabXWDFDL3cVzpabsVNCjkjgHvMAfTwPy6kCV9HiB7n"
 vault = "ANXYYTDoEHooFjaN8M8pDHRj87d945Bj5QvAFGcpqakw"
 

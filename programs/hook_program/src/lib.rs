@@ -14,7 +14,9 @@ pub mod hook_program {
     use super::*;
 
     #[instruction(discriminator = DepositHookInstruction::SPL_DISCRIMINATOR_SLICE)]
-    pub fn execute_deposit(ctx: Context<DepositHook>) -> Result<()> {
+    pub fn execute_deposit<'info>(
+        ctx: Context<'_, '_, '_, 'info, DepositHook<'info>>,
+    ) -> Result<()> {
         instructions::deposit_hook::handler(ctx)
     }
 }

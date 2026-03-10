@@ -4,9 +4,6 @@ use anchor_lang::{
 };
 use spl_discriminator::{ArrayDiscriminator, SplDiscriminate};
 
-pub const EXTRA_ACCOUNT_METAS_SEED: &[u8] = b"extra_account_metas";
-pub const DEPOSIT_ACCOUNT_METAS_SEED: &[u8] = b"deposit";
-
 pub enum VaultStandardInstruction {
     DepositHook,
 }
@@ -37,13 +34,15 @@ pub fn deposit_hook(
     program_id: &Pubkey,
     signer: &Pubkey,
     mint: &Pubkey,
+    extra_meta_accounts: &Pubkey,
     system_program: &Pubkey,
 ) -> Instruction {
     let data = VaultStandardInstruction::DepositHook.pack();
 
-    // index 5, vault_state
     let accounts = vec![
+        AccountMeta::new_readonly(*signer, true),
         AccountMeta::new_readonly(*mint, false),
+        AccountMeta::new_readonly(*extra_meta_accounts, false),
         AccountMeta::new_readonly(*system_program, false),
     ];
 

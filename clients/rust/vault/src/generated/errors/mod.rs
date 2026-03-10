@@ -3,7 +3,9 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
-pub(crate) mod vault;
-
-pub use self::vault::VaultError;
+      pub(crate) mod vault;
+  
+      pub use self::vault::VaultError;
+  

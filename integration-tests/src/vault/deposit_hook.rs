@@ -1,4 +1,8 @@
 use anchor_spl::token;
+use dummy_client::{
+    sdk::{program_id as dummy_program_id, IntoSdkInstruction as DummyIntoSdkInstruction},
+    CreateVaultBuilder as DummyCreateVaultBuilder,
+};
 use hook_client::HOOK_PROGRAM_ID;
 use litesvm::LiteSVM;
 use solana_sdk::{
@@ -25,6 +29,9 @@ fn test_deposit_with_hook() {
 
     let hook_program_bytes = include_bytes!("../../../target/deploy/hook_program.so");
     svm.add_program(HOOK_PROGRAM_ID, hook_program_bytes);
+
+    let dummy_program_bytes = include_bytes!("../../../target/deploy/dummy_protocol.so");
+    svm.add_program(dummy_program_id(), dummy_program_bytes);
 
     let authority = Keypair::new();
     let payer = Keypair::new();
@@ -106,6 +113,31 @@ fn test_deposit_with_hook() {
     init_vault(&mut svm, &authority, &share_mint.pubkey(), &vault_pubkey)
         .expect("init vault failed");
 
+    // Create the dummy protocol vault
+    let (dummy_vault_pubkey, _) = Pubkey::find_program_address(
+        &[b"vault", share_mint.pubkey().as_ref()],
+        &dummy_program_id(),
+    );
+    let dummy_create_vault_ix = DummyCreateVaultBuilder::new()
+        .payer(payer.pubkey())
+        .mint_authority(mint_authority.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(dummy_vault_pubkey)
+        .asset_token_program(token::ID)
+        .share_token_program(token::ID)
+        .instruction();
+    let dummy_create_vault_ix =
+        DummyIntoSdkInstruction::into_sdk_instruction(dummy_create_vault_ix);
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[dummy_create_vault_ix],
+        Some(&payer.pubkey()),
+        &[&payer, &mint_authority],
+        blockhash,
+    );
+    svm.send_transaction(tx).expect("dummy create vault failed");
+
     // Set up user accounts
     let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
     let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
@@ -139,23 +171,24 @@ fn test_deposit_with_hook() {
         ],
         &program_id(),
     );
-    let ix = DepositBuilder::new()
-        .user(user.pubkey())
-        .asset_mint(asset_mint.pubkey())
-        .share_mint(share_mint.pubkey())
-        .reserve(reserve_pubkey)
-        .vault(vault_pubkey)
-        .fee_recipient(fee_recipient_ata)
-        .extra_metas(Some(extra_meta_pubkey))
-        .user_assets_account(user_asset_ata)
-        .user_shares_account(user_share_ata)
-        .asset_token_program(token::ID)
-        .share_token_program(token::ID)
-        .hook_program(HOOK_PROGRAM_ID)
-        .assets(deposit_amount)
-        .min_shares(0)
-        .instruction()
-        .into_sdk_instruction();
+    let ix = vault_client::sdk::IntoSdkInstruction::into_sdk_instruction(
+        DepositBuilder::new()
+            .user(user.pubkey())
+            .asset_mint(asset_mint.pubkey())
+            .share_mint(share_mint.pubkey())
+            .reserve(reserve_pubkey)
+            .vault(vault_pubkey)
+            .fee_recipient(fee_recipient_ata)
+            .extra_metas(Some(extra_meta_pubkey))
+            .user_assets_account(user_asset_ata)
+            .user_shares_account(user_share_ata)
+            .asset_token_program(token::ID)
+            .share_token_program(token::ID)
+            .hook_program(HOOK_PROGRAM_ID)
+            .assets(deposit_amount)
+            .min_shares(0)
+            .instruction(),
+    );
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
@@ -187,4 +220,5 @@ fn test_deposit_with_hook() {
     // Verify reserve received assets
     let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
     assert_eq!(vault_asset_balance, deposit_amount);
+    msg!("Logs {:?}", result.unwrap().logs)
 }

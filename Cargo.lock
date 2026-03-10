@@ -1041,6 +1041,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "dummy-client"
+version = "0.1.0"
+dependencies = [
+ "borsh 1.6.0",
+ "num-derive",
+ "num-traits",
+ "serde",
+ "solana-account-info",
+ "solana-cpi",
+ "solana-instruction",
+ "solana-program-error",
+ "solana-pubkey",
+ "solana-sdk",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "dummy_protocol"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anchor-spl",
+]
+
+[[package]]
 name = "eager"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1681,6 +1706,7 @@ name = "integration-tests"
 version = "0.1.0"
 dependencies = [
  "anchor-spl",
+ "dummy-client",
  "hook-client",
  "litesvm",
  "solana-sdk",

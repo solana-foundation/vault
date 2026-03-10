@@ -1,4 +1,4 @@
-use anchor_lang::{prelude::*, solana_program::program::invoke};
+use anchor_lang::{prelude::*, solana_program::program::invoke_signed};
 use anchor_spl::{
     token::spl_token,
     token_2022::spl_token_2022::{
@@ -150,20 +150,25 @@ impl<'info> DepositAndMint<'info> {
     }
 
     pub fn deposit_hook(&mut self) -> Result<()> {
+        let extra_metas = &self.extra_metas.clone().unwrap();
+        let share_mint = self.share_mint.key();
         let deposit_hook_ix = deposit_hook(
             &self.hook_program.key(),
-            &self.user.key(),
+            &self.vault.key(),
             &self.share_mint.key(),
+            &extra_metas.key(),
             &self.system_program.key(),
         );
-        invoke(
-            &deposit_hook_ix,
-            &[
-                self.user.to_account_info(),
-                self.share_mint.to_account_info(),
-                self.system_program.to_account_info(),
-            ],
-        )?;
+
+        let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
+        let account_infos = vec![
+            self.vault.to_account_info(),
+            self.share_mint.to_account_info(),
+            extra_metas.to_account_info(),
+            self.system_program.to_account_info(),
+        ];
+
+        invoke_signed(&deposit_hook_ix, &account_infos, seeds)?;
         Ok(())
     }
 }
@@ -185,7 +190,9 @@ pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64
     let is_deposit_hook_present = ctx.accounts.vault.deposit_hook_type().is_some();
 
     if is_deposit_hook_present {
+        // Delegate
         ctx.accounts.deposit_hook()?;
+        // Remove delegation
     }
 
     let updated_reserve_amount = ctx.accounts.reserve.amount;

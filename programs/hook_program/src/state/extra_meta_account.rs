@@ -1,9 +1,8 @@
-use anchor_lang::{
-    prelude::{AccountMeta, ProgramError, Pubkey},
-    solana_program::instruction::Instruction,
-};
-
+use crate::state::{DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED};
+use anchor_lang::prelude::{AccountMeta, ProgramError, Pubkey};
 use spl_discriminator::{ArrayDiscriminator, SplDiscriminate};
+use spl_tlv_account_resolution::solana_instruction::Instruction;
+
 pub enum VaultStandardInstruction {
     DepositHook,
 }
@@ -28,5 +27,42 @@ impl VaultStandardInstruction {
         match self {
             Self::DepositHook => DepositHookInstruction::SPL_DISCRIMINATOR_SLICE.to_vec(),
         }
+    }
+}
+pub fn get_deposit_hook_extra_account_metas_address(mint: &Pubkey, program_id: &Pubkey) -> Pubkey {
+    get_deposit_hook_extra_account_metas_address_and_bump_seed(mint, program_id).0
+}
+
+pub fn get_deposit_hook_extra_account_metas_address_and_bump_seed(
+    mint: &Pubkey,
+    program_id: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&collect_deposit_hook_extra_account_metas(mint), program_id)
+}
+
+pub fn collect_deposit_hook_extra_account_metas(mint: &Pubkey) -> [&[u8]; 3] {
+    [
+        EXTRA_ACCOUNT_METAS_SEED,
+        DEPOSIT_ACCOUNT_METAS_SEED,
+        mint.as_ref(),
+    ]
+}
+
+pub fn deposit_hook_permissionless(
+    program_id: &Pubkey,
+    signer: &Pubkey,
+    share_mint: &Pubkey,
+) -> Instruction {
+    let data = VaultStandardInstruction::DepositHook.pack();
+    let accounts = vec![
+        AccountMeta::new_readonly(*signer, false),
+        AccountMeta::new_readonly(*share_mint, false),
+        AccountMeta::new_readonly(*program_id, false),
+    ];
+
+    Instruction {
+        program_id: *program_id,
+        accounts,
+        data,
     }
 }
