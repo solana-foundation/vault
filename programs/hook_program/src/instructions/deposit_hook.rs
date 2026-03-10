@@ -14,6 +14,7 @@ pub struct DepositHook<'info> {
     pub share_mint: InterfaceAccount<'info, Mint>,
     /// CHECK: This is the extra metas
     pub extra_metas: AccountInfo<'info>,
+    /// CHECK: This is downstream protocol
     pub protocol: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
@@ -22,11 +23,10 @@ impl<'info> DepositHook<'info> {
     pub fn invoke_deposit(
         &self,
         program_id: &Pubkey,
-        protocol_program_id: &Pubkey,
         additional_accounts: &[AccountInfo<'info>],
     ) -> Result<()> {
         let mut instruction = deposit_hook_permissionless(
-            protocol_program_id,
+            &self.protocol.key(),
             self.signer.key,
             &self.share_mint.key(),
         );
@@ -63,7 +63,6 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, DepositHook<'info>>) -> Re
     msg!("Execute Hook 1");
     ctx.accounts.invoke_deposit(
         &pubkey!("ANXYYTDoEHooFjaN8M8pDHRj87d945Bj5QvAFGcpqakw"),
-        &pubkey!("BTNuRUYMNxqg9XfndGm2DiSjrc14QLfNt7BbhMnLZaV"),
         ctx.remaining_accounts,
     )?;
     Ok(())
