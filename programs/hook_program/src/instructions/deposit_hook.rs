@@ -15,7 +15,7 @@ pub struct DepositHook<'info> {
     /// CHECK: This is the extra metas
     pub extra_metas: AccountInfo<'info>,
     /// CHECK: This is downstream protocol
-    pub protocol: AccountInfo<'info>,
+    pub protocol: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
 }
 

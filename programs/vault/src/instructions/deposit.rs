@@ -73,6 +73,7 @@ pub struct DepositAndMint<'info> {
         bump
     )]
     pub extra_metas: Option<AccountInfo<'info>>,
+    pub protocol: Option<AccountInfo<'info>>,
 
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub share_token_program: Interface<'info, TokenInterface>,
@@ -151,12 +152,14 @@ impl<'info> DepositAndMint<'info> {
 
     pub fn deposit_hook(&mut self) -> Result<()> {
         let extra_metas = &self.extra_metas.clone().unwrap();
+        let protocol = &self.protocol.clone().unwrap();
         let share_mint = self.share_mint.key();
         let deposit_hook_ix = deposit_hook(
             &self.hook_program.key(),
             &self.vault.key(),
             &self.share_mint.key(),
             &extra_metas.key(),
+            &protocol.key(),
             &self.system_program.key(),
         );
 
@@ -165,6 +168,7 @@ impl<'info> DepositAndMint<'info> {
             self.vault.to_account_info(),
             self.share_mint.to_account_info(),
             extra_metas.to_account_info(),
+            protocol.to_account_info(),
             self.system_program.to_account_info(),
         ];
 

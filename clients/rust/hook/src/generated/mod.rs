@@ -3,10 +3,9 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
-//!
 
-        pub mod errors;
-        pub mod instructions;
-        pub mod programs;
-      
-  pub(crate) use programs::*;
+pub mod errors;
+pub mod instructions;
+pub mod programs;
+
+pub(crate) use programs::*;

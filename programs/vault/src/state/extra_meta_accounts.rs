@@ -35,6 +35,7 @@ pub fn deposit_hook(
     signer: &Pubkey,
     mint: &Pubkey,
     extra_meta_accounts: &Pubkey,
+    protocol: &Pubkey,
     system_program: &Pubkey,
 ) -> Instruction {
     let data = VaultStandardInstruction::DepositHook.pack();
@@ -43,6 +44,7 @@ pub fn deposit_hook(
         AccountMeta::new_readonly(*signer, true),
         AccountMeta::new_readonly(*mint, false),
         AccountMeta::new_readonly(*extra_meta_accounts, false),
+        AccountMeta::new_readonly(*protocol, false),
         AccountMeta::new_readonly(*system_program, false),
     ];
 
