@@ -14,6 +14,7 @@ pub struct DepositHook<'info> {
     pub share_mint: InterfaceAccount<'info, Mint>,
     /// CHECK: This is the extra metas
     pub extra_metas: AccountInfo<'info>,
+    pub protocol: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
 }
 
@@ -36,6 +37,7 @@ impl<'info> DepositHook<'info> {
         let mut cpi_account_infos = vec![
             self.signer.to_account_info(),
             self.share_mint.to_account_info(),
+            self.protocol.to_account_info(),
         ];
 
         if self.extra_metas.key() == validation_pubkey {
@@ -44,7 +46,6 @@ impl<'info> DepositHook<'info> {
                 .push(AccountMeta::new_readonly(validation_pubkey, false));
             let validation_info = self.extra_metas.to_account_info();
             cpi_account_infos.push(validation_info.clone());
-
             ExtraAccountMetaList::add_to_cpi_instruction::<DepositHookInstruction>(
                 &mut instruction,
                 &mut cpi_account_infos,
@@ -52,7 +53,7 @@ impl<'info> DepositHook<'info> {
                 additional_accounts,
             )?;
         }
-        msg!("Invoking downstream protocol");
+
         invoke(&instruction, &cpi_account_infos)?;
         Ok(())
     }
