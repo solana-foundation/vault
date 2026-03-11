@@ -1,5 +1,6 @@
 use anchor_lang::{prelude::*, solana_program::program::invoke};
 use anchor_spl::token_interface::Mint;
+use solana_instruction::Instruction;
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 
 use crate::state::{
@@ -54,13 +55,39 @@ impl<'info> DepositHook<'info> {
             )?;
         }
 
-        invoke(&instruction, &cpi_account_infos)?;
+        let protocol_vault = cpi_account_infos
+            .last()
+            .ok_or(ProgramError::InvalidAccountData)?
+            .clone();
+
+        let mut data = vec![242u8, 35, 198, 137, 82, 225, 242, 182];
+        data.extend_from_slice(&0u64.to_le_bytes());
+
+        let deposit_ix = Instruction {
+            program_id: self.protocol.key(),
+            accounts: vec![
+                AccountMeta::new(*self.signer.key, true),
+                AccountMeta::new_readonly(self.share_mint.key(), false),
+                AccountMeta::new(*protocol_vault.key, false),
+                AccountMeta::new_readonly(self.system_program.key(), false),
+            ],
+            data,
+        };
+
+        invoke(
+            &deposit_ix,
+            &[
+                self.signer.to_account_info(),
+                self.share_mint.to_account_info(),
+                protocol_vault,
+                self.system_program.to_account_info(),
+            ],
+        )?;
         Ok(())
     }
 }
 
 pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, DepositHook<'info>>) -> Result<()> {
-    msg!("Execute Hook 1");
     ctx.accounts.invoke_deposit(
         &pubkey!("ANXYYTDoEHooFjaN8M8pDHRj87d945Bj5QvAFGcpqakw"),
         ctx.remaining_accounts,

@@ -150,11 +150,11 @@ impl<'info> DepositAndMint<'info> {
             .div_ceil(MAX_BPS.into()))
     }
 
-    pub fn deposit_hook(&mut self) -> Result<()> {
+    pub fn deposit_hook(&mut self, remaining_accounts: &[AccountInfo<'info>]) -> Result<()> {
         let extra_metas = &self.extra_metas.clone().unwrap();
         let protocol = &self.protocol.clone().unwrap();
         let share_mint = self.share_mint.key();
-        let deposit_hook_ix = deposit_hook(
+        let mut deposit_hook_ix = deposit_hook(
             &self.hook_program.key(),
             &self.vault.key(),
             &self.share_mint.key(),
@@ -163,21 +163,34 @@ impl<'info> DepositAndMint<'info> {
             &self.system_program.key(),
         );
 
+        for account_info in remaining_accounts.iter() {
+            deposit_hook_ix.accounts.push(AccountMeta {
+                pubkey: *account_info.key,
+                is_signer: account_info.is_signer,
+                is_writable: account_info.is_writable,
+            });
+        }
+
         let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
-        let account_infos = vec![
+        let mut account_infos = vec![
             self.vault.to_account_info(),
             self.share_mint.to_account_info(),
             extra_metas.to_account_info(),
             protocol.to_account_info(),
             self.system_program.to_account_info(),
         ];
+        account_infos.extend_from_slice(remaining_accounts);
 
         invoke_signed(&deposit_hook_ix, &account_infos, seeds)?;
         Ok(())
     }
 }
 
-pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64) -> Result<()> {
+pub fn handler<'info>(
+    ctx: Context<'_, '_, '_, 'info, DepositAndMint<'info>>,
+    assets: u64,
+    min_shares: u64,
+) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
     let fee = ctx.accounts.vault.get_deposit_fee(assets)?;
@@ -194,8 +207,9 @@ pub fn handler<'info>(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64
     let is_deposit_hook_present = ctx.accounts.vault.deposit_hook_type().is_some();
 
     if is_deposit_hook_present {
+        let remaining = ctx.remaining_accounts;
         // Delegate
-        ctx.accounts.deposit_hook()?;
+        ctx.accounts.deposit_hook(remaining)?;
         // Remove delegation
     }
 

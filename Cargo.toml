@@ -18,6 +18,7 @@ sha2 = "0.10"
 # Pin blake3 to fix edition error
 blake3 = "=1.5.5"
 test-case = "3.3.1"
+solana-instruction = "2.0"
 spl-discriminator = "0.4.0"
 spl-tlv-account-resolution = "0.10.0"
 solana-account-info = "2.0"

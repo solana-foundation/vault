@@ -41,7 +41,7 @@ pub fn deposit_hook(
     let data = VaultStandardInstruction::DepositHook.pack();
 
     let accounts = vec![
-        AccountMeta::new_readonly(*signer, true),
+        AccountMeta::new(*signer, true),
         AccountMeta::new_readonly(*mint, false),
         AccountMeta::new_readonly(*extra_meta_accounts, false),
         AccountMeta::new_readonly(*protocol, false),

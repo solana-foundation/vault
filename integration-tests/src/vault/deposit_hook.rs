@@ -6,14 +6,11 @@ use dummy_client::{
 use hook_client::HOOK_PROGRAM_ID;
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, msg, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
+    account::ReadableAccount, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
     signer::Signer, transaction::Transaction,
 };
 use spl_token::state::Account as TokenAccount;
-use vault_client::{
-    sdk::{program_id, IntoSdkInstruction},
-    DepositBuilder, VaultConfig, VaultExtension,
-};
+use vault_client::{sdk::program_id, DepositBuilder, VaultConfig, VaultExtension};
 
 use crate::vault::helper_functions::{
     create_ata, create_mint, create_vault, get_vault_asset_balance, helper_mint_to,
@@ -171,7 +168,7 @@ fn test_deposit_with_hook() {
         ],
         &program_id(),
     );
-    let ix = vault_client::sdk::IntoSdkInstruction::into_sdk_instruction(
+    let mut ix = vault_client::sdk::IntoSdkInstruction::into_sdk_instruction(
         DepositBuilder::new()
             .user(user.pubkey())
             .asset_mint(asset_mint.pubkey())
@@ -190,6 +187,12 @@ fn test_deposit_with_hook() {
             .min_shares(0)
             .instruction(),
     );
+    // dummy_vault_pubkey is resolved from the extra_metas TLV data by add_to_cpi_instruction.
+    // It must be forwarded through the vault → hook → protocol CPI chain as a remaining account.
+    ix.accounts.push(solana_sdk::instruction::AccountMeta::new(
+        dummy_vault_pubkey,
+        false,
+    ));
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
@@ -221,5 +224,4 @@ fn test_deposit_with_hook() {
     // Verify reserve received assets
     let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
     assert_eq!(vault_asset_balance, deposit_amount);
-    msg!("Logs {:?}", result.unwrap().logs)
 }

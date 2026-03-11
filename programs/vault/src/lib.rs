@@ -56,7 +56,11 @@ pub mod vault {
     /// # Arguments
     /// * `assets` - The amount of asset tokens to deposit into the vault
     /// * `min_shares` - Minimum number of shares the user must receive (slippage check)
-    pub fn deposit(ctx: Context<DepositAndMint>, assets: u64, min_shares: u64) -> Result<()> {
+    pub fn deposit<'info>(
+        ctx: Context<'_, '_, '_, 'info, DepositAndMint<'info>>,
+        assets: u64,
+        min_shares: u64,
+    ) -> Result<()> {
         instructions::deposit::handler(ctx, assets, min_shares)
     }
 
