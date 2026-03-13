@@ -25,7 +25,7 @@ impl VaultStandardInstruction {
 
     pub fn pack(&self) -> Vec<u8> {
         match self {
-            Self::DepositHook => DepositHookInstruction::SPL_DISCRIMINATOR_SLICE.to_vec(),
+            Self::DepositHook => vec![242u8, 35, 198, 137, 82, 225, 242, 182],
         }
     }
 }
@@ -53,7 +53,8 @@ pub fn deposit_hook_permissionless(
     signer: &Pubkey,
     share_mint: &Pubkey,
 ) -> Instruction {
-    let data = VaultStandardInstruction::DepositHook.pack();
+    let mut data = VaultStandardInstruction::DepositHook.pack();
+    data.extend_from_slice(&0u64.to_le_bytes());
     let accounts = vec![
         AccountMeta::new_readonly(*signer, false),
         AccountMeta::new_readonly(*share_mint, false),

@@ -30,6 +30,7 @@ impl VaultStandardInstruction {
         }
     }
 }
+
 pub fn deposit_hook(
     program_id: &Pubkey,
     signer: &Pubkey,
