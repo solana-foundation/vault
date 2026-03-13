@@ -5,53 +5,57 @@
 //! <https://github.com/codama-idl/codama>
 //!
 
-use crate::generated::types::FeeType;
 use borsh::BorshSerialize;
 use borsh::BorshDeserialize;
 
-pub const INITIALIZE_WITHDRAWAL_FEES_DISCRIMINATOR: [u8; 8] = [131, 139, 95, 14, 6, 64, 178, 232];
+pub const ADD_ASSOCIATED_PROTOCOL_DISCRIMINATOR: [u8; 8] = [145, 129, 114, 136, 114, 32, 27, 223];
 
 /// Accounts.
 #[derive(Debug)]
-pub struct InitializeWithdrawalFees {
+pub struct AddAssociatedProtocol {
       
               
           pub authority: solana_pubkey::Pubkey,
           
               
-          pub share_mint: solana_pubkey::Pubkey,
+          pub vault: solana_pubkey::Pubkey,
           
               
-          pub vault: solana_pubkey::Pubkey,
+          pub vault_associated_protocols: solana_pubkey::Pubkey,
+          
+              
+          pub protocol: solana_pubkey::Pubkey,
       }
 
-impl InitializeWithdrawalFees {
-  pub fn instruction(&self, args: InitializeWithdrawalFeesInstructionArgs) -> solana_instruction::Instruction {
-    self.instruction_with_remaining_accounts(args, &[])
+impl AddAssociatedProtocol {
+  pub fn instruction(&self) -> solana_instruction::Instruction {
+    self.instruction_with_remaining_accounts(&[])
   }
   #[allow(clippy::arithmetic_side_effects)]
   #[allow(clippy::vec_init_then_push)]
-  pub fn instruction_with_remaining_accounts(&self, args: InitializeWithdrawalFeesInstructionArgs, remaining_accounts: &[solana_instruction::AccountMeta]) -> solana_instruction::Instruction {
-    let mut accounts = Vec::with_capacity(3+ remaining_accounts.len());
-                            accounts.push(solana_instruction::AccountMeta::new_readonly(
+  pub fn instruction_with_remaining_accounts(&self, remaining_accounts: &[solana_instruction::AccountMeta]) -> solana_instruction::Instruction {
+    let mut accounts = Vec::with_capacity(4+ remaining_accounts.len());
+                            accounts.push(solana_instruction::AccountMeta::new(
             self.authority,
             true
           ));
                                           accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.share_mint,
-            false
-          ));
-                                          accounts.push(solana_instruction::AccountMeta::new(
             self.vault,
             false
           ));
+                                          accounts.push(solana_instruction::AccountMeta::new(
+            self.vault_associated_protocols,
+            false
+          ));
+                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.protocol,
+            false
+          ));
                       accounts.extend_from_slice(remaining_accounts);
-    let mut data = InitializeWithdrawalFeesInstructionData::new().try_to_vec().unwrap();
-          let mut args = args.try_to_vec().unwrap();
-      data.append(&mut args);
+    let data = AddAssociatedProtocolInstructionData::new().try_to_vec().unwrap();
     
     solana_instruction::Instruction {
-      program_id: crate::VAULT_ID,
+      program_id: crate::HOOK_PROGRAM_ID,
       accounts,
       data,
     }
@@ -60,15 +64,15 @@ impl InitializeWithdrawalFees {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
- pub struct InitializeWithdrawalFeesInstructionData {
+ pub struct AddAssociatedProtocolInstructionData {
             discriminator: [u8; 8],
-            }
+      }
 
-impl InitializeWithdrawalFeesInstructionData {
+impl AddAssociatedProtocolInstructionData {
   pub fn new() -> Self {
     Self {
-                        discriminator: [131, 139, 95, 14, 6, 64, 178, 232],
-                                }
+                        discriminator: [145, 129, 114, 136, 114, 32, 27, 223],
+                  }
   }
 
     pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error> {
@@ -76,42 +80,32 @@ impl InitializeWithdrawalFeesInstructionData {
   }
   }
 
-impl Default for InitializeWithdrawalFeesInstructionData {
+impl Default for AddAssociatedProtocolInstructionData {
   fn default() -> Self {
     Self::new()
   }
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
- pub struct InitializeWithdrawalFeesInstructionArgs {
-                  pub withdrawal_fee: FeeType,
-      }
-
-impl InitializeWithdrawalFeesInstructionArgs {
-  pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error> {
-    borsh::to_vec(self)
-  }
-}
 
 
-/// Instruction builder for `InitializeWithdrawalFees`.
+/// Instruction builder for `AddAssociatedProtocol`.
 ///
 /// ### Accounts:
 ///
-                ///   0. `[signer]` authority
-          ///   1. `[]` share_mint
-                ///   2. `[writable]` vault
+                      ///   0. `[writable, signer]` authority
+          ///   1. `[]` vault
+                ///   2. `[writable]` vault_associated_protocols
+          ///   3. `[]` protocol
 #[derive(Clone, Debug, Default)]
-pub struct InitializeWithdrawalFeesBuilder {
+pub struct AddAssociatedProtocolBuilder {
             authority: Option<solana_pubkey::Pubkey>,
-                share_mint: Option<solana_pubkey::Pubkey>,
                 vault: Option<solana_pubkey::Pubkey>,
-                        withdrawal_fee: Option<FeeType>,
-        __remaining_accounts: Vec<solana_instruction::AccountMeta>,
+                vault_associated_protocols: Option<solana_pubkey::Pubkey>,
+                protocol: Option<solana_pubkey::Pubkey>,
+                __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
-impl InitializeWithdrawalFeesBuilder {
+impl AddAssociatedProtocolBuilder {
   pub fn new() -> Self {
     Self::default()
   }
@@ -121,21 +115,21 @@ impl InitializeWithdrawalFeesBuilder {
                     self
     }
             #[inline(always)]
-    pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
-                        self.share_mint = Some(share_mint);
-                    self
-    }
-            #[inline(always)]
     pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
                         self.vault = Some(vault);
                     self
     }
-                    #[inline(always)]
-      pub fn withdrawal_fee(&mut self, withdrawal_fee: FeeType) -> &mut Self {
-        self.withdrawal_fee = Some(withdrawal_fee);
-        self
-      }
-        /// Add an additional account to the instruction.
+            #[inline(always)]
+    pub fn vault_associated_protocols(&mut self, vault_associated_protocols: solana_pubkey::Pubkey) -> &mut Self {
+                        self.vault_associated_protocols = Some(vault_associated_protocols);
+                    self
+    }
+            #[inline(always)]
+    pub fn protocol(&mut self, protocol: solana_pubkey::Pubkey) -> &mut Self {
+                        self.protocol = Some(protocol);
+                    self
+    }
+            /// Add an additional account to the instruction.
   #[inline(always)]
   pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
     self.__remaining_accounts.push(account);
@@ -149,34 +143,35 @@ impl InitializeWithdrawalFeesBuilder {
   }
   #[allow(clippy::clone_on_copy)]
   pub fn instruction(&self) -> solana_instruction::Instruction {
-    let accounts = InitializeWithdrawalFees {
+    let accounts = AddAssociatedProtocol {
                               authority: self.authority.expect("authority is not set"),
-                                        share_mint: self.share_mint.expect("share_mint is not set"),
                                         vault: self.vault.expect("vault is not set"),
+                                        vault_associated_protocols: self.vault_associated_protocols.expect("vault_associated_protocols is not set"),
+                                        protocol: self.protocol.expect("protocol is not set"),
                       };
-          let args = InitializeWithdrawalFeesInstructionArgs {
-                                                              withdrawal_fee: self.withdrawal_fee.clone().expect("withdrawal_fee is not set"),
-                                    };
     
-    accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
+    accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
   }
 }
 
-  /// `initialize_withdrawal_fees` CPI accounts.
-  pub struct InitializeWithdrawalFeesCpiAccounts<'a, 'b> {
+  /// `add_associated_protocol` CPI accounts.
+  pub struct AddAssociatedProtocolCpiAccounts<'a, 'b> {
           
                     
               pub authority: &'b solana_account_info::AccountInfo<'a>,
                 
                     
-              pub share_mint: &'b solana_account_info::AccountInfo<'a>,
+              pub vault: &'b solana_account_info::AccountInfo<'a>,
                 
                     
-              pub vault: &'b solana_account_info::AccountInfo<'a>,
+              pub vault_associated_protocols: &'b solana_account_info::AccountInfo<'a>,
+                
+                    
+              pub protocol: &'b solana_account_info::AccountInfo<'a>,
             }
 
-/// `initialize_withdrawal_fees` CPI instruction.
-pub struct InitializeWithdrawalFeesCpi<'a, 'b> {
+/// `add_associated_protocol` CPI instruction.
+pub struct AddAssociatedProtocolCpi<'a, 'b> {
   /// The program to invoke.
   pub __program: &'b solana_account_info::AccountInfo<'a>,
       
@@ -184,27 +179,27 @@ pub struct InitializeWithdrawalFeesCpi<'a, 'b> {
           pub authority: &'b solana_account_info::AccountInfo<'a>,
           
               
-          pub share_mint: &'b solana_account_info::AccountInfo<'a>,
+          pub vault: &'b solana_account_info::AccountInfo<'a>,
           
               
-          pub vault: &'b solana_account_info::AccountInfo<'a>,
-            /// The arguments for the instruction.
-    pub __args: InitializeWithdrawalFeesInstructionArgs,
-  }
+          pub vault_associated_protocols: &'b solana_account_info::AccountInfo<'a>,
+          
+              
+          pub protocol: &'b solana_account_info::AccountInfo<'a>,
+        }
 
-impl<'a, 'b> InitializeWithdrawalFeesCpi<'a, 'b> {
+impl<'a, 'b> AddAssociatedProtocolCpi<'a, 'b> {
   pub fn new(
     program: &'b solana_account_info::AccountInfo<'a>,
-          accounts: InitializeWithdrawalFeesCpiAccounts<'a, 'b>,
-              args: InitializeWithdrawalFeesInstructionArgs,
-      ) -> Self {
+          accounts: AddAssociatedProtocolCpiAccounts<'a, 'b>,
+          ) -> Self {
     Self {
       __program: program,
               authority: accounts.authority,
-              share_mint: accounts.share_mint,
               vault: accounts.vault,
-                    __args: args,
-          }
+              vault_associated_protocols: accounts.vault_associated_protocols,
+              protocol: accounts.protocol,
+                }
   }
   #[inline(always)]
   pub fn invoke(&self) -> solana_program_error::ProgramResult {
@@ -226,17 +221,21 @@ impl<'a, 'b> InitializeWithdrawalFeesCpi<'a, 'b> {
     signers_seeds: &[&[&[u8]]],
     remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)]
   ) -> solana_program_error::ProgramResult {
-    let mut accounts = Vec::with_capacity(3+ remaining_accounts.len());
-                            accounts.push(solana_instruction::AccountMeta::new_readonly(
+    let mut accounts = Vec::with_capacity(4+ remaining_accounts.len());
+                            accounts.push(solana_instruction::AccountMeta::new(
             *self.authority.key,
             true
           ));
                                           accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.share_mint.key,
+            *self.vault.key,
             false
           ));
                                           accounts.push(solana_instruction::AccountMeta::new(
-            *self.vault.key,
+            *self.vault_associated_protocols.key,
+            false
+          ));
+                                          accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.protocol.key,
             false
           ));
                       remaining_accounts.iter().for_each(|remaining_account| {
@@ -246,20 +245,19 @@ impl<'a, 'b> InitializeWithdrawalFeesCpi<'a, 'b> {
           is_writable: remaining_account.2,
       })
     });
-    let mut data = InitializeWithdrawalFeesInstructionData::new().try_to_vec().unwrap();
-          let mut args = self.__args.try_to_vec().unwrap();
-      data.append(&mut args);
+    let data = AddAssociatedProtocolInstructionData::new().try_to_vec().unwrap();
     
     let instruction = solana_instruction::Instruction {
-      program_id: crate::VAULT_ID,
+      program_id: crate::HOOK_PROGRAM_ID,
       accounts,
       data,
     };
-    let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
+    let mut account_infos = Vec::with_capacity(5 + remaining_accounts.len());
     account_infos.push(self.__program.clone());
                   account_infos.push(self.authority.clone());
-                        account_infos.push(self.share_mint.clone());
                         account_infos.push(self.vault.clone());
+                        account_infos.push(self.vault_associated_protocols.clone());
+                        account_infos.push(self.protocol.clone());
               remaining_accounts.iter().for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
 
     if signers_seeds.is_empty() {
@@ -270,27 +268,28 @@ impl<'a, 'b> InitializeWithdrawalFeesCpi<'a, 'b> {
   }
 }
 
-/// Instruction builder for `InitializeWithdrawalFees` via CPI.
+/// Instruction builder for `AddAssociatedProtocol` via CPI.
 ///
 /// ### Accounts:
 ///
-                ///   0. `[signer]` authority
-          ///   1. `[]` share_mint
-                ///   2. `[writable]` vault
+                      ///   0. `[writable, signer]` authority
+          ///   1. `[]` vault
+                ///   2. `[writable]` vault_associated_protocols
+          ///   3. `[]` protocol
 #[derive(Clone, Debug)]
-pub struct InitializeWithdrawalFeesCpiBuilder<'a, 'b> {
-  instruction: Box<InitializeWithdrawalFeesCpiBuilderInstruction<'a, 'b>>,
+pub struct AddAssociatedProtocolCpiBuilder<'a, 'b> {
+  instruction: Box<AddAssociatedProtocolCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> InitializeWithdrawalFeesCpiBuilder<'a, 'b> {
+impl<'a, 'b> AddAssociatedProtocolCpiBuilder<'a, 'b> {
   pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
-    let instruction = Box::new(InitializeWithdrawalFeesCpiBuilderInstruction {
+    let instruction = Box::new(AddAssociatedProtocolCpiBuilderInstruction {
       __program: program,
               authority: None,
-              share_mint: None,
               vault: None,
-                                            withdrawal_fee: None,
-                    __remaining_accounts: Vec::new(),
+              vault_associated_protocols: None,
+              protocol: None,
+                                __remaining_accounts: Vec::new(),
     });
     Self { instruction }
   }
@@ -300,21 +299,21 @@ impl<'a, 'b> InitializeWithdrawalFeesCpiBuilder<'a, 'b> {
                     self
     }
       #[inline(always)]
-    pub fn share_mint(&mut self, share_mint: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-                        self.instruction.share_mint = Some(share_mint);
-                    self
-    }
-      #[inline(always)]
     pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
                         self.instruction.vault = Some(vault);
                     self
     }
-                    #[inline(always)]
-      pub fn withdrawal_fee(&mut self, withdrawal_fee: FeeType) -> &mut Self {
-        self.instruction.withdrawal_fee = Some(withdrawal_fee);
-        self
-      }
-        /// Add an additional account to the instruction.
+      #[inline(always)]
+    pub fn vault_associated_protocols(&mut self, vault_associated_protocols: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.vault_associated_protocols = Some(vault_associated_protocols);
+                    self
+    }
+      #[inline(always)]
+    pub fn protocol(&mut self, protocol: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+                        self.instruction.protocol = Some(protocol);
+                    self
+    }
+            /// Add an additional account to the instruction.
   #[inline(always)]
   pub fn add_remaining_account(&mut self, account: &'b solana_account_info::AccountInfo<'a>, is_writable: bool, is_signer: bool) -> &mut Self {
     self.instruction.__remaining_accounts.push((account, is_writable, is_signer));
@@ -336,31 +335,29 @@ impl<'a, 'b> InitializeWithdrawalFeesCpiBuilder<'a, 'b> {
   #[allow(clippy::clone_on_copy)]
   #[allow(clippy::vec_init_then_push)]
   pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
-          let args = InitializeWithdrawalFeesInstructionArgs {
-                                                              withdrawal_fee: self.instruction.withdrawal_fee.clone().expect("withdrawal_fee is not set"),
-                                    };
-        let instruction = InitializeWithdrawalFeesCpi {
+        let instruction = AddAssociatedProtocolCpi {
         __program: self.instruction.__program,
                   
           authority: self.instruction.authority.expect("authority is not set"),
                   
-          share_mint: self.instruction.share_mint.expect("share_mint is not set"),
-                  
           vault: self.instruction.vault.expect("vault is not set"),
-                          __args: args,
-            };
+                  
+          vault_associated_protocols: self.instruction.vault_associated_protocols.expect("vault_associated_protocols is not set"),
+                  
+          protocol: self.instruction.protocol.expect("protocol is not set"),
+                    };
     instruction.invoke_signed_with_remaining_accounts(signers_seeds, &self.instruction.__remaining_accounts)
   }
 }
 
 #[derive(Clone, Debug)]
-struct InitializeWithdrawalFeesCpiBuilderInstruction<'a, 'b> {
+struct AddAssociatedProtocolCpiBuilderInstruction<'a, 'b> {
   __program: &'b solana_account_info::AccountInfo<'a>,
             authority: Option<&'b solana_account_info::AccountInfo<'a>>,
-                share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
                 vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-                        withdrawal_fee: Option<FeeType>,
-        /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
+                vault_associated_protocols: Option<&'b solana_account_info::AccountInfo<'a>>,
+                protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
+                /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
   __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }
 

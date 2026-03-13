@@ -3,7 +3,10 @@ use dummy_client::{
     sdk::{program_id as dummy_program_id, IntoSdkInstruction as DummyIntoSdkInstruction},
     CreateVaultBuilder as DummyCreateVaultBuilder,
 };
-use hook_client::HOOK_PROGRAM_ID;
+use hook_client::{
+    sdk::program_id as hook_program_id, AddAssociatedProtocolBuilder,
+    InitVaultAssociatedProtocolsBuilder, HOOK_PROGRAM_ID,
+};
 use litesvm::LiteSVM;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
@@ -134,6 +137,49 @@ fn test_deposit_with_hook() {
         blockhash,
     );
     svm.send_transaction(tx).expect("dummy create vault failed");
+
+    // Derive vault associated protocols PDA
+    let (vault_associated_protocols_pubkey, _) = Pubkey::find_program_address(
+        &[b"vault_associated_protocols", vault_pubkey.as_ref()],
+        &hook_program_id(),
+    );
+
+    // Initialize vault associated protocols
+    let init_vap_ix = hook_client::sdk::IntoSdkInstruction::into_sdk_instruction(
+        InitVaultAssociatedProtocolsBuilder::new()
+            .authority(authority.pubkey())
+            .vault(vault_pubkey)
+            .vault_associated_protocols(vault_associated_protocols_pubkey)
+            .instruction(),
+    );
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[init_vap_ix],
+        Some(&authority.pubkey()),
+        &[&authority],
+        blockhash,
+    );
+    svm.send_transaction(tx)
+        .expect("init vault associated protocols failed");
+
+    // Add dummy program as associated protocol
+    let add_protocol_ix = hook_client::sdk::IntoSdkInstruction::into_sdk_instruction(
+        AddAssociatedProtocolBuilder::new()
+            .authority(authority.pubkey())
+            .vault(vault_pubkey)
+            .vault_associated_protocols(vault_associated_protocols_pubkey)
+            .protocol(dummy_program_id())
+            .instruction(),
+    );
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[add_protocol_ix],
+        Some(&authority.pubkey()),
+        &[&authority],
+        blockhash,
+    );
+    svm.send_transaction(tx)
+        .expect("add associated protocol failed");
 
     // Set up user accounts
     let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);

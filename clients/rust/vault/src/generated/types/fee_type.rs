@@ -3,8 +3,10 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshSerialize;
+use borsh::BorshDeserialize;
 
 /// The fee types:
 /// FixedAmount: a fixed fee is applied (ex 0.1 asset)
@@ -12,6 +14,12 @@ use borsh::{BorshDeserialize, BorshSerialize};
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FeeType {
-    FixedAmount { amount: u64 },
-    Percentage { bps: u16 },
+FixedAmount {
+amount: u64,
+},
+Percentage {
+bps: u16,
+},
 }
+
+

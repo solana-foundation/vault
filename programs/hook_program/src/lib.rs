@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+pub mod errors;
 pub mod instructions;
 pub mod state;
 
@@ -18,5 +19,23 @@ pub mod hook_program {
         ctx: Context<'_, '_, '_, 'info, DepositHook<'info>>,
     ) -> Result<()> {
         instructions::deposit_hook::handler(ctx)
+    }
+
+    pub fn get_nav<'info>(ctx: Context<'_, '_, 'info, 'info, GetNav<'info>>) -> Result<()> {
+        instructions::get_nav::handler(ctx)
+    }
+
+    pub fn init_vault_associated_protocols(
+        ctx: Context<InitVaultAssociatedProtocols>,
+    ) -> Result<()> {
+        instructions::init_vault_associated_protocols::handler(ctx)
+    }
+
+    pub fn add_associated_protocol(ctx: Context<AddAssociatedProtocol>) -> Result<()> {
+        instructions::add_associated_protocol::handler(ctx)
+    }
+
+    pub fn remove_associated_protocol(ctx: Context<RemoveAssociatedProtocol>) -> Result<()> {
+        instructions::remove_associated_protocol::handler(ctx)
     }
 }

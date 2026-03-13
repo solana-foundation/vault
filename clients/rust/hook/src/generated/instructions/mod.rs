@@ -3,7 +3,17 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
-pub(crate) mod r#execute_deposit;
+  pub(crate) mod r#add_associated_protocol;
+  pub(crate) mod r#execute_deposit;
+  pub(crate) mod r#get_nav;
+  pub(crate) mod r#init_vault_associated_protocols;
+  pub(crate) mod r#remove_associated_protocol;
 
-pub use self::r#execute_deposit::*;
+  pub use self::r#add_associated_protocol::*;
+  pub use self::r#execute_deposit::*;
+  pub use self::r#get_nav::*;
+  pub use self::r#init_vault_associated_protocols::*;
+  pub use self::r#remove_associated_protocol::*;
+
