@@ -3,9 +3,7 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
-//!
 
-  pub(crate) mod r#vault_associated_protocols;
+pub(crate) mod r#vault_associated_protocols;
 
-  pub use self::r#vault_associated_protocols::*;
-
+pub use self::r#vault_associated_protocols::*;
