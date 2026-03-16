@@ -1,12 +1,15 @@
-use anchor_lang::{prelude::*, solana_program::program::set_return_data};
+use anchor_lang::prelude::*;
 
 use crate::state::{
-    ProtocolDeposits, VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS, VAULT_PROTOCOL_DEPOSIT,
+    NavReturnData, ProtocolDeposits, VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS,
+    VAULT_NAV_DATA, VAULT_PROTOCOL_DEPOSIT,
 };
 
 #[derive(Accounts)]
-pub struct GetNav<'info> {
-    /// CHECK: This is vault
+pub struct UpdateNavData<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    /// CHECK: This is the vault
     pub vault: AccountInfo<'info>,
 
     #[account(
@@ -14,9 +17,19 @@ pub struct GetNav<'info> {
         bump
     )]
     pub associated_protocols_info: Account<'info, VaultAssociatedProtocols>,
+
+    #[account(
+        init_if_needed,
+        payer = payer,
+        space = 8 + NavReturnData::INIT_SPACE,
+        seeds = [VAULT_NAV_DATA, vault.key().as_ref()],
+        bump
+    )]
+    pub nav_return_data: Account<'info, NavReturnData>,
+    pub system_program: Program<'info, System>,
 }
 
-pub fn handler<'info>(ctx: Context<'_, '_, 'info, 'info, GetNav<'info>>) -> Result<()> {
+pub fn handler<'info>(ctx: Context<'_, '_, 'info, 'info, UpdateNavData<'info>>) -> Result<()> {
     let vault_key = ctx.accounts.vault.key();
     let protocols = &ctx.accounts.associated_protocols_info.protocols;
     let program_id = ctx.program_id;
@@ -45,7 +58,8 @@ pub fn handler<'info>(ctx: Context<'_, '_, 'info, 'info, GetNav<'info>>) -> Resu
             .checked_add(deposit.amount)
             .ok_or_else(|| error!(ErrorCode::AccountDidNotDeserialize))?;
     }
-    set_return_data(&total.to_be_bytes());
 
+    ctx.accounts.nav_return_data.nav = total;
+    ctx.accounts.nav_return_data.update_timestamp = Clock::get()?.unix_timestamp;
     Ok(())
 }

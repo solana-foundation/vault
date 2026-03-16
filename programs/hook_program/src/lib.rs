@@ -21,8 +21,14 @@ pub mod hook_program {
         instructions::deposit_hook::handler(ctx)
     }
 
-    pub fn get_nav<'info>(ctx: Context<'_, '_, 'info, 'info, GetNav<'info>>) -> Result<()> {
-        instructions::get_nav::handler(ctx)
+    pub fn get_nav<'info>(ctx: Context<GetNavData>) -> Result<()> {
+        instructions::get_nav_data::handler(ctx)
+    }
+
+    pub fn update_nav<'info>(
+        ctx: Context<'_, '_, 'info, 'info, UpdateNavData<'info>>,
+    ) -> Result<()> {
+        instructions::update_nav_data::handler(ctx)
     }
 
     pub fn init_vault_associated_protocols(
