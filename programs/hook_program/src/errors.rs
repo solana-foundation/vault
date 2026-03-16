@@ -8,4 +8,6 @@ pub enum HookProgramError {
     ProtocolNotFound,
     #[msg("Maximum number of associated protocols reached")]
     MaxProtocolsReached,
+    #[msg("update_nav must be called before get_nav in the same transaction")]
+    UpdateNavNotCalledBeforeGetNav,
 }

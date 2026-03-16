@@ -1,4 +1,10 @@
-use anchor_lang::{prelude::*, solana_program::program::invoke_signed};
+use anchor_lang::{
+    prelude::*,
+    solana_program::{
+        instruction::Instruction,
+        program::{get_return_data, invoke_signed},
+    },
+};
 use anchor_spl::{
     token::spl_token,
     token_2022::spl_token_2022::{
@@ -12,7 +18,7 @@ use crate::{
     error::VaultProgramError,
     state::{
         deposit_hook, Rounding, VaultConfig, DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED,
-        MAX_BPS, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
+        GET_NAV_DISCRIMINATOR, MAX_BPS, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
     },
 };
 
@@ -74,12 +80,16 @@ pub struct DepositAndMint<'info> {
     )]
     pub extra_metas: Option<AccountInfo<'info>>,
     pub protocol: Option<AccountInfo<'info>>,
+    /// CHECK: NAV return data PDA from the hook program, required when a deposit hook is present
+    pub nav_return_data: Option<AccountInfo<'info>>,
 
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub share_token_program: Interface<'info, TokenInterface>,
     /// CHECK: This is the hook program ID
     pub hook_program: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
+    /// CHECK: Instructions sysvar, required when a deposit hook is present
+    pub instructions: Option<AccountInfo<'info>>,
 }
 
 impl<'info> DepositAndMint<'info> {
@@ -150,6 +160,58 @@ impl<'info> DepositAndMint<'info> {
             .div_ceil(MAX_BPS.into()))
     }
 
+    pub fn check_nav_freshness(&self) -> Result<()> {
+        let nav_account = self
+            .nav_return_data
+            .as_ref()
+            .ok_or(VaultProgramError::StaleVaultNav)?;
+
+        let ix_sysvar = self
+            .instructions
+            .as_ref()
+            .ok_or(VaultProgramError::StaleVaultNav)?;
+
+        let get_nav_ix = Instruction {
+            program_id: self.hook_program.key(),
+            accounts: vec![
+                AccountMeta::new_readonly(self.vault.key(), false),
+                AccountMeta::new_readonly(*nav_account.key, false),
+                AccountMeta::new_readonly(
+                    anchor_lang::solana_program::sysvar::instructions::ID,
+                    false,
+                ),
+            ],
+            data: GET_NAV_DISCRIMINATOR.to_vec(),
+        };
+
+        invoke_signed(
+            &get_nav_ix,
+            &[
+                self.hook_program.to_account_info(),
+                self.vault.to_account_info(),
+                nav_account.clone(),
+                ix_sysvar.clone(),
+            ],
+            &[],
+        )?;
+
+        let (_, return_data) = get_return_data().ok_or(VaultProgramError::StaleVaultNav)?;
+
+        let update_timestamp = i64::from_le_bytes(
+            return_data[16..24]
+                .try_into()
+                .map_err(|_| VaultProgramError::StaleVaultNav)?,
+        );
+
+        let current_time = Clock::get()?.unix_timestamp;
+        require!(
+            current_time.saturating_sub(update_timestamp) <= 60,
+            VaultProgramError::StaleVaultNav
+        );
+
+        Ok(())
+    }
+
     pub fn deposit_hook(&mut self, remaining_accounts: &[AccountInfo<'info>]) -> Result<()> {
         let extra_metas = &self.extra_metas.clone().unwrap();
         let protocol = &self.protocol.clone().unwrap();
@@ -207,6 +269,7 @@ pub fn handler<'info>(
     let is_deposit_hook_present = ctx.accounts.vault.deposit_hook_type().is_some();
 
     if is_deposit_hook_present {
+        ctx.accounts.check_nav_freshness()?;
         let remaining = ctx.remaining_accounts;
         // Delegate
         ctx.accounts.deposit_hook(remaining)?;

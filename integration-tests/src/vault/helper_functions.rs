@@ -154,6 +154,11 @@ pub fn deposit(
     min_shares: u64,
     asset_token_program: Pubkey,
     share_token_program: Pubkey,
+    hook_program: Pubkey,
+    protocol: Option<Pubkey>,
+    nav_return_data: Option<Pubkey>,
+    instructions: Option<Pubkey>,
+    extra_metas: Option<Pubkey>,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = DepositBuilder::new()
         .user(user.pubkey())
@@ -168,7 +173,11 @@ pub fn deposit(
         .min_shares(min_shares)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
-        .hook_program(system_program::id())
+        .hook_program(hook_program)
+        .protocol(protocol)
+        .nav_return_data(nav_return_data)
+        .instructions(instructions)
+        .extra_metas(extra_metas)
         .instruction()
         .into_sdk_instruction();
 

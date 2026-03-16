@@ -106,6 +106,11 @@ fn test_deposit_vault() {
         0, // no slippage protection set
         token::ID,
         token::ID,
+        hook_client::HOOK_PROGRAM_ID,
+        None,
+        None,
+        None,
+        None,
     );
 
     assert_eq!(result.is_ok(), true, "Unexpected result for test case");
@@ -264,6 +269,11 @@ fn test_deposit_vault_with_transfer_fees() {
         0, // no slippage protection set
         token_2022::ID,
         token::ID,
+        hook_client::HOOK_PROGRAM_ID,
+        None,
+        None,
+        None,
+        None,
     );
 
     assert_eq!(result.is_ok(), true, "Unexpected result for test case");
@@ -420,6 +430,11 @@ fn test_deposit_slippage_protection() {
         min_shares,
         token::ID,
         token::ID,
+        hook_client::HOOK_PROGRAM_ID,
+        None,
+        None,
+        None,
+        None,
     );
 
     assert_error_code(&result.unwrap_err(), 6013, "Slippage exceeded.");

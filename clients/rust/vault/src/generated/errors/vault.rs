@@ -66,6 +66,9 @@ pub enum VaultError {
     /// 6018 - The provided vault and mint mismatch.
     #[error("The provided vault and mint mismatch.")]
     VaultShareMintMismatch = 0x1782,
+    /// 6019 - The vault NAV is stale. Please update the NAV value before depositing.
+    #[error("The vault NAV is stale. Please update the NAV value before depositing.")]
+    StaleVaultNav = 0x1783,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {

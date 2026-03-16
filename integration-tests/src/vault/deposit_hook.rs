@@ -5,7 +5,7 @@ use dummy_client::{
 };
 use hook_client::{
     sdk::program_id as hook_program_id, AddAssociatedProtocolBuilder,
-    InitVaultAssociatedProtocolsBuilder, HOOK_PROGRAM_ID,
+    InitVaultAssociatedProtocolsBuilder, UpdateNavBuilder, HOOK_PROGRAM_ID,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
@@ -214,6 +214,21 @@ fn test_deposit_with_hook() {
         ],
         &program_id(),
     );
+
+    let (nav_return_data_pubkey, _) = Pubkey::find_program_address(
+        &[b"vault_nav_data", vault_pubkey.as_ref()],
+        &hook_program_id(),
+    );
+
+    let update_nav_ix = hook_client::sdk::IntoSdkInstruction::into_sdk_instruction(
+        UpdateNavBuilder::new()
+            .payer(user.pubkey())
+            .vault(vault_pubkey)
+            .associated_protocols_info(vault_associated_protocols_pubkey)
+            .nav_return_data(nav_return_data_pubkey)
+            .instruction(),
+    );
+
     let mut ix = vault_client::sdk::IntoSdkInstruction::into_sdk_instruction(
         DepositBuilder::new()
             .user(user.pubkey())
@@ -229,6 +244,8 @@ fn test_deposit_with_hook() {
             .share_token_program(token::ID)
             .hook_program(HOOK_PROGRAM_ID)
             .protocol(Some(dummy_program_id()))
+            .nav_return_data(Some(nav_return_data_pubkey))
+            .instructions(Some(solana_sdk::sysvar::instructions::ID))
             .assets(deposit_amount)
             .min_shares(0)
             .instruction(),
@@ -241,7 +258,12 @@ fn test_deposit_with_hook() {
     ));
 
     let blockhash = svm.latest_blockhash();
-    let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
+    let tx = Transaction::new_signed_with_payer(
+        &[update_nav_ix, ix],
+        Some(&user.pubkey()),
+        &[&user],
+        blockhash,
+    );
     let result = svm.send_transaction(tx);
 
     assert!(

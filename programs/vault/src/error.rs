@@ -58,4 +58,7 @@ pub enum VaultProgramError {
 
     #[msg("The provided vault and mint mismatch.")]
     VaultShareMintMismatch,
+
+    #[msg("The vault NAV is stale. Please update the NAV value before depositing.")]
+    StaleVaultNav,
 }

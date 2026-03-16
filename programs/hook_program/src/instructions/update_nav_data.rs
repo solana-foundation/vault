@@ -46,16 +46,16 @@ pub fn handler<'info>(ctx: Context<'_, '_, 'info, 'info, UpdateNavData<'info>>) 
             program_id,
         );
 
-        let deposit_account = ctx
+        let amount = ctx
             .remaining_accounts
             .iter()
             .find(|a| a.key() == pda)
-            .ok_or_else(|| error!(ErrorCode::AccountNotEnoughKeys))?;
-
-        let deposit: Account<ProtocolDeposits> = Account::try_from(deposit_account)?;
+            .and_then(|deposit_account| Account::<ProtocolDeposits>::try_from(deposit_account).ok())
+            .map(|deposit| deposit.amount)
+            .unwrap_or(0);
 
         total = total
-            .checked_add(deposit.amount)
+            .checked_add(amount)
             .ok_or_else(|| error!(ErrorCode::AccountDidNotDeserialize))?;
     }
 

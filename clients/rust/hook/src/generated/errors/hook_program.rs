@@ -18,6 +18,9 @@ pub enum HookProgramError {
     /// 6002 - Maximum number of associated protocols reached
     #[error("Maximum number of associated protocols reached")]
     MaxProtocolsReached = 0x1772,
+    /// 6003 - update_nav must be called before get_nav in the same transaction
+    #[error("update_nav must be called before get_nav in the same transaction")]
+    UpdateNavNotCalledBeforeGetNav = 0x1773,
 }
 
 impl From<HookProgramError> for solana_program_error::ProgramError {
