@@ -10,4 +10,6 @@ pub enum HookProgramError {
     MaxProtocolsReached,
     #[msg("update_nav must be called before get_nav in the same transaction")]
     UpdateNavNotCalledBeforeGetNav,
+    #[msg("The provided extra meta accounts pubkey does not match")]
+    InvalidAccountData,
 }

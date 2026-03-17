@@ -3,9 +3,12 @@ use anchor_spl::token_interface::Mint;
 use solana_instruction::Instruction;
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 
-use crate::state::{
-    deposit_hook_permissionless, get_deposit_hook_extra_account_metas_address,
-    DepositHookInstruction,
+use crate::{
+    errors::HookProgramError,
+    state::{
+        deposit_hook_permissionless, get_deposit_hook_extra_account_metas_address,
+        DepositHookInstruction,
+    },
 };
 
 #[derive(Accounts)]
@@ -53,6 +56,8 @@ impl<'info> DepositHook<'info> {
                 &validation_info.try_borrow_data()?,
                 additional_accounts,
             )?;
+        } else {
+            return Err(HookProgramError::InvalidAccountData.into());
         }
 
         cpi_account_infos.remove(2);

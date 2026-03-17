@@ -50,6 +50,10 @@ impl InitializeDepositExtraMetaAccounts<'_> {
 }
 
 pub fn handler<'info>(ctx: Context<InitializeDepositExtraMetaAccounts>) -> Result<()> {
+    require!(
+        ctx.accounts.vault.deposit_hook_type().is_some(),
+        VaultProgramError::HookExtensionNotInitialized
+    );
     ctx.accounts.create_extra_account_meta()
 }
 

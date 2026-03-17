@@ -61,4 +61,7 @@ pub enum VaultProgramError {
 
     #[msg("The vault NAV is stale. Please update the NAV value before depositing.")]
     StaleVaultNav,
+
+    #[msg("This instruction needs the hook extension to be initialized.")]
+    HookExtensionNotInitialized,
 }
