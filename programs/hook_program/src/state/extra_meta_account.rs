@@ -56,9 +56,9 @@ pub fn deposit_hook_permissionless(
     let mut data = VaultStandardInstruction::DepositHook.pack();
     data.extend_from_slice(&0u64.to_le_bytes());
     let accounts = vec![
-        AccountMeta::new_readonly(*signer, false),
+        AccountMeta::new(*signer, true),
         AccountMeta::new_readonly(*share_mint, false),
-        AccountMeta::new_readonly(*program_id, false),
+        AccountMeta::new(*program_id, false),
     ];
 
     Instruction {

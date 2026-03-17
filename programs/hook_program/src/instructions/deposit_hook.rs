@@ -55,34 +55,15 @@ impl<'info> DepositHook<'info> {
             )?;
         }
 
-        let protocol_vault = cpi_account_infos
-            .last()
-            .ok_or(ProgramError::InvalidAccountData)?
-            .clone();
-
-        let mut data = vec![242u8, 35, 198, 137, 82, 225, 242, 182];
-        data.extend_from_slice(&0u64.to_le_bytes());
-
-        let deposit_ix = Instruction {
-            program_id: self.protocol.key(),
-            accounts: vec![
-                AccountMeta::new(*self.signer.key, true),
-                AccountMeta::new_readonly(self.share_mint.key(), false),
-                AccountMeta::new(*protocol_vault.key, false),
-                AccountMeta::new_readonly(self.system_program.key(), false),
-            ],
-            data,
-        };
-
-        invoke(
-            &deposit_ix,
-            &[
-                self.signer.to_account_info(),
-                self.share_mint.to_account_info(),
-                protocol_vault,
-                self.system_program.to_account_info(),
-            ],
-        )?;
+        cpi_account_infos.remove(2);
+        cpi_account_infos.remove(2);
+        instruction.accounts.remove(2);
+        instruction.accounts.remove(2);
+        instruction
+            .accounts
+            .push(AccountMeta::new_readonly(self.system_program.key(), false));
+        cpi_account_infos.push(self.system_program.to_account_info());
+        invoke(&instruction, &cpi_account_infos)?;
         Ok(())
     }
 }
