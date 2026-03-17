@@ -21,6 +21,9 @@ pub enum HookProgramError {
     /// 6003 - update_nav must be called before get_nav in the same transaction
     #[error("update_nav must be called before get_nav in the same transaction")]
     UpdateNavNotCalledBeforeGetNav = 0x1773,
+    /// 6004 - The provided extra meta accounts pubkey does not match
+    #[error("The provided extra meta accounts pubkey does not match")]
+    InvalidAccountData = 0x1774,
 }
 
 impl From<HookProgramError> for solana_program_error::ProgramError {

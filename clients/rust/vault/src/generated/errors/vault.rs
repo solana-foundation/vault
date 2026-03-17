@@ -69,6 +69,9 @@ pub enum VaultError {
     /// 6019 - The vault NAV is stale. Please update the NAV value before depositing.
     #[error("The vault NAV is stale. Please update the NAV value before depositing.")]
     StaleVaultNav = 0x1783,
+    /// 6020 - This instruction needs the hook extension to be initialized.
+    #[error("This instruction needs the hook extension to be initialized.")]
+    HookExtensionNotInitialized = 0x1784,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {
