@@ -214,10 +214,10 @@ impl<'info> DepositAndMint<'info> {
         );
 
         let current_time = Clock::get()?.unix_timestamp;
-        require!(
-            current_time.saturating_sub(update_timestamp) <= 60,
-            VaultProgramError::StaleVaultNav
-        );
+        let nav_age = current_time
+            .checked_sub(update_timestamp)
+            .ok_or(VaultProgramError::ArithmeticError)?;
+        require!(nav_age <= 60, VaultProgramError::StaleVaultNav);
 
         Ok(())
     }
