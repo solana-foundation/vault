@@ -1,13 +1,12 @@
 use anchor_lang::{prelude::*, solana_program::program::invoke};
 use anchor_spl::token_interface::Mint;
-use solana_instruction::Instruction;
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 
 use crate::{
     errors::HookProgramError,
     state::{
         deposit_hook_permissionless, get_deposit_hook_extra_account_metas_address,
-        DepositHookInstruction,
+        DepositHookInstruction, VAULT_PROGRAM_ID,
     },
 };
 
@@ -74,9 +73,7 @@ impl<'info> DepositHook<'info> {
 }
 
 pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, DepositHook<'info>>) -> Result<()> {
-    ctx.accounts.invoke_deposit(
-        &pubkey!("ANXYYTDoEHooFjaN8M8pDHRj87d945Bj5QvAFGcpqakw"),
-        ctx.remaining_accounts,
-    )?;
+    ctx.accounts
+        .invoke_deposit(VAULT_PROGRAM_ID, ctx.remaining_accounts)?;
     Ok(())
 }
