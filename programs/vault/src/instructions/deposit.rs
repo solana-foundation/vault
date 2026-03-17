@@ -195,12 +195,22 @@ impl<'info> DepositAndMint<'info> {
             &[],
         )?;
 
-        let (_, return_data) = get_return_data().ok_or(VaultProgramError::StaleVaultNav)?;
+        let (return_program_id, return_data) =
+            get_return_data().ok_or(VaultProgramError::StaleVaultNav)?;
+        require_keys_eq!(
+            return_program_id,
+            self.hook_program.key(),
+            VaultProgramError::InvalidReturnedData
+        );
+        require!(
+            return_data.len() >= 24,
+            VaultProgramError::InvalidReturnedData
+        );
 
         let update_timestamp = i64::from_le_bytes(
             return_data[16..24]
                 .try_into()
-                .map_err(|_| VaultProgramError::StaleVaultNav)?,
+                .map_err(|_| VaultProgramError::InvalidReturnedData)?,
         );
 
         let current_time = Clock::get()?.unix_timestamp;

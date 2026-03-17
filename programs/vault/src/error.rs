@@ -65,6 +65,9 @@ pub enum VaultProgramError {
     #[msg("This instruction needs the hook extension to be initialized.")]
     HookExtensionNotInitialized,
 
-    #[msg("The provided optional account is empty")]
+    #[msg("The provided optional account is empty.")]
     OptionalAccountIsEmpty,
+
+    #[msg("The returned data is invalid.")]
+    InvalidReturnedData,
 }
