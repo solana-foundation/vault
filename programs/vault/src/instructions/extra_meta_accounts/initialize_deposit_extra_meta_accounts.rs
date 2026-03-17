@@ -43,8 +43,8 @@ impl InitializeDepositExtraMetaAccounts<'_> {
     pub fn create_extra_account_meta(&mut self) -> Result<()> {
         let extra_metas_account = &self.extra_metas;
         let metas = get_extra_metas();
-        let mut data = extra_metas_account.try_borrow_mut_data().unwrap();
-        ExtraAccountMetaList::init::<DepositHookInstruction>(&mut data, &metas?).unwrap();
+        let mut data = extra_metas_account.try_borrow_mut_data()?;
+        ExtraAccountMetaList::init::<DepositHookInstruction>(&mut data, &metas?)?;
         Ok(())
     }
 }

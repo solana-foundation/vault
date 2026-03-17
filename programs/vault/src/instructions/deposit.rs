@@ -213,8 +213,14 @@ impl<'info> DepositAndMint<'info> {
     }
 
     pub fn deposit_hook(&mut self, remaining_accounts: &[AccountInfo<'info>]) -> Result<()> {
-        let extra_metas = &self.extra_metas.clone().unwrap();
-        let protocol = &self.protocol.clone().unwrap();
+        let extra_metas = &self
+            .extra_metas
+            .clone()
+            .ok_or(VaultProgramError::OptionalAccountIsEmpty)?;
+        let protocol = &self
+            .protocol
+            .clone()
+            .ok_or(VaultProgramError::OptionalAccountIsEmpty)?;
         let share_mint = self.share_mint.key();
         let mut deposit_hook_ix = deposit_hook(
             &self.hook_program.key(),

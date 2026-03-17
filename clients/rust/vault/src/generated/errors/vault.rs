@@ -72,6 +72,9 @@ pub enum VaultError {
     /// 6020 - This instruction needs the hook extension to be initialized.
     #[error("This instruction needs the hook extension to be initialized.")]
     HookExtensionNotInitialized = 0x1784,
+    /// 6021 - The provided optional account is empty
+    #[error("The provided optional account is empty")]
+    OptionalAccountIsEmpty = 0x1785,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {
