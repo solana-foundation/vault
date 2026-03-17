@@ -1,14 +1,20 @@
 use anchor_lang::prelude::*;
+use vault::state::VaultConfig;
 
-use crate::state::{VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS};
+use crate::{
+    errors::HookProgramError,
+    state::{VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS},
+};
 
 #[derive(Accounts)]
 pub struct InitVaultAssociatedProtocols<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
-    /// CHECK: This is the vault
-    pub vault: AccountInfo<'info>,
+    #[account(
+        has_one = authority @ HookProgramError::UnauthorizedAuthority,
+    )]
+    pub vault: Account<'info, VaultConfig>,
 
     #[account(
         init,

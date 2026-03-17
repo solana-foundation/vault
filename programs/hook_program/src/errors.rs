@@ -12,4 +12,6 @@ pub enum HookProgramError {
     UpdateNavNotCalledBeforeGetNav,
     #[msg("The provided extra meta accounts pubkey does not match")]
     InvalidAccountData,
+    #[msg("Signer is not the vault authority")]
+    UnauthorizedAuthority,
 }

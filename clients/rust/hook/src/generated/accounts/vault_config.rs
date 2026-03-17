@@ -5,6 +5,8 @@
 //! <https://github.com/codama-idl/codama>
 //!
 
+use solana_pubkey::Pubkey;
+use crate::generated::types::VaultExtension;
 use borsh::BorshSerialize;
 use borsh::BorshDeserialize;
 
@@ -13,7 +15,31 @@ use borsh::BorshDeserialize;
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VaultConfig {
 pub discriminator: [u8; 8],
-pub amount_deposit: u64,
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub asset_mint_address: Pubkey,
+/// share mint address
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub share_mint_address: Pubkey,
+/// vault_token_account
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub vault_token_account: Pubkey,
+/// authority that can sign permissioned instructions
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub authority: Pubkey,
+/// initial price of shares in asset units (scaled by asset mint decimals)
+pub initial_price: u64,
+/// paused
+pub paused: bool,
+/// once a vault is initialized, no extensions can be added
+pub initialized: bool,
+/// max balance allowed in vault
+pub vault_asset_cap: u64,
+/// pubkey that is required to own the TokenAccount fees are sent to
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub fee_recipient: Pubkey,
+/// vault extensions
+pub extensions: Vec<VaultExtension>,
+pub reserve_bump: u8,
 pub bump: u8,
 }
 
@@ -21,7 +47,6 @@ pub bump: u8,
 pub const VAULT_CONFIG_DISCRIMINATOR: [u8; 8] = [99, 86, 43, 216, 184, 102, 119, 77];
 
 impl VaultConfig {
-      pub const LEN: usize = 17;
   
   
   
@@ -110,7 +135,7 @@ pub fn fetch_all_maybe_vault_config(
   #[cfg(feature = "anchor")]
   impl anchor_lang::Owner for VaultConfig {
       fn owner() -> Pubkey {
-        crate::DUMMY_PROTOCOL_ID
+        crate::HOOK_PROGRAM_ID
       }
   }
 

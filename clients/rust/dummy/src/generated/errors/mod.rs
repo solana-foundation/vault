@@ -3,7 +3,9 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
-pub(crate) mod dummy_protocol;
-
-pub use self::dummy_protocol::DummyProtocolError;
+      pub(crate) mod dummy_protocol;
+  
+      pub use self::dummy_protocol::DummyProtocolError;
+  

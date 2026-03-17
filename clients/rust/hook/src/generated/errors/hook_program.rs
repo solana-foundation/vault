@@ -3,6 +3,7 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
 use num_derive::FromPrimitive;
 use thiserror::Error;
@@ -24,6 +25,9 @@ pub enum HookProgramError {
     /// 6004 - The provided extra meta accounts pubkey does not match
     #[error("The provided extra meta accounts pubkey does not match")]
     InvalidAccountData = 0x1774,
+    /// 6005 - Signer is not the vault authority
+    #[error("Signer is not the vault authority")]
+    UnauthorizedAuthority = 0x1775,
 }
 
 impl From<HookProgramError> for solana_program_error::ProgramError {
@@ -31,3 +35,4 @@ impl From<HookProgramError> for solana_program_error::ProgramError {
         solana_program_error::ProgramError::Custom(e as u32)
     }
 }
+

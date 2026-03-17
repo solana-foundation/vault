@@ -1467,6 +1467,7 @@ dependencies = [
  "solana-instruction",
  "spl-discriminator",
  "spl-tlv-account-resolution 0.10.0",
+ "vault",
 ]
 
 [[package]]
