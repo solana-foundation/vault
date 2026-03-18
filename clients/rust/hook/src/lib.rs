@@ -1,6 +1,6 @@
 mod generated;
 
-pub use generated::{instructions::*, programs::*};
+pub use generated::{accounts::*, instructions::*, programs::*};
 
 // Re-export the underlying types for convenience
 pub use solana_pubkey::Pubkey;
