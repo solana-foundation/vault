@@ -160,7 +160,7 @@ impl<'info> DepositAndMint<'info> {
             .div_ceil(MAX_BPS.into()))
     }
 
-    pub fn check_nav_freshness(&self) -> Result<()> {
+    pub fn get_nav_value(&self) -> Result<u64> {
         let nav_account = self
             .nav_return_data
             .as_ref()
@@ -218,8 +218,13 @@ impl<'info> DepositAndMint<'info> {
             .checked_sub(update_timestamp)
             .ok_or(VaultProgramError::ArithmeticError)?;
         require!(nav_age <= 60, VaultProgramError::StaleVaultNav);
+        let nav = u64::from_le_bytes(
+            return_data[8..16]
+                .try_into()
+                .map_err(|_| VaultProgramError::InvalidReturnedData)?,
+        );
 
-        Ok(())
+        Ok(nav)
     }
 
     pub fn deposit_hook(&mut self, remaining_accounts: &[AccountInfo<'info>]) -> Result<()> {
@@ -283,13 +288,16 @@ pub fn handler<'info>(
     ctx.accounts.reserve.reload()?;
 
     let is_deposit_hook_present = ctx.accounts.vault.deposit_hook_type().is_some();
-
+    let mut reserve_balance = reserve_amount_before;
     if is_deposit_hook_present {
-        ctx.accounts.check_nav_freshness()?;
+        let nav = ctx.accounts.get_nav_value()?;
         let remaining = ctx.remaining_accounts;
         // Delegate
         ctx.accounts.deposit_hook(remaining)?;
         // Remove delegation
+        reserve_balance = reserve_balance
+            .checked_add(nav)
+            .ok_or(VaultProgramError::ArithmeticError)?;
     }
 
     let updated_reserve_amount = ctx.accounts.reserve.amount;
@@ -304,7 +312,7 @@ pub fn handler<'info>(
     );
 
     let shares = ctx.accounts.vault.get_shares_from_assets(
-        reserve_amount_before,
+        reserve_balance,
         ctx.accounts.share_mint.supply,
         actual_transferred_amount,
         Rounding::Down,
