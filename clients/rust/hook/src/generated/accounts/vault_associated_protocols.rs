@@ -3,78 +3,85 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
-//!
 
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_pubkey::Pubkey;
-use borsh::BorshSerialize;
-use borsh::BorshDeserialize;
-
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct VaultAssociatedProtocols {
-pub discriminator: [u8; 8],
-#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<Vec<serde_with::DisplayFromStr>>"))]
-pub protocols: Vec<Pubkey>,
-#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
-pub vault: Pubkey,
-pub bump: u8,
+    pub discriminator: [u8; 8],
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<Vec<serde_with::DisplayFromStr>>")
+    )]
+    pub protocols: Vec<Pubkey>,
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub vault: Pubkey,
+    pub bump: u8,
 }
-
 
 pub const VAULT_ASSOCIATED_PROTOCOLS_DISCRIMINATOR: [u8; 8] = [248, 247, 10, 11, 53, 98, 49, 178];
 
 impl VaultAssociatedProtocols {
-  
-  
-  
-  #[inline(always)]
-  pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
-    let mut data = data;
-    Self::deserialize(&mut data)
-  }
+    #[inline(always)]
+    pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
+        let mut data = data;
+        Self::deserialize(&mut data)
+    }
 }
 
 impl<'a> TryFrom<&solana_account_info::AccountInfo<'a>> for VaultAssociatedProtocols {
-  type Error = std::io::Error;
+    type Error = std::io::Error;
 
-  fn try_from(account_info: &solana_account_info::AccountInfo<'a>) -> Result<Self, Self::Error> {
-      let mut data: &[u8] = &(*account_info.data).borrow();
-      Self::deserialize(&mut data)
-  }
+    fn try_from(account_info: &solana_account_info::AccountInfo<'a>) -> Result<Self, Self::Error> {
+        let mut data: &[u8] = &(*account_info.data).borrow();
+        Self::deserialize(&mut data)
+    }
 }
 
 #[cfg(feature = "fetch")]
 pub fn fetch_vault_associated_protocols(
-  rpc: &solana_client::rpc_client::RpcClient,
-  address: &solana_pubkey::Pubkey,
+    rpc: &solana_client::rpc_client::RpcClient,
+    address: &solana_pubkey::Pubkey,
 ) -> Result<crate::shared::DecodedAccount<VaultAssociatedProtocols>, std::io::Error> {
-  let accounts = fetch_all_vault_associated_protocols(rpc, &[*address])?;
-  Ok(accounts[0].clone())
+    let accounts = fetch_all_vault_associated_protocols(rpc, &[*address])?;
+    Ok(accounts[0].clone())
 }
 
 #[cfg(feature = "fetch")]
 pub fn fetch_all_vault_associated_protocols(
-  rpc: &solana_client::rpc_client::RpcClient,
-  addresses: &[solana_pubkey::Pubkey],
+    rpc: &solana_client::rpc_client::RpcClient,
+    addresses: &[solana_pubkey::Pubkey],
 ) -> Result<Vec<crate::shared::DecodedAccount<VaultAssociatedProtocols>>, std::io::Error> {
-    let accounts = rpc.get_multiple_accounts(addresses)
-      .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
-    let mut decoded_accounts: Vec<crate::shared::DecodedAccount<VaultAssociatedProtocols>> = Vec::new();
+    let accounts = rpc
+        .get_multiple_accounts(addresses)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+    let mut decoded_accounts: Vec<crate::shared::DecodedAccount<VaultAssociatedProtocols>> =
+        Vec::new();
     for i in 0..addresses.len() {
-      let address = addresses[i];
-      let account = accounts[i].as_ref()
-        .ok_or(std::io::Error::new(std::io::ErrorKind::Other, format!("Account not found: {}", address)))?;
-      let data = VaultAssociatedProtocols::from_bytes(&account.data)?;
-      decoded_accounts.push(crate::shared::DecodedAccount { address, account: account.clone(), data });
+        let address = addresses[i];
+        let account = accounts[i].as_ref().ok_or(std::io::Error::new(
+            std::io::ErrorKind::Other,
+            format!("Account not found: {}", address),
+        ))?;
+        let data = VaultAssociatedProtocols::from_bytes(&account.data)?;
+        decoded_accounts.push(crate::shared::DecodedAccount {
+            address,
+            account: account.clone(),
+            data,
+        });
     }
     Ok(decoded_accounts)
 }
 
 #[cfg(feature = "fetch")]
 pub fn fetch_maybe_vault_associated_protocols(
-  rpc: &solana_client::rpc_client::RpcClient,
-  address: &solana_pubkey::Pubkey,
+    rpc: &solana_client::rpc_client::RpcClient,
+    address: &solana_pubkey::Pubkey,
 ) -> Result<crate::shared::MaybeAccount<VaultAssociatedProtocols>, std::io::Error> {
     let accounts = fetch_all_maybe_vault_associated_protocols(rpc, &[*address])?;
     Ok(accounts[0].clone())
@@ -82,47 +89,53 @@ pub fn fetch_maybe_vault_associated_protocols(
 
 #[cfg(feature = "fetch")]
 pub fn fetch_all_maybe_vault_associated_protocols(
-  rpc: &solana_client::rpc_client::RpcClient,
-  addresses: &[solana_pubkey::Pubkey],
+    rpc: &solana_client::rpc_client::RpcClient,
+    addresses: &[solana_pubkey::Pubkey],
 ) -> Result<Vec<crate::shared::MaybeAccount<VaultAssociatedProtocols>>, std::io::Error> {
-    let accounts = rpc.get_multiple_accounts(addresses)
-      .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
-    let mut decoded_accounts: Vec<crate::shared::MaybeAccount<VaultAssociatedProtocols>> = Vec::new();
+    let accounts = rpc
+        .get_multiple_accounts(addresses)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+    let mut decoded_accounts: Vec<crate::shared::MaybeAccount<VaultAssociatedProtocols>> =
+        Vec::new();
     for i in 0..addresses.len() {
-      let address = addresses[i];
-      if let Some(account) = accounts[i].as_ref() {
-        let data = VaultAssociatedProtocols::from_bytes(&account.data)?;
-        decoded_accounts.push(crate::shared::MaybeAccount::Exists(crate::shared::DecodedAccount { address, account: account.clone(), data }));
-      } else {
-        decoded_accounts.push(crate::shared::MaybeAccount::NotFound(address));
-      }
+        let address = addresses[i];
+        if let Some(account) = accounts[i].as_ref() {
+            let data = VaultAssociatedProtocols::from_bytes(&account.data)?;
+            decoded_accounts.push(crate::shared::MaybeAccount::Exists(
+                crate::shared::DecodedAccount {
+                    address,
+                    account: account.clone(),
+                    data,
+                },
+            ));
+        } else {
+            decoded_accounts.push(crate::shared::MaybeAccount::NotFound(address));
+        }
     }
-  Ok(decoded_accounts)
+    Ok(decoded_accounts)
 }
 
-  #[cfg(feature = "anchor")]
-  impl anchor_lang::AccountDeserialize for VaultAssociatedProtocols {
-      fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+#[cfg(feature = "anchor")]
+impl anchor_lang::AccountDeserialize for VaultAssociatedProtocols {
+    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         Ok(Self::deserialize(buf)?)
-      }
-  }
+    }
+}
 
-  #[cfg(feature = "anchor")]
-  impl anchor_lang::AccountSerialize for VaultAssociatedProtocols {}
+#[cfg(feature = "anchor")]
+impl anchor_lang::AccountSerialize for VaultAssociatedProtocols {}
 
-  #[cfg(feature = "anchor")]
-  impl anchor_lang::Owner for VaultAssociatedProtocols {
-      fn owner() -> Pubkey {
+#[cfg(feature = "anchor")]
+impl anchor_lang::Owner for VaultAssociatedProtocols {
+    fn owner() -> Pubkey {
         crate::HOOK_PROGRAM_ID
-      }
-  }
+    }
+}
 
-  #[cfg(feature = "anchor-idl-build")]
-  impl anchor_lang::IdlBuild for VaultAssociatedProtocols {}
+#[cfg(feature = "anchor-idl-build")]
+impl anchor_lang::IdlBuild for VaultAssociatedProtocols {}
 
-  
-  #[cfg(feature = "anchor-idl-build")]
-  impl anchor_lang::Discriminator for VaultAssociatedProtocols {
+#[cfg(feature = "anchor-idl-build")]
+impl anchor_lang::Discriminator for VaultAssociatedProtocols {
     const DISCRIMINATOR: &[u8] = &[0; 8];
-  }
-
+}

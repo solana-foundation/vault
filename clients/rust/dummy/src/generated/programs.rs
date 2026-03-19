@@ -3,11 +3,8 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
-//!
 
 use solana_pubkey::{pubkey, Pubkey};
 
-
-  /// `dummy_protocol` program ID.
-  pub const DUMMY_PROTOCOL_ID: Pubkey = pubkey!("BTNuRUYMNxqg9XfndGm2DiSjrc14QLfNt7BbhMnLZaV");
-
+/// `dummy_protocol` program ID.
+pub const DUMMY_PROTOCOL_ID: Pubkey = pubkey!("BTNuRUYMNxqg9XfndGm2DiSjrc14QLfNt7BbhMnLZaV");

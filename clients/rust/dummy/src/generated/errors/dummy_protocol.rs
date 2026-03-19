@@ -3,7 +3,6 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
-//!
 
 use num_derive::FromPrimitive;
 use thiserror::Error;
@@ -74,4 +73,3 @@ impl From<DummyProtocolError> for solana_program_error::ProgramError {
         solana_program_error::ProgramError::Custom(e as u32)
     }
 }
-

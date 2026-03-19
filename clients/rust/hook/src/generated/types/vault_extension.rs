@@ -3,20 +3,19 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
-//!
 
 use crate::generated::types::FeeType;
+use borsh::{BorshDeserialize, BorshSerialize};
 use solana_pubkey::Pubkey;
-use borsh::BorshSerialize;
-use borsh::BorshDeserialize;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum VaultExtension {
-DepositFee(FeeType),
-WithdrawalFee(FeeType),
-#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
-DepositHook(Pubkey),
+    DepositFee(FeeType),
+    WithdrawalFee(FeeType),
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    DepositHook(Pubkey),
 }
-
-
