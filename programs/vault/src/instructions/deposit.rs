@@ -89,11 +89,11 @@ pub struct DepositAndMint<'info> {
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub share_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
-    /// CHECK: Instructions sysvar, required when a deposit hook is present
     pub instructions: Option<AccountInfo<'info>>,
 }
 
 impl<'info> DepositAndMint<'info> {
+    /// Transfers the deposit fee from the user's asset account to the fee recipient.
     pub fn transfer_asset_token_fee_to_fee_recipient(&mut self, fee: u64) -> Result<()> {
         let fee_recipient_transfer_cpi_accounts = TransferChecked {
             from: self.user_assets_account.to_account_info(),
@@ -109,6 +109,7 @@ impl<'info> DepositAndMint<'info> {
         token_interface::transfer_checked(cpi_ctx, fee, self.asset_mint.decimals)
     }
 
+    /// Transfers the deposit amount from the user's asset account into the vault reserve.
     pub fn transfer_asset_token_to_vault(&mut self, amount: u64) -> Result<()> {
         let vault_transfer_cpi_accounts = TransferChecked {
             from: self.user_assets_account.to_account_info(),
@@ -124,6 +125,8 @@ impl<'info> DepositAndMint<'info> {
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
 
+    /// Mints the calculated share amount to the user's share token account, signed by the vault
+    /// PDA.
     pub fn mint_shares_to_user(&mut self, amount: u64) -> Result<()> {
         let share_mint = self.share_mint.key();
         let mint_to_cpi_accounts = MintTo {
@@ -142,6 +145,7 @@ impl<'info> DepositAndMint<'info> {
         mint_to(mint_cpi_ctx, amount)
     }
 
+    /// Returns the Token-2022 transfer fee for the given amount, or 0 for standard SPL tokens.
     pub fn get_transfer_fees(&mut self, amount: u64) -> Result<u64> {
         if self.asset_mint.to_account_info().owner == &spl_token::id() {
             return Ok(0);
