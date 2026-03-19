@@ -11,7 +11,10 @@ use anchor_spl::{
         self,
         extension::{BaseStateWithExtensions, StateWithExtensions},
     },
-    token_interface::{self, mint_to, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked},
+    token_interface::{
+        self, approve_checked, mint_to, ApproveChecked, Mint, MintTo, TokenAccount, TokenInterface,
+        TransferChecked,
+    },
 };
 use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 
@@ -243,6 +246,25 @@ impl<'info> DepositAndMint<'info> {
         Ok(nav)
     }
 
+    /// Grants a delegate account permission to transfer up to `amount` tokens from the reserve,
+    /// signed by the vault PDA (which owns the reserve).
+    pub fn delegate_reserve(&mut self, delegate: AccountInfo<'info>, amount: u64) -> Result<()> {
+        let share_mint = self.share_mint.key();
+        let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
+        let approve_cpi_accounts = ApproveChecked {
+            to: self.reserve.to_account_info(),
+            mint: self.asset_mint.to_account_info(),
+            delegate,
+            authority: self.vault.to_account_info(),
+        };
+        let cpi_ctx = CpiContext::new_with_signer(
+            self.asset_token_program.to_account_info(),
+            approve_cpi_accounts,
+            seeds,
+        );
+        approve_checked(cpi_ctx, amount, self.asset_mint.decimals)
+    }
+
     /// Invokes the deposit hook program, allowing it to execute custom logic on deposit.
     ///
     /// The deposit hook is an external program registered on the vault that can
@@ -351,10 +373,10 @@ pub fn handler<'info>(
             .accounts
             .get_nav_value(hook_program_pubkey, hook_program_account.clone())?;
         let remaining = ctx.remaining_accounts;
-        // Delegate
+        ctx.accounts
+            .delegate_reserve(hook_program_account.clone(), remaining_amount)?;
         ctx.accounts
             .execute_deposit_hook(hook_program_pubkey, remaining)?;
-        // Remove delegation
         reserve_balance = reserve_balance
             .checked_add(nav)
             .ok_or(VaultProgramError::ArithmeticError)?;
