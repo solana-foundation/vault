@@ -165,13 +165,4 @@ pub mod vault {
     ) -> Result<()> {
         instructions::update_withdrawal_fees::handler(ctx, args)
     }
-
-    // Extra Meta Accounts
-
-    /// Initializes the deposit hook extra meta accounts needed for the deposit hook
-    pub fn initialize_deposit_extra_meta_accounts(
-        ctx: Context<InitializeDepositExtraMetaAccounts>,
-    ) -> Result<()> {
-        instructions::initialize_deposit_extra_meta_accounts::handler(ctx)
-    }
 }

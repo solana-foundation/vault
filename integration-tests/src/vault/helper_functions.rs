@@ -1,3 +1,4 @@
+use hook_client::InitializeDepositExtraMetaAccountsBuilder;
 use litesvm::{
     types::{FailedTransactionMetadata, TransactionMetadata},
     LiteSVM,
@@ -12,11 +13,10 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use vault_client::{
-    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
-    InitializeDepositExtraMetaAccountsBuilder, InitializeDepositFeesBuilder,
-    InitializeDepositHookBuilder, InitializeVaultBuilder, InitializeWithdrawalFeesBuilder,
-    MintBuilder, Pubkey, RedeemBuilder, UpdateDepositFeesBuilder, UpdateVaultBuilder,
-    UpdateWithdrawalFeesBuilder, VaultConfig, WithdrawBuilder,
+    sdk::IntoSdkInstruction as _, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
+    InitializeDepositFeesBuilder, InitializeDepositHookBuilder, InitializeVaultBuilder,
+    InitializeWithdrawalFeesBuilder, MintBuilder, Pubkey, RedeemBuilder, UpdateDepositFeesBuilder,
+    UpdateVaultBuilder, UpdateWithdrawalFeesBuilder, VaultConfig, WithdrawBuilder,
 };
 
 use anchor_spl::{
@@ -756,18 +756,17 @@ pub fn init_deposit_extra_meta_accounts(
     payer: &Keypair,
     asset_mint: &Pubkey,
     share_mint: &Pubkey,
-    vault: &Pubkey,
+    _vault: &Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let (extra_metas, _) = Pubkey::find_program_address(
         &[b"extra_account_metas", b"deposit", share_mint.as_ref()],
-        &vault_client::sdk::program_id(),
+        &hook_client::sdk::program_id(),
     );
 
     let ix = InitializeDepositExtraMetaAccountsBuilder::new()
         .payer(payer.pubkey())
         .asset_mint(*asset_mint)
         .share_mint_address(*share_mint)
-        .vault(*vault)
         .extra_metas(extra_metas)
         .instruction()
         .into_sdk_instruction();

@@ -215,7 +215,7 @@ fn test_deposit_with_hook() {
             b"deposit",
             share_mint.pubkey().as_ref(),
         ],
-        &program_id(),
+        &hook_program_id(),
     );
 
     let (nav_return_data_pubkey, _) = Pubkey::find_program_address(
@@ -482,7 +482,7 @@ fn test_deposit_with_hook_two_protocols() {
             b"deposit",
             share_mint.pubkey().as_ref(),
         ],
-        &program_id(),
+        &hook_program_id(),
     );
 
     let (nav_return_data_pubkey, _) = Pubkey::find_program_address(

@@ -4,12 +4,7 @@ use spl_tlv_account_resolution::{
     account::ExtraAccountMeta, seeds::Seed, state::ExtraAccountMetaList,
 };
 
-use crate::{
-    error::VaultProgramError,
-    state::{
-        DepositHookInstruction, VaultConfig, DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED,
-    },
-};
+use crate::state::{DepositHookInstruction, DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED};
 
 #[derive(Accounts)]
 pub struct InitializeDepositExtraMetaAccounts<'info> {
@@ -19,11 +14,6 @@ pub struct InitializeDepositExtraMetaAccounts<'info> {
     pub asset_mint: InterfaceAccount<'info, Mint>,
 
     pub share_mint_address: InterfaceAccount<'info, Mint>,
-
-    #[account(
-        has_one = share_mint_address @ VaultProgramError::VaultShareMintMismatch,
-    )]
-    pub vault: Account<'info, VaultConfig>,
 
     /// CHECK: extra metas, it's checked by seeds
     #[account(
@@ -50,10 +40,6 @@ impl InitializeDepositExtraMetaAccounts<'_> {
 }
 
 pub fn handler<'info>(ctx: Context<InitializeDepositExtraMetaAccounts>) -> Result<()> {
-    require!(
-        ctx.accounts.vault.deposit_hook_type().is_some(),
-        VaultProgramError::HookExtensionNotInitialized
-    );
     ctx.accounts.create_extra_account_meta()
 }
 

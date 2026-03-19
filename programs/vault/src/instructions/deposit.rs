@@ -19,9 +19,8 @@ use crate::{
     error::VaultProgramError,
     state::{
         create_deposit_hook_ix, get_deposit_hook_extra_account_metas_address,
-        DepositHookInstruction, Rounding, VaultConfig, DEPOSIT_ACCOUNT_METAS_SEED,
-        EXTRA_ACCOUNT_METAS_SEED, GET_NAV_DISCRIMINATOR, MAX_BPS, RESERVE_CONFIG_SEED,
-        VAULT_CONFIG_SEED,
+        DepositHookInstruction, Rounding, VaultConfig, GET_NAV_DISCRIMINATOR, MAX_BPS,
+        RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
     },
 };
 
@@ -77,10 +76,6 @@ pub struct DepositAndMint<'info> {
     )]
     pub user_shares_account: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(
-        seeds = [EXTRA_ACCOUNT_METAS_SEED,DEPOSIT_ACCOUNT_METAS_SEED, share_mint.key().as_ref()],
-        bump
-    )]
     pub extra_metas: Option<AccountInfo<'info>>,
     pub protocol: Option<AccountInfo<'info>>,
     pub nav_return_data: Option<AccountInfo<'info>>,
@@ -279,7 +274,7 @@ impl<'info> DepositAndMint<'info> {
         // Derive the expected address of the extra-account-metas validation PDA to guard
         // against a caller passing a malicious account in place of the real one.
         let validation_pubkey =
-            get_deposit_hook_extra_account_metas_address(&self.share_mint.key(), &program_id);
+            get_deposit_hook_extra_account_metas_address(&self.share_mint.key(), &hook_program);
 
         let mut cpi_account_infos = vec![
             self.vault.to_account_info(),

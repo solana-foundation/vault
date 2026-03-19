@@ -18,8 +18,6 @@ pub struct InitializeDepositExtraMetaAccounts {
 
     pub share_mint_address: solana_pubkey::Pubkey,
 
-    pub vault: solana_pubkey::Pubkey,
-
     pub extra_metas: solana_pubkey::Pubkey,
 
     pub token_program: solana_pubkey::Pubkey,
@@ -38,7 +36,7 @@ impl InitializeDepositExtraMetaAccounts {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.payer, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
@@ -47,9 +45,6 @@ impl InitializeDepositExtraMetaAccounts {
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.share_mint_address,
             false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.vault, false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(
             self.extra_metas,
@@ -69,7 +64,7 @@ impl InitializeDepositExtraMetaAccounts {
             .unwrap();
 
         solana_instruction::Instruction {
-            program_id: crate::VAULT_ID,
+            program_id: crate::HOOK_PROGRAM_ID,
             accounts,
             data,
         }
@@ -107,16 +102,14 @@ impl Default for InitializeDepositExtraMetaAccountsInstructionData {
 ///   0. `[writable, signer]` payer
 ///   1. `[]` asset_mint
 ///   2. `[]` share_mint_address
-///   3. `[]` vault
-///   4. `[writable]` extra_metas
-///   5. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   3. `[writable]` extra_metas
+///   4. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
+///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeDepositExtraMetaAccountsBuilder {
     payer: Option<solana_pubkey::Pubkey>,
     asset_mint: Option<solana_pubkey::Pubkey>,
     share_mint_address: Option<solana_pubkey::Pubkey>,
-    vault: Option<solana_pubkey::Pubkey>,
     extra_metas: Option<solana_pubkey::Pubkey>,
     token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
@@ -143,12 +136,6 @@ impl InitializeDepositExtraMetaAccountsBuilder {
     #[inline(always)]
     pub fn share_mint_address(&mut self, share_mint_address: solana_pubkey::Pubkey) -> &mut Self {
         self.share_mint_address = Some(share_mint_address);
-        self
-    }
-
-    #[inline(always)]
-    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-        self.vault = Some(vault);
         self
     }
 
@@ -197,7 +184,6 @@ impl InitializeDepositExtraMetaAccountsBuilder {
             share_mint_address: self
                 .share_mint_address
                 .expect("share_mint_address is not set"),
-            vault: self.vault.expect("vault is not set"),
             extra_metas: self.extra_metas.expect("extra_metas is not set"),
             token_program: self.token_program.unwrap_or(solana_pubkey::pubkey!(
                 "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
@@ -219,8 +205,6 @@ pub struct InitializeDepositExtraMetaAccountsCpiAccounts<'a, 'b> {
 
     pub share_mint_address: &'b solana_account_info::AccountInfo<'a>,
 
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub extra_metas: &'b solana_account_info::AccountInfo<'a>,
 
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
@@ -239,8 +223,6 @@ pub struct InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
 
     pub share_mint_address: &'b solana_account_info::AccountInfo<'a>,
 
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub extra_metas: &'b solana_account_info::AccountInfo<'a>,
 
     pub token_program: &'b solana_account_info::AccountInfo<'a>,
@@ -258,7 +240,6 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
             payer: accounts.payer,
             asset_mint: accounts.asset_mint,
             share_mint_address: accounts.share_mint_address,
-            vault: accounts.vault,
             extra_metas: accounts.extra_metas,
             token_program: accounts.token_program,
             system_program: accounts.system_program,
@@ -291,7 +272,7 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.payer.key, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
@@ -299,10 +280,6 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.share_mint_address.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.vault.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(
@@ -329,16 +306,15 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
             .unwrap();
 
         let instruction = solana_instruction::Instruction {
-            program_id: crate::VAULT_ID,
+            program_id: crate::HOOK_PROGRAM_ID,
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(7 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.payer.clone());
         account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint_address.clone());
-        account_infos.push(self.vault.clone());
         account_infos.push(self.extra_metas.clone());
         account_infos.push(self.token_program.clone());
         account_infos.push(self.system_program.clone());
@@ -361,10 +337,9 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
 ///   0. `[writable, signer]` payer
 ///   1. `[]` asset_mint
 ///   2. `[]` share_mint_address
-///   3. `[]` vault
-///   4. `[writable]` extra_metas
-///   5. `[]` token_program
-///   6. `[]` system_program
+///   3. `[writable]` extra_metas
+///   4. `[]` token_program
+///   5. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeDepositExtraMetaAccountsCpiBuilder<'a, 'b> {
     instruction: Box<InitializeDepositExtraMetaAccountsCpiBuilderInstruction<'a, 'b>>,
@@ -377,7 +352,6 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpiBuilder<'a, 'b> {
             payer: None,
             asset_mint: None,
             share_mint_address: None,
-            vault: None,
             extra_metas: None,
             token_program: None,
             system_program: None,
@@ -407,12 +381,6 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpiBuilder<'a, 'b> {
         share_mint_address: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.share_mint_address = Some(share_mint_address);
-        self
-    }
-
-    #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.vault = Some(vault);
         self
     }
 
@@ -493,8 +461,6 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpiBuilder<'a, 'b> {
                 .share_mint_address
                 .expect("share_mint_address is not set"),
 
-            vault: self.instruction.vault.expect("vault is not set"),
-
             extra_metas: self
                 .instruction
                 .extra_metas
@@ -523,7 +489,6 @@ struct InitializeDepositExtraMetaAccountsCpiBuilderInstruction<'a, 'b> {
     payer: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint_address: Option<&'b solana_account_info::AccountInfo<'a>>,
-    vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
     token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,

@@ -1,7 +1,6 @@
 pub mod close_vault;
 pub mod create_vault;
 pub mod deposit;
-pub mod extra_meta_accounts;
 pub mod initialize_deposit_fees;
 
 pub mod initialize_deposit_hook_extension;
@@ -17,7 +16,6 @@ pub mod withdraw;
 pub use close_vault::*;
 pub use create_vault::*;
 pub use deposit::*;
-pub use extra_meta_accounts::*;
 pub use initialize_deposit_fees::*;
 
 pub use initialize_deposit_hook_extension::*;
