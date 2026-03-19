@@ -173,7 +173,7 @@ pub fn deposit(
         .min_shares(min_shares)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
-        .hook_program(hook_program)
+        .hook_program(Some(hook_program))
         .protocol(protocol)
         .nav_return_data(nav_return_data)
         .instructions(instructions)
@@ -214,7 +214,7 @@ pub fn mint(
         .max_assets(max_assets)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
-        .hook_program(system_program::ID)
+        .hook_program(Some(system_program::ID))
         .instruction()
         .into_sdk_instruction();
 
@@ -730,11 +730,13 @@ pub fn init_deposit_hook(
     authority: &Keypair,
     share_mint: &Pubkey,
     vault: &Pubkey,
+    hook_program: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = InitializeDepositHookBuilder::new()
         .authority(authority.pubkey())
         .share_mint(*share_mint)
         .vault(*vault)
+        .hook_program(hook_program)
         .instruction()
         .into_sdk_instruction();
 

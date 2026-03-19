@@ -4,6 +4,8 @@ use anchor_lang::{
 };
 use spl_discriminator::{ArrayDiscriminator, SplDiscriminate};
 
+use crate::state::{DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED};
+
 pub enum VaultStandardInstruction {
     DepositHook,
 }
@@ -31,7 +33,26 @@ impl VaultStandardInstruction {
     }
 }
 
-pub fn deposit_hook(
+pub fn get_deposit_hook_extra_account_metas_address(mint: &Pubkey, program_id: &Pubkey) -> Pubkey {
+    get_deposit_hook_extra_account_metas_address_and_bump_seed(mint, program_id).0
+}
+
+pub fn get_deposit_hook_extra_account_metas_address_and_bump_seed(
+    mint: &Pubkey,
+    program_id: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&collect_deposit_hook_extra_account_metas(mint), program_id)
+}
+
+pub fn collect_deposit_hook_extra_account_metas(mint: &Pubkey) -> [&[u8]; 3] {
+    [
+        EXTRA_ACCOUNT_METAS_SEED,
+        DEPOSIT_ACCOUNT_METAS_SEED,
+        mint.as_ref(),
+    ]
+}
+
+pub fn create_deposit_hook_ix(
     program_id: &Pubkey,
     signer: &Pubkey,
     mint: &Pubkey,

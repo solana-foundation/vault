@@ -133,8 +133,11 @@ pub mod vault {
     /// Initializes the deposit hook extension for a vault (one-time, pre-init only).
     /// Stores the provided extension inside `vault.extensions` as `VaultExtension::DepositHook`.
     /// Only the vault authority can call this.
-    pub fn initialize_deposit_hook(ctx: Context<InitializeDepositHook>) -> Result<()> {
-        instructions::initialize_deposit_hook_extension::handler(ctx)
+    pub fn initialize_deposit_hook(
+        ctx: Context<InitializeDepositHook>,
+        hook_program: Pubkey,
+    ) -> Result<()> {
+        instructions::initialize_deposit_hook_extension::handler(ctx, hook_program)
     }
 
     /// Updates the deposit fee configuration for an already-initialized deposit fee extension.

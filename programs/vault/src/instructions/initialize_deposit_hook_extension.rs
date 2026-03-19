@@ -21,7 +21,7 @@ pub struct InitializeDepositHook<'info> {
     pub vault: Account<'info, VaultConfig>,
 }
 
-pub fn handler<'info>(ctx: Context<InitializeDepositHook>) -> Result<()> {
+pub fn handler<'info>(ctx: Context<InitializeDepositHook>, hook_program: Pubkey) -> Result<()> {
     ctx.accounts.vault.assert_uninitialized()?;
 
     let is_deposit_hook_present = ctx.accounts.vault.deposit_hook_type().is_some();
@@ -33,7 +33,7 @@ pub fn handler<'info>(ctx: Context<InitializeDepositHook>) -> Result<()> {
     ctx.accounts
         .vault
         .extensions
-        .push(VaultExtension::DepositHook(true));
+        .push(VaultExtension::DepositHook(hook_program));
 
     Ok(())
 }

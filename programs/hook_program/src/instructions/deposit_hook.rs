@@ -1,14 +1,7 @@
 use anchor_lang::{prelude::*, solana_program::program::invoke};
 use anchor_spl::token_interface::Mint;
-use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 
-use crate::{
-    errors::HookProgramError,
-    state::{
-        deposit_hook_permissionless, get_deposit_hook_extra_account_metas_address,
-        DepositHookInstruction, VAULT_PROGRAM_ID,
-    },
-};
+use crate::{errors::HookProgramError, state::protocol_deposit};
 
 #[derive(Accounts)]
 pub struct DepositHook<'info> {
@@ -20,60 +13,38 @@ pub struct DepositHook<'info> {
     /// CHECK: This is downstream protocol
     pub protocol: UncheckedAccount<'info>,
     pub system_program: Program<'info, System>,
+    /// CHECK: This is the downstream protocol vault
+    pub vault: UncheckedAccount<'info>,
 }
 
 impl<'info> DepositHook<'info> {
-    pub fn invoke_deposit(
-        &self,
-        program_id: &Pubkey,
-        additional_accounts: &[AccountInfo<'info>],
-    ) -> Result<()> {
-        let mut instruction = deposit_hook_permissionless(
+    pub fn invoke_deposit(&self, additional_accounts: &[AccountInfo<'info>]) -> Result<()> {
+        let downstream_vault = additional_accounts
+            .first()
+            .ok_or(error!(HookProgramError::InvalidAccountData))?;
+
+        let instruction = protocol_deposit(
             &self.protocol.key(),
             self.signer.key,
             &self.share_mint.key(),
+            &downstream_vault.key(),
+            &self.system_program.key(),
         );
-
-        let validation_pubkey =
-            get_deposit_hook_extra_account_metas_address(&self.share_mint.key(), program_id);
 
         let mut cpi_account_infos = vec![
             self.signer.to_account_info(),
             self.share_mint.to_account_info(),
-            self.protocol.to_account_info(),
+            downstream_vault.clone(),
+            self.system_program.to_account_info(),
         ];
+        cpi_account_infos.extend_from_slice(additional_accounts);
 
-        if self.extra_metas.key() == validation_pubkey {
-            instruction
-                .accounts
-                .push(AccountMeta::new_readonly(validation_pubkey, false));
-            let validation_info = self.extra_metas.to_account_info();
-            cpi_account_infos.push(validation_info.clone());
-            ExtraAccountMetaList::add_to_cpi_instruction::<DepositHookInstruction>(
-                &mut instruction,
-                &mut cpi_account_infos,
-                &validation_info.try_borrow_data()?,
-                additional_accounts,
-            )?;
-        } else {
-            return Err(HookProgramError::InvalidAccountData.into());
-        }
-
-        cpi_account_infos.remove(2);
-        cpi_account_infos.remove(2);
-        instruction.accounts.remove(2);
-        instruction.accounts.remove(2);
-        instruction
-            .accounts
-            .push(AccountMeta::new_readonly(self.system_program.key(), false));
-        cpi_account_infos.push(self.system_program.to_account_info());
         invoke(&instruction, &cpi_account_infos)?;
         Ok(())
     }
 }
 
 pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, DepositHook<'info>>) -> Result<()> {
-    ctx.accounts
-        .invoke_deposit(VAULT_PROGRAM_ID, ctx.remaining_accounts)?;
+    ctx.accounts.invoke_deposit(ctx.remaining_accounts)?;
     Ok(())
 }

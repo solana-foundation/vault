@@ -29,6 +29,7 @@ impl VaultStandardInstruction {
         }
     }
 }
+
 pub fn get_deposit_hook_extra_account_metas_address(mint: &Pubkey, program_id: &Pubkey) -> Pubkey {
     get_deposit_hook_extra_account_metas_address_and_bump_seed(mint, program_id).0
 }
@@ -48,17 +49,20 @@ pub fn collect_deposit_hook_extra_account_metas(mint: &Pubkey) -> [&[u8]; 3] {
     ]
 }
 
-pub fn deposit_hook_permissionless(
+pub fn protocol_deposit(
     program_id: &Pubkey,
     signer: &Pubkey,
     share_mint: &Pubkey,
+    vault: &Pubkey,
+    system_program: &Pubkey,
 ) -> Instruction {
     let mut data = VaultStandardInstruction::DepositHook.pack();
     data.extend_from_slice(&0u64.to_le_bytes());
     let accounts = vec![
         AccountMeta::new(*signer, true),
         AccountMeta::new_readonly(*share_mint, false),
-        AccountMeta::new(*program_id, false),
+        AccountMeta::new(*vault, false),
+        AccountMeta::new_readonly(*system_program, false),
     ];
 
     Instruction {

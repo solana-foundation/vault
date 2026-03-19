@@ -3,6 +3,7 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
 use num_derive::FromPrimitive;
 use thiserror::Error;
@@ -78,6 +79,9 @@ pub enum VaultError {
     /// 6022 - The returned data is invalid.
     #[error("The returned data is invalid.")]
     InvalidReturnedData = 0x1786,
+    /// 6023 - The provided extra meta accounts pubkey does not match
+    #[error("The provided extra meta accounts pubkey does not match")]
+    InvalidAccountData = 0x1787,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {
@@ -85,3 +89,4 @@ impl From<VaultError> for solana_program_error::ProgramError {
         solana_program_error::ProgramError::Custom(e as u32)
     }
 }
+

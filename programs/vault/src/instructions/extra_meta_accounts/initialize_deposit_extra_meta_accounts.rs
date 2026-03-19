@@ -59,7 +59,7 @@ pub fn handler<'info>(ctx: Context<InitializeDepositExtraMetaAccounts>) -> Resul
 
 fn get_extra_metas() -> Result<Vec<ExtraAccountMeta>> {
     let vault_state_meta = ExtraAccountMeta::new_external_pda_with_seeds(
-        2, // external protocol token program index
+        3, // external protocol token program index
         &[
             Seed::Literal {
                 bytes: "vault".as_bytes().to_vec(),

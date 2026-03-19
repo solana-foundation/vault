@@ -8,7 +8,7 @@ use anchor_lang::prelude::*;
 pub enum VaultExtension {
     DepositFee(FeeType),
     WithdrawalFee(FeeType),
-    DepositHook(bool),
+    DepositHook(Pubkey),
 }
 
 impl VaultExtension {
@@ -26,9 +26,9 @@ impl VaultExtension {
         }
     }
 
-    pub fn as_deposit_hook(&self) -> Option<bool> {
+    pub fn as_deposit_hook(&self) -> Option<Pubkey> {
         match self {
-            VaultExtension::DepositHook(status) => Some(*status),
+            VaultExtension::DepositHook(hook_program) => Some(*hook_program),
             _ => None,
         }
     }
@@ -271,12 +271,12 @@ impl VaultConfig {
             })
     }
 
-    pub fn deposit_hook_type(&self) -> Option<(usize, bool)> {
+    pub fn deposit_hook_type(&self) -> Option<Pubkey> {
         self.extensions
             .iter()
             .enumerate()
-            .find_map(|(index, extension)| {
-                VaultExtension::as_deposit_hook(extension).map(|status| (index, status))
+            .find_map(|(_, extension)| {
+                VaultExtension::as_deposit_hook(extension).map(|hook_program| hook_program)
             })
     }
 

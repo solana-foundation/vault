@@ -86,8 +86,14 @@ fn test_deposit_with_hook() {
     .expect("vault update failed");
 
     // Add the deposit hook extension
-    init_deposit_hook(&mut svm, &authority, &share_mint.pubkey(), &vault_pubkey)
-        .expect("init deposit hook failed");
+    init_deposit_hook(
+        &mut svm,
+        &authority,
+        &share_mint.pubkey(),
+        &vault_pubkey,
+        HOOK_PROGRAM_ID,
+    )
+    .expect("init deposit hook failed");
 
     // Initialize the extra meta accounts for the hook
     init_deposit_extra_meta_accounts(
@@ -106,7 +112,7 @@ fn test_deposit_with_hook() {
     let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
     assert_eq!(
         vault_config.extensions[0],
-        VaultExtension::DepositHook(true)
+        VaultExtension::DepositHook(HOOK_PROGRAM_ID)
     );
 
     // Initialize the vault
@@ -239,7 +245,7 @@ fn test_deposit_with_hook() {
             .user_shares_account(user_share_ata)
             .asset_token_program(token::ID)
             .share_token_program(token::ID)
-            .hook_program(HOOK_PROGRAM_ID)
+            .hook_program(Some(HOOK_PROGRAM_ID))
             .protocol(Some(dummy_program_id()))
             .nav_return_data(Some(nav_return_data_pubkey))
             .instructions(Some(solana_sdk::sysvar::instructions::ID))
@@ -351,8 +357,14 @@ fn test_deposit_with_hook_two_protocols() {
     )
     .expect("vault update failed");
 
-    init_deposit_hook(&mut svm, &authority, &share_mint.pubkey(), &vault_pubkey)
-        .expect("init deposit hook failed");
+    init_deposit_hook(
+        &mut svm,
+        &authority,
+        &share_mint.pubkey(),
+        &vault_pubkey,
+        HOOK_PROGRAM_ID,
+    )
+    .expect("init deposit hook failed");
 
     init_deposit_extra_meta_accounts(
         &mut svm,
@@ -542,7 +554,7 @@ fn test_deposit_with_hook_two_protocols() {
             .user_shares_account(user_share_ata)
             .asset_token_program(token::ID)
             .share_token_program(token::ID)
-            .hook_program(HOOK_PROGRAM_ID)
+            .hook_program(Some(HOOK_PROGRAM_ID))
             .protocol(Some(dummy_program_id()))
             .nav_return_data(Some(nav_return_data_pubkey))
             .instructions(Some(solana_sdk::sysvar::instructions::ID))
