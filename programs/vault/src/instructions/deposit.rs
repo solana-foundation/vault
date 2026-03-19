@@ -17,10 +17,13 @@ use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 
 use crate::{
     error::VaultProgramError,
-    state::{
+    extensions::{
         create_deposit_hook_ix, get_deposit_hook_extra_account_metas_address,
-        DepositHookInstruction, Rounding, VaultConfig, GET_NAV_DISCRIMINATOR, MAX_BPS,
-        RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
+        DepositHookInstruction,
+    },
+    state::{
+        Rounding, VaultConfig, GET_NAV_DISCRIMINATOR, MAX_BPS, RESERVE_CONFIG_SEED,
+        VAULT_CONFIG_SEED,
     },
 };
 
@@ -247,7 +250,6 @@ impl<'info> DepositAndMint<'info> {
     /// Account resolution follows the `ExtraAccountMetaList` pattern.
     pub fn execute_deposit_hook(
         &mut self,
-        program_id: Pubkey,
         hook_program: Pubkey,
         remaining_accounts: &[AccountInfo<'info>],
     ) -> Result<()> {
@@ -350,7 +352,7 @@ pub fn handler<'info>(
         let remaining = ctx.remaining_accounts;
         // Delegate
         ctx.accounts
-            .execute_deposit_hook(ctx.program_id.key(), hook_program_pubkey, remaining)?;
+            .execute_deposit_hook(hook_program_pubkey, remaining)?;
         // Remove delegation
         reserve_balance = reserve_balance
             .checked_add(nav)
