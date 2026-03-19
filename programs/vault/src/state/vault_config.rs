@@ -5,10 +5,16 @@ use crate::{
 use anchor_lang::prelude::*;
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, InitSpace, Copy)]
+pub struct DepositHook {
+    pub hook_program_id: Pubkey,
+    pub authority: Pubkey,
+}
+
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, InitSpace, Copy)]
 pub enum VaultExtension {
     DepositFee(FeeType),
     WithdrawalFee(FeeType),
-    DepositHook(Pubkey),
+    DepositHook(DepositHook),
 }
 
 impl VaultExtension {
@@ -26,7 +32,7 @@ impl VaultExtension {
         }
     }
 
-    pub fn as_deposit_hook(&self) -> Option<Pubkey> {
+    pub fn as_deposit_hook(&self) -> Option<DepositHook> {
         match self {
             VaultExtension::DepositHook(hook_program) => Some(*hook_program),
             _ => None,
@@ -271,7 +277,7 @@ impl VaultConfig {
             })
     }
 
-    pub fn deposit_hook_type(&self) -> Option<Pubkey> {
+    pub fn deposit_hook_type(&self) -> Option<DepositHook> {
         self.extensions
             .iter()
             .enumerate()

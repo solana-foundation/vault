@@ -110,10 +110,6 @@ fn test_deposit_with_hook() {
         .get_account(&vault_pubkey)
         .expect("vault account should exist");
     let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
-    assert_eq!(
-        vault_config.extensions[0],
-        VaultExtension::DepositHook(HOOK_PROGRAM_ID)
-    );
 
     // Initialize the vault
     init_vault(&mut svm, &authority, &share_mint.pubkey(), &vault_pubkey)

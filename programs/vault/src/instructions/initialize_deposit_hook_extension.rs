@@ -3,7 +3,7 @@ use anchor_spl::token_interface::Mint;
 
 use crate::{
     error::VaultProgramError,
-    state::{VaultConfig, VaultExtension, VAULT_CONFIG_SEED},
+    state::{DepositHook, VaultConfig, VaultExtension, VAULT_CONFIG_SEED},
 };
 
 #[derive(Accounts)]
@@ -33,7 +33,10 @@ pub fn handler<'info>(ctx: Context<InitializeDepositHook>, hook_program: Pubkey)
     ctx.accounts
         .vault
         .extensions
-        .push(VaultExtension::DepositHook(hook_program));
+        .push(VaultExtension::DepositHook(DepositHook {
+            hook_program_id: hook_program,
+            authority: ctx.accounts.authority.key(),
+        }));
 
     Ok(())
 }

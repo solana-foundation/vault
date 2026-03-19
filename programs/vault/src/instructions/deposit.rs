@@ -335,8 +335,9 @@ pub fn handler<'info>(
     let deposit_hook_program = ctx.accounts.vault.deposit_hook_type();
     let mut reserve_balance = reserve_amount_before;
     if deposit_hook_program.is_some() {
-        let hook_program_pubkey =
+        let deposit_hook =
             deposit_hook_program.ok_or(VaultProgramError::HookExtensionNotInitialized)?;
+        let hook_program_pubkey = deposit_hook.hook_program_id;
         let hook_program_account = ctx
             .accounts
             .hook_program
