@@ -3,7 +3,8 @@ use anchor_spl::token_interface::Mint;
 
 use crate::{
     error::VaultProgramError,
-    state::{DepositHook, VaultConfig, VaultExtension, VAULT_CONFIG_SEED},
+    extensions::{DepositHook, VaultExtension},
+    state::{VaultConfig, VAULT_CONFIG_SEED},
 };
 
 #[derive(Accounts)]

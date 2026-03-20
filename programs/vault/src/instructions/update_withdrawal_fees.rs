@@ -3,7 +3,8 @@ use anchor_spl::token_interface::Mint;
 
 use crate::{
     error::VaultProgramError,
-    state::{FeeType, VaultConfig, VaultExtension, VAULT_CONFIG_SEED},
+    extensions::VaultExtension,
+    state::{FeeType, VaultConfig, VAULT_CONFIG_SEED},
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]

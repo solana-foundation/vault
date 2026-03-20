@@ -4,7 +4,7 @@ use anchor_spl::token_interface::Mint;
 use crate::{errors::HookProgramError, state::protocol_deposit};
 
 #[derive(Accounts)]
-pub struct DepositHook<'info> {
+pub struct ExecuteDepositHook<'info> {
     // This should be the vault authority
     pub signer: Signer<'info>,
     pub share_mint: InterfaceAccount<'info, Mint>,
@@ -17,7 +17,7 @@ pub struct DepositHook<'info> {
     pub vault: UncheckedAccount<'info>,
 }
 
-impl<'info> DepositHook<'info> {
+impl<'info> ExecuteDepositHook<'info> {
     pub fn invoke_deposit(&self, additional_accounts: &[AccountInfo<'info>]) -> Result<()> {
         let downstream_vault = additional_accounts
             .first()
@@ -44,7 +44,7 @@ impl<'info> DepositHook<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, DepositHook<'info>>) -> Result<()> {
+pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ExecuteDepositHook<'info>>) -> Result<()> {
     ctx.accounts.invoke_deposit(ctx.remaining_accounts)?;
     Ok(())
 }

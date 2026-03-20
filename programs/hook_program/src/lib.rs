@@ -19,9 +19,9 @@ pub mod hook_program {
     /// protocol's deposit hook via CPI using the `DepositHookInstruction` discriminator.
     #[instruction(discriminator = DepositHookInstruction::SPL_DISCRIMINATOR_SLICE)]
     pub fn execute_deposit<'info>(
-        ctx: Context<'_, '_, '_, 'info, DepositHook<'info>>,
+        ctx: Context<'_, '_, '_, 'info, ExecuteDepositHook<'info>>,
     ) -> Result<()> {
-        instructions::deposit_hook::handler(ctx)
+        instructions::execute_deposit_hook::handler(ctx)
     }
 
     /// Returns the vault's current Net Asset Value (NAV) as transaction return data.

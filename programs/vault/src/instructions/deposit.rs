@@ -170,7 +170,7 @@ impl<'info> DepositAndMint<'info> {
     ///
     /// The NAV is needed to correctly
     /// calculate the share-to-asset exchange rate when the vault has an active deposit hook.
-    pub fn get_nav_value(
+    pub fn get_nav(
         &self,
         hook_program: Pubkey,
         hook_program_account_info: AccountInfo<'info>,
@@ -371,7 +371,7 @@ pub fn handler<'info>(
         );
         let nav = ctx
             .accounts
-            .get_nav_value(hook_program_pubkey, hook_program_account.clone())?;
+            .get_nav(hook_program_pubkey, hook_program_account.clone())?;
         let remaining = ctx.remaining_accounts;
         ctx.accounts
             .delegate_reserve(hook_program_account.clone(), remaining_amount)?;
