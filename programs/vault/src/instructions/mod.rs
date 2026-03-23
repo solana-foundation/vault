@@ -5,6 +5,7 @@ pub mod initialize_deposit_fees;
 
 pub mod initialize_deposit_hook_extension;
 pub mod initialize_vault;
+pub mod initialize_withdraw_hook_extension;
 pub mod initialize_withdrawal_fees;
 pub mod mint;
 pub mod redeem;
@@ -20,6 +21,7 @@ pub use initialize_deposit_fees::*;
 
 pub use initialize_deposit_hook_extension::*;
 pub use initialize_vault::*;
+pub use initialize_withdraw_hook_extension::*;
 pub use initialize_withdrawal_fees::*;
 pub use mint::*;
 pub use redeem::*;

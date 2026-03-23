@@ -1,6 +1,6 @@
 use crate::{
     error::VaultProgramError,
-    extensions::{DepositHook, VaultExtension},
+    extensions::{DepositHook, VaultExtension, WithdrawHook},
     state::{FeeType, Rounding},
 };
 use anchor_lang::prelude::*;
@@ -157,6 +157,12 @@ impl VaultConfig {
             .find_map(|(_, extension)| {
                 VaultExtension::as_deposit_hook(extension).map(|hook_program| hook_program)
             })
+    }
+
+    pub fn withdraw_hook_type(&self) -> Option<WithdrawHook> {
+        self.extensions
+            .iter()
+            .find_map(|extension| VaultExtension::as_withdraw_hook(extension))
     }
 
     pub fn assert_unpaused_and_initialized(&self) -> Result<()> {

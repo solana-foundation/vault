@@ -5,7 +5,8 @@ pub mod state;
 
 declare_id!("4QabXWDFDL3cVzpabsVNCjkjgHvMAfTwPy6kCV9HiB7n");
 
-use crate::state::DepositHookInstruction;
+use crate::state::{DepositHookInstruction, WithdrawHookInstruction};
+
 use instructions::*;
 use spl_discriminator::SplDiscriminate;
 
@@ -19,6 +20,16 @@ pub mod hook_program {
     /// protocol's deposit hook via CPI using the `DepositHookInstruction` discriminator.
     #[instruction(discriminator = DepositHookInstruction::SPL_DISCRIMINATOR_SLICE)]
     pub fn execute_deposit<'info>(
+        ctx: Context<'_, '_, '_, 'info, ExecuteDepositHook<'info>>,
+    ) -> Result<()> {
+        instructions::execute_deposit_hook::handler(ctx)
+    }
+
+    /// Transfer hook entrypoint called by the vault program withdraw instruction.
+    /// Resolves extra account metas from the validation PDA and invokes the downstream
+    /// protocol's withdraw hook via CPI using the `WithdrawHookInstruction` discriminator.
+    #[instruction(discriminator = WithdrawHookInstruction::SPL_DISCRIMINATOR_SLICE)]
+    pub fn execute_withdraw<'info>(
         ctx: Context<'_, '_, '_, 'info, ExecuteDepositHook<'info>>,
     ) -> Result<()> {
         instructions::execute_deposit_hook::handler(ctx)

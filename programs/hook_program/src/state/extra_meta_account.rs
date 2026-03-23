@@ -11,6 +11,10 @@ pub enum VaultStandardInstruction {
 #[discriminator_hash_input("vault-standard:deposit-hook")]
 pub struct DepositHookInstruction;
 
+#[derive(SplDiscriminate)]
+#[discriminator_hash_input("vault-standard:withdraw-hook")]
+pub struct WithdrawHookInstruction;
+
 impl VaultStandardInstruction {
     pub fn unpack(data: &[u8]) -> Result<Self, ProgramError> {
         if data.len() < ArrayDiscriminator::LENGTH {

@@ -1,11 +1,22 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{
+    prelude::*,
+    solana_program::{
+        instruction::Instruction,
+        program::{get_return_data, invoke_signed},
+    },
+};
 use anchor_spl::token_interface::{
     self, burn, Burn, Mint, TokenAccount, TokenInterface, TransferChecked,
 };
+use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 
 use crate::{
     error::VaultProgramError,
-    state::{Rounding, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    extensions::{
+        create_withdraw_hook_ix, get_withdraw_hook_extra_account_metas_address,
+        WithdrawHookInstruction,
+    },
+    state::{Rounding, VaultConfig, GET_NAV_DISCRIMINATOR, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
 };
 
 #[derive(Accounts)]
@@ -67,8 +78,15 @@ pub struct Withdraw<'info> {
     )]
     pub user_shares_account: InterfaceAccount<'info, TokenAccount>,
 
+    pub extra_metas: Option<AccountInfo<'info>>,
+    pub protocol: Option<AccountInfo<'info>>,
+    pub nav_return_data: Option<AccountInfo<'info>>,
+    pub hook_program: Option<AccountInfo<'info>>,
+
     pub share_token_program: Interface<'info, TokenInterface>,
     pub asset_token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>,
+    pub instructions: Option<AccountInfo<'info>>,
 }
 
 impl<'info> Withdraw<'info> {
@@ -115,6 +133,139 @@ impl<'info> Withdraw<'info> {
         token_interface::transfer_checked(cpi_ctx, asset_amount, self.asset_mint.decimals)
     }
 
+    /// Queries the hook program for the current Net Asset Value (NAV) of the vault.
+    pub fn get_nav(
+        &self,
+        hook_program: Pubkey,
+        hook_program_account_info: AccountInfo<'info>,
+    ) -> Result<u64> {
+        let nav_account = self
+            .nav_return_data
+            .as_ref()
+            .ok_or(VaultProgramError::StaleVaultNav)?;
+
+        let ix_sysvar = self
+            .instructions
+            .as_ref()
+            .ok_or(VaultProgramError::OptionalAccountIsEmpty)?;
+
+        let get_nav_ix = Instruction {
+            program_id: hook_program,
+            accounts: vec![
+                AccountMeta::new_readonly(self.vault.key(), false),
+                AccountMeta::new_readonly(*nav_account.key, false),
+                AccountMeta::new_readonly(
+                    anchor_lang::solana_program::sysvar::instructions::ID,
+                    false,
+                ),
+            ],
+            data: GET_NAV_DISCRIMINATOR.to_vec(),
+        };
+
+        invoke_signed(
+            &get_nav_ix,
+            &[
+                hook_program_account_info,
+                self.vault.to_account_info(),
+                nav_account.clone(),
+                ix_sysvar.clone(),
+            ],
+            &[],
+        )?;
+
+        let (return_program_id, return_data) =
+            get_return_data().ok_or(VaultProgramError::StaleVaultNav)?;
+        require_keys_eq!(
+            return_program_id,
+            hook_program.key(),
+            VaultProgramError::InvalidReturnedData
+        );
+        require!(
+            return_data.len() >= 24,
+            VaultProgramError::InvalidReturnedData
+        );
+
+        let update_timestamp = i64::from_le_bytes(
+            return_data[16..24]
+                .try_into()
+                .map_err(|_| VaultProgramError::InvalidReturnedData)?,
+        );
+
+        let current_time = Clock::get()?.unix_timestamp;
+        let nav_age = current_time
+            .checked_sub(update_timestamp)
+            .ok_or(VaultProgramError::ArithmeticError)?;
+        require!(nav_age <= 60, VaultProgramError::StaleVaultNav);
+
+        let nav = u64::from_le_bytes(
+            return_data[8..16]
+                .try_into()
+                .map_err(|_| VaultProgramError::InvalidReturnedData)?,
+        );
+
+        Ok(nav)
+    }
+
+    /// Invokes the withdraw hook program, allowing it to execute custom logic on withdrawal.
+    pub fn execute_withdraw_hook(
+        &mut self,
+        hook_program: Pubkey,
+        remaining_accounts: &[AccountInfo<'info>],
+    ) -> Result<()> {
+        let extra_metas = &self
+            .extra_metas
+            .clone()
+            .ok_or(VaultProgramError::OptionalAccountIsEmpty)?;
+        let protocol = &self
+            .protocol
+            .clone()
+            .ok_or(VaultProgramError::OptionalAccountIsEmpty)?;
+        let share_mint = self.share_mint.key();
+
+        let mut instruction = create_withdraw_hook_ix(
+            &hook_program,
+            &self.vault.key(),
+            &self.share_mint.key(),
+            &extra_metas.key(),
+            &protocol.key(),
+            &self.system_program.key(),
+        );
+
+        let validation_pubkey =
+            get_withdraw_hook_extra_account_metas_address(&self.share_mint.key(), &hook_program);
+
+        let mut cpi_account_infos = vec![
+            self.vault.to_account_info(),
+            self.share_mint.to_account_info(),
+            extra_metas.to_account_info(),
+            protocol.to_account_info(),
+            self.system_program.to_account_info(),
+        ];
+
+        if extra_metas.key() == validation_pubkey {
+            instruction
+                .accounts
+                .push(AccountMeta::new_readonly(validation_pubkey, false));
+            let validation_info = extra_metas.to_account_info();
+            cpi_account_infos.push(validation_info.clone());
+            ExtraAccountMetaList::add_to_cpi_instruction::<WithdrawHookInstruction>(
+                &mut instruction,
+                &mut cpi_account_infos,
+                &validation_info.try_borrow_data()?,
+                remaining_accounts,
+            )?;
+        } else {
+            return Err(VaultProgramError::InvalidAccountData.into());
+        }
+
+        let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
+
+        cpi_account_infos.extend_from_slice(remaining_accounts);
+
+        invoke_signed(&instruction, &cpi_account_infos, seeds)?;
+        Ok(())
+    }
+
     /// Burns `shares_amount` from user shares token account
     pub fn burn_shares(&mut self, shares_amount: u64) -> Result<()> {
         let cpi_accounts = Burn {
@@ -129,7 +280,11 @@ impl<'info> Withdraw<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64, max_shares: u64) -> Result<()> {
+pub fn handler<'info>(
+    ctx: Context<'_, '_, '_, 'info, Withdraw<'info>>,
+    assets: u64,
+    max_shares: u64,
+) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
     // assets is NET to receiver/user.
@@ -138,14 +293,33 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64, max_shares: u64) -> R
     // fee computed on the net amount
     let fee = ctx.accounts.vault.get_withdraw_fee(amount_assets_out)?;
 
-    // total assets leaving the vault reserve
-    // including the fees
+    // total assets leaving the vault reserve including fees
     let amount_with_fee = amount_assets_out
         .checked_add(fee)
         .ok_or(VaultProgramError::ArithmeticError)?;
 
+    // If a withdraw hook is registered, use the NAV reported by the hook program
+    // as the reserve balance (assets may be deployed externally).
+    let withdraw_hook_program = ctx.accounts.vault.withdraw_hook_type();
+    let reserve_balance = if let Some(withdraw_hook) = withdraw_hook_program {
+        let hook_program_pubkey = withdraw_hook.hook_program_id;
+        let hook_program_account = ctx
+            .accounts
+            .hook_program
+            .as_ref()
+            .ok_or(VaultProgramError::OptionalAccountIsEmpty)?;
+        require!(
+            hook_program_account.key().eq(&hook_program_pubkey),
+            VaultProgramError::HookExtensionNotInitialized
+        );
+        ctx.accounts
+            .get_nav(hook_program_pubkey, hook_program_account.clone())?
+    } else {
+        ctx.accounts.reserve.amount
+    };
+
     let shares_to_burn = ctx.accounts.vault.get_shares_from_assets(
-        ctx.accounts.reserve.amount,
+        reserve_balance,
         ctx.accounts.share_mint.supply,
         amount_with_fee,
         // This ensures the user provides (burns) enough shares
@@ -164,6 +338,14 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64, max_shares: u64) -> R
 
     // burn user shares
     ctx.accounts.burn_shares(shares_to_burn)?;
+
+    // execute withdraw hook if present (allows external program to handle asset return)
+    if let Some(withdraw_hook) = withdraw_hook_program {
+        let hook_program_pubkey = withdraw_hook.hook_program_id;
+        let remaining = ctx.remaining_accounts;
+        ctx.accounts
+            .execute_withdraw_hook(hook_program_pubkey, remaining)?;
+    }
 
     // pay fee from vault reserve -> fee recipient (if fee > 0)
     if fee > 0 {

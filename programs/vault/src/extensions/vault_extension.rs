@@ -1,12 +1,16 @@
 use anchor_lang::prelude::*;
 
-use crate::{extensions::DepositHook, state::FeeType};
+use crate::{
+    extensions::{DepositHook, WithdrawHook},
+    state::FeeType,
+};
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, InitSpace, Copy)]
 pub enum VaultExtension {
     DepositFee(FeeType),
     WithdrawalFee(FeeType),
     DepositHook(DepositHook),
+    WithdrawHook(WithdrawHook),
 }
 
 impl VaultExtension {
@@ -27,6 +31,13 @@ impl VaultExtension {
     pub fn as_deposit_hook(&self) -> Option<DepositHook> {
         match self {
             VaultExtension::DepositHook(hook_program) => Some(*hook_program),
+            _ => None,
+        }
+    }
+
+    pub fn as_withdraw_hook(&self) -> Option<WithdrawHook> {
+        match self {
+            VaultExtension::WithdrawHook(hook_program) => Some(*hook_program),
             _ => None,
         }
     }

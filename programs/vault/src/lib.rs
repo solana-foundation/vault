@@ -82,7 +82,11 @@ pub mod vault {
     /// # Arguments
     /// * `assets` - The amount of asset tokens to withdraw from the vault
     /// * `max_shares` - Maximum number of shares the user is willing to burn (slippage check)
-    pub fn withdraw(ctx: Context<Withdraw>, assets: u64, max_shares: u64) -> Result<()> {
+    pub fn withdraw<'info>(
+        ctx: Context<'_, '_, '_, 'info, Withdraw<'info>>,
+        assets: u64,
+        max_shares: u64,
+    ) -> Result<()> {
         instructions::withdraw::handler(ctx, assets, max_shares)
     }
 

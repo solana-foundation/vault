@@ -18,4 +18,8 @@ pub mod dummy_protocol {
     pub fn deposit(ctx: Context<Deposit>, assets: u64) -> Result<()> {
         instructions::deposit::handler(ctx, assets)
     }
+
+    pub fn withdraw(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
+        instructions::withdraw::handler(ctx, assets)
+    }
 }
