@@ -27,18 +27,8 @@ pub mod hook_program {
     /// Returns the vault's current Net Asset Value (NAV) as transaction return data.
     /// Reads the stored `NavReturnData` PDA and sets it as the return data for the caller.
     /// Requires that `update_nav` was called earlier in the same transaction for the same vault.
-    pub fn get_nav<'info>(ctx: Context<GetNavData>) -> Result<()> {
-        instructions::get_nav_data::handler(ctx)
-    }
-
-    /// Aggregates deposit amounts across all associated protocols and stores the total NAV.
-    /// Iterates through each protocol in `VaultAssociatedProtocols`, reads its `ProtocolDeposits`
-    /// PDA from `remaining_accounts`, and sums the amounts into the `NavReturnData` PDA.
-    /// Creates the `NavReturnData` account if it does not yet exist.
-    pub fn update_nav<'info>(
-        ctx: Context<'_, '_, 'info, 'info, UpdateNavData<'info>>,
-    ) -> Result<()> {
-        instructions::update_nav_data::handler(ctx)
+    pub fn get_nav<'info>(ctx: Context<'_, '_, '_, 'info, GetNav<'info>>) -> Result<()> {
+        instructions::get_nav::handler(ctx)
     }
 
     /// Initializes the `VaultAssociatedProtocols` PDA for a given vault.

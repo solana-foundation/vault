@@ -175,8 +175,6 @@ pub fn deposit(
         .share_token_program(share_token_program)
         .hook_program(Some(hook_program))
         .protocol(protocol)
-        .nav_return_data(nav_return_data)
-        .instructions(instructions)
         .extra_metas(extra_metas)
         .instruction()
         .into_sdk_instruction();

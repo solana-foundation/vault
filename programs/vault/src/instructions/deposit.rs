@@ -1,9 +1,6 @@
 use anchor_lang::{
     prelude::*,
-    solana_program::{
-        instruction::Instruction,
-        program::{get_return_data, invoke_signed},
-    },
+    solana_program::program::{get_return_data, invoke_signed},
 };
 use anchor_spl::{
     token::spl_token,
@@ -24,10 +21,7 @@ use crate::{
         create_deposit_hook_ix, get_deposit_hook_extra_account_metas_address,
         DepositHookInstruction,
     },
-    state::{
-        Rounding, VaultConfig, GET_NAV_DISCRIMINATOR, MAX_BPS, RESERVE_CONFIG_SEED,
-        VAULT_CONFIG_SEED,
-    },
+    state::{Rounding, VaultConfig, MAX_BPS, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
 };
 
 #[derive(Accounts)]
@@ -84,13 +78,11 @@ pub struct DepositAndMint<'info> {
 
     pub extra_metas: Option<AccountInfo<'info>>,
     pub protocol: Option<AccountInfo<'info>>,
-    pub nav_return_data: Option<AccountInfo<'info>>,
     pub hook_program: Option<AccountInfo<'info>>,
 
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub share_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
-    pub instructions: Option<AccountInfo<'info>>,
 }
 
 impl<'info> DepositAndMint<'info> {
@@ -166,86 +158,6 @@ impl<'info> DepositAndMint<'info> {
             .div_ceil(MAX_BPS.into()))
     }
 
-    /// Queries the hook program for the current Net Asset Value (NAV) of the vault.
-    ///
-    /// The NAV is needed to correctly
-    /// calculate the share-to-asset exchange rate when the vault has an active deposit hook.
-    pub fn get_nav(
-        &self,
-        hook_program: Pubkey,
-        hook_program_account_info: AccountInfo<'info>,
-    ) -> Result<u64> {
-        let nav_account = self
-            .nav_return_data
-            .as_ref()
-            .ok_or(VaultProgramError::StaleVaultNav)?;
-
-        let ix_sysvar = self
-            .instructions
-            .as_ref()
-            .ok_or(VaultProgramError::OptionalAccountIsEmpty)?;
-
-        // Build the `get_nav` CPI instruction targeting the hook program.
-        // The hook program reads the vault state and writes the NAV into return data.
-        let get_nav_ix = Instruction {
-            program_id: hook_program,
-            accounts: vec![
-                AccountMeta::new_readonly(self.vault.key(), false),
-                AccountMeta::new_readonly(*nav_account.key, false),
-                AccountMeta::new_readonly(
-                    anchor_lang::solana_program::sysvar::instructions::ID,
-                    false,
-                ),
-            ],
-            data: GET_NAV_DISCRIMINATOR.to_vec(),
-        };
-
-        invoke_signed(
-            &get_nav_ix,
-            &[
-                hook_program_account_info,
-                self.vault.to_account_info(),
-                nav_account.clone(),
-                ix_sysvar.clone(),
-            ],
-            &[],
-        )?;
-
-        // Retrieve and validate the return data written by the hook program.
-        let (return_program_id, return_data) =
-            get_return_data().ok_or(VaultProgramError::StaleVaultNav)?;
-        // Ensure the return data originates from the expected hook program and not a spoofed one.
-        require_keys_eq!(
-            return_program_id,
-            hook_program.key(),
-            VaultProgramError::InvalidReturnedData
-        );
-        require!(
-            return_data.len() >= 24,
-            VaultProgramError::InvalidReturnedData
-        );
-
-        // Reject stale NAV values to prevent deposits from using an outdated exchange rate.
-        let update_timestamp = i64::from_le_bytes(
-            return_data[16..24]
-                .try_into()
-                .map_err(|_| VaultProgramError::InvalidReturnedData)?,
-        );
-
-        let current_time = Clock::get()?.unix_timestamp;
-        let nav_age = current_time
-            .checked_sub(update_timestamp)
-            .ok_or(VaultProgramError::ArithmeticError)?;
-        require!(nav_age <= 60, VaultProgramError::StaleVaultNav);
-        let nav = u64::from_le_bytes(
-            return_data[8..16]
-                .try_into()
-                .map_err(|_| VaultProgramError::InvalidReturnedData)?,
-        );
-
-        Ok(nav)
-    }
-
     /// Grants a delegate account permission to transfer up to `amount` tokens from the reserve,
     /// signed by the vault PDA (which owns the reserve).
     pub fn delegate_reserve(&mut self, delegate: AccountInfo<'info>, amount: u64) -> Result<()> {
@@ -274,7 +186,7 @@ impl<'info> DepositAndMint<'info> {
         &mut self,
         hook_program: Pubkey,
         remaining_accounts: &[AccountInfo<'info>],
-    ) -> Result<()> {
+    ) -> Result<u64> {
         let extra_metas = &self
             .extra_metas
             .clone()
@@ -285,7 +197,6 @@ impl<'info> DepositAndMint<'info> {
             .ok_or(VaultProgramError::OptionalAccountIsEmpty)?;
         let share_mint = self.share_mint.key();
 
-        // Build the base deposit-hook instruction with the standard set of accounts.
         let mut instruction = create_deposit_hook_ix(
             &hook_program,
             &self.vault.key(),
@@ -295,8 +206,6 @@ impl<'info> DepositAndMint<'info> {
             &self.system_program.key(),
         );
 
-        // Derive the expected address of the extra-account-metas validation PDA to guard
-        // against a caller passing a malicious account in place of the real one.
         let validation_pubkey =
             get_deposit_hook_extra_account_metas_address(&self.share_mint.key(), &hook_program);
 
@@ -332,7 +241,27 @@ impl<'info> DepositAndMint<'info> {
         cpi_account_infos.extend_from_slice(remaining_accounts);
 
         invoke_signed(&instruction, &cpi_account_infos, seeds)?;
-        Ok(())
+        let (return_program_id, return_data) =
+            get_return_data().ok_or(VaultProgramError::StaleVaultNav)?;
+
+        // Ensure the return data originates from the expected hook program and not a spoofed one.
+        require_keys_eq!(
+            return_program_id,
+            hook_program.key(),
+            VaultProgramError::InvalidReturnedData
+        );
+        require!(
+            return_data.len() >= 8,
+            VaultProgramError::InvalidReturnedData
+        );
+
+        let nav = u64::from_le_bytes(
+            return_data[0..8]
+                .try_into()
+                .map_err(|_| VaultProgramError::InvalidReturnedData)?,
+        );
+
+        Ok(nav)
     }
 }
 
@@ -369,17 +298,14 @@ pub fn handler<'info>(
             hook_program_account.key().eq(&hook_program_pubkey),
             VaultProgramError::HookExtensionNotInitialized
         );
-        let nav = ctx
-            .accounts
-            .get_nav(hook_program_pubkey, hook_program_account.clone())?;
+
         let remaining = ctx.remaining_accounts;
         ctx.accounts
             .delegate_reserve(hook_program_account.clone(), remaining_amount)?;
-        ctx.accounts
+        let nav = ctx
+            .accounts
             .execute_deposit_hook(hook_program_pubkey, remaining)?;
-        reserve_balance = reserve_balance
-            .checked_add(nav)
-            .ok_or(VaultProgramError::ArithmeticError)?;
+        reserve_balance = nav;
     }
 
     let updated_reserve_amount = ctx.accounts.reserve.amount;

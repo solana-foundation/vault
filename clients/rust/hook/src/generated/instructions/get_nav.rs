@@ -11,11 +11,9 @@ pub const GET_NAV_DISCRIMINATOR: [u8; 8] = [200, 89, 76, 53, 215, 218, 63, 21];
 /// Accounts.
 #[derive(Debug)]
 pub struct GetNav {
-    pub vault: solana_pubkey::Pubkey,
+    pub share_mint: solana_pubkey::Pubkey,
 
-    pub nav_return_data: solana_pubkey::Pubkey,
-
-    pub instructions: solana_pubkey::Pubkey,
+    pub associated_protocols_info: solana_pubkey::Pubkey,
 }
 
 impl GetNav {
@@ -29,16 +27,13 @@ impl GetNav {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(2 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.vault, false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.nav_return_data,
+            self.share_mint,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.instructions,
+            self.associated_protocols_info,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -80,14 +75,12 @@ impl Default for GetNavInstructionData {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` vault
-///   1. `[]` nav_return_data
-///   2. `[optional]` instructions (default to `Sysvar1nstructions1111111111111111111111111`)
+///   0. `[]` share_mint
+///   1. `[]` associated_protocols_info
 #[derive(Clone, Debug, Default)]
 pub struct GetNavBuilder {
-    vault: Option<solana_pubkey::Pubkey>,
-    nav_return_data: Option<solana_pubkey::Pubkey>,
-    instructions: Option<solana_pubkey::Pubkey>,
+    share_mint: Option<solana_pubkey::Pubkey>,
+    associated_protocols_info: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -97,21 +90,17 @@ impl GetNavBuilder {
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-        self.vault = Some(vault);
+    pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
+        self.share_mint = Some(share_mint);
         self
     }
 
     #[inline(always)]
-    pub fn nav_return_data(&mut self, nav_return_data: solana_pubkey::Pubkey) -> &mut Self {
-        self.nav_return_data = Some(nav_return_data);
-        self
-    }
-
-    /// `[optional account, default to 'Sysvar1nstructions1111111111111111111111111']`
-    #[inline(always)]
-    pub fn instructions(&mut self, instructions: solana_pubkey::Pubkey) -> &mut Self {
-        self.instructions = Some(instructions);
+    pub fn associated_protocols_info(
+        &mut self,
+        associated_protocols_info: solana_pubkey::Pubkey,
+    ) -> &mut Self {
+        self.associated_protocols_info = Some(associated_protocols_info);
         self
     }
 
@@ -135,11 +124,10 @@ impl GetNavBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let accounts = GetNav {
-            vault: self.vault.expect("vault is not set"),
-            nav_return_data: self.nav_return_data.expect("nav_return_data is not set"),
-            instructions: self.instructions.unwrap_or(solana_pubkey::pubkey!(
-                "Sysvar1nstructions1111111111111111111111111"
-            )),
+            share_mint: self.share_mint.expect("share_mint is not set"),
+            associated_protocols_info: self
+                .associated_protocols_info
+                .expect("associated_protocols_info is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
@@ -148,11 +136,9 @@ impl GetNavBuilder {
 
 /// `get_nav` CPI accounts.
 pub struct GetNavCpiAccounts<'a, 'b> {
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
+    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
-    pub nav_return_data: &'b solana_account_info::AccountInfo<'a>,
-
-    pub instructions: &'b solana_account_info::AccountInfo<'a>,
+    pub associated_protocols_info: &'b solana_account_info::AccountInfo<'a>,
 }
 
 /// `get_nav` CPI instruction.
@@ -160,11 +146,9 @@ pub struct GetNavCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
+    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
-    pub nav_return_data: &'b solana_account_info::AccountInfo<'a>,
-
-    pub instructions: &'b solana_account_info::AccountInfo<'a>,
+    pub associated_protocols_info: &'b solana_account_info::AccountInfo<'a>,
 }
 
 impl<'a, 'b> GetNavCpi<'a, 'b> {
@@ -174,9 +158,8 @@ impl<'a, 'b> GetNavCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            vault: accounts.vault,
-            nav_return_data: accounts.nav_return_data,
-            instructions: accounts.instructions,
+            share_mint: accounts.share_mint,
+            associated_protocols_info: accounts.associated_protocols_info,
         }
     }
 
@@ -206,17 +189,13 @@ impl<'a, 'b> GetNavCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(2 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.vault.key,
+            *self.share_mint.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.nav_return_data.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.instructions.key,
+            *self.associated_protocols_info.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -233,11 +212,10 @@ impl<'a, 'b> GetNavCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(3 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.vault.clone());
-        account_infos.push(self.nav_return_data.clone());
-        account_infos.push(self.instructions.clone());
+        account_infos.push(self.share_mint.clone());
+        account_infos.push(self.associated_protocols_info.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -254,9 +232,8 @@ impl<'a, 'b> GetNavCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[]` vault
-///   1. `[]` nav_return_data
-///   2. `[]` instructions
+///   0. `[]` share_mint
+///   1. `[]` associated_protocols_info
 #[derive(Clone, Debug)]
 pub struct GetNavCpiBuilder<'a, 'b> {
     instruction: Box<GetNavCpiBuilderInstruction<'a, 'b>>,
@@ -266,35 +243,28 @@ impl<'a, 'b> GetNavCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(GetNavCpiBuilderInstruction {
             __program: program,
-            vault: None,
-            nav_return_data: None,
-            instructions: None,
+            share_mint: None,
+            associated_protocols_info: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.vault = Some(vault);
+    pub fn share_mint(
+        &mut self,
+        share_mint: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.share_mint = Some(share_mint);
         self
     }
 
     #[inline(always)]
-    pub fn nav_return_data(
+    pub fn associated_protocols_info(
         &mut self,
-        nav_return_data: &'b solana_account_info::AccountInfo<'a>,
+        associated_protocols_info: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.nav_return_data = Some(nav_return_data);
-        self
-    }
-
-    #[inline(always)]
-    pub fn instructions(
-        &mut self,
-        instructions: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.instructions = Some(instructions);
+        self.instruction.associated_protocols_info = Some(associated_protocols_info);
         self
     }
 
@@ -339,17 +309,12 @@ impl<'a, 'b> GetNavCpiBuilder<'a, 'b> {
         let instruction = GetNavCpi {
             __program: self.instruction.__program,
 
-            vault: self.instruction.vault.expect("vault is not set"),
+            share_mint: self.instruction.share_mint.expect("share_mint is not set"),
 
-            nav_return_data: self
+            associated_protocols_info: self
                 .instruction
-                .nav_return_data
-                .expect("nav_return_data is not set"),
-
-            instructions: self
-                .instruction
-                .instructions
-                .expect("instructions is not set"),
+                .associated_protocols_info
+                .expect("associated_protocols_info is not set"),
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -361,9 +326,8 @@ impl<'a, 'b> GetNavCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct GetNavCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
-    vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-    nav_return_data: Option<&'b solana_account_info::AccountInfo<'a>>,
-    instructions: Option<&'b solana_account_info::AccountInfo<'a>>,
+    share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
+    associated_protocols_info: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

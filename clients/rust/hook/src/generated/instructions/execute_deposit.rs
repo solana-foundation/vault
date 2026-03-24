@@ -22,6 +22,8 @@ pub struct ExecuteDeposit {
     pub system_program: solana_pubkey::Pubkey,
 
     pub vault: solana_pubkey::Pubkey,
+
+    pub associated_protocols_info: solana_pubkey::Pubkey,
 }
 
 impl ExecuteDeposit {
@@ -35,7 +37,7 @@ impl ExecuteDeposit {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.signer,
             true,
@@ -58,6 +60,10 @@ impl ExecuteDeposit {
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.vault, false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.associated_protocols_info,
+            false,
         ));
         accounts.extend_from_slice(remaining_accounts);
         let data = ExecuteDepositInstructionData::new().try_to_vec().unwrap();
@@ -104,6 +110,7 @@ impl Default for ExecuteDepositInstructionData {
 ///   3. `[]` protocol
 ///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
 ///   5. `[]` vault
+///   6. `[]` associated_protocols_info
 #[derive(Clone, Debug, Default)]
 pub struct ExecuteDepositBuilder {
     signer: Option<solana_pubkey::Pubkey>,
@@ -112,6 +119,7 @@ pub struct ExecuteDepositBuilder {
     protocol: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
+    associated_protocols_info: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -157,6 +165,15 @@ impl ExecuteDepositBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn associated_protocols_info(
+        &mut self,
+        associated_protocols_info: solana_pubkey::Pubkey,
+    ) -> &mut Self {
+        self.associated_protocols_info = Some(associated_protocols_info);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -185,6 +202,9 @@ impl ExecuteDepositBuilder {
                 .system_program
                 .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
             vault: self.vault.expect("vault is not set"),
+            associated_protocols_info: self
+                .associated_protocols_info
+                .expect("associated_protocols_info is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
@@ -204,6 +224,8 @@ pub struct ExecuteDepositCpiAccounts<'a, 'b> {
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub associated_protocols_info: &'b solana_account_info::AccountInfo<'a>,
 }
 
 /// `execute_deposit` CPI instruction.
@@ -222,6 +244,8 @@ pub struct ExecuteDepositCpi<'a, 'b> {
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub associated_protocols_info: &'b solana_account_info::AccountInfo<'a>,
 }
 
 impl<'a, 'b> ExecuteDepositCpi<'a, 'b> {
@@ -237,6 +261,7 @@ impl<'a, 'b> ExecuteDepositCpi<'a, 'b> {
             protocol: accounts.protocol,
             system_program: accounts.system_program,
             vault: accounts.vault,
+            associated_protocols_info: accounts.associated_protocols_info,
         }
     }
 
@@ -266,7 +291,7 @@ impl<'a, 'b> ExecuteDepositCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.signer.key,
             true,
@@ -291,6 +316,10 @@ impl<'a, 'b> ExecuteDepositCpi<'a, 'b> {
             *self.vault.key,
             false,
         ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.associated_protocols_info.key,
+            false,
+        ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -305,7 +334,7 @@ impl<'a, 'b> ExecuteDepositCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(8 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.signer.clone());
         account_infos.push(self.share_mint.clone());
@@ -313,6 +342,7 @@ impl<'a, 'b> ExecuteDepositCpi<'a, 'b> {
         account_infos.push(self.protocol.clone());
         account_infos.push(self.system_program.clone());
         account_infos.push(self.vault.clone());
+        account_infos.push(self.associated_protocols_info.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -335,6 +365,7 @@ impl<'a, 'b> ExecuteDepositCpi<'a, 'b> {
 ///   3. `[]` protocol
 ///   4. `[]` system_program
 ///   5. `[]` vault
+///   6. `[]` associated_protocols_info
 #[derive(Clone, Debug)]
 pub struct ExecuteDepositCpiBuilder<'a, 'b> {
     instruction: Box<ExecuteDepositCpiBuilderInstruction<'a, 'b>>,
@@ -350,6 +381,7 @@ impl<'a, 'b> ExecuteDepositCpiBuilder<'a, 'b> {
             protocol: None,
             system_program: None,
             vault: None,
+            associated_protocols_info: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -397,6 +429,15 @@ impl<'a, 'b> ExecuteDepositCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.vault = Some(vault);
+        self
+    }
+
+    #[inline(always)]
+    pub fn associated_protocols_info(
+        &mut self,
+        associated_protocols_info: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.associated_protocols_info = Some(associated_protocols_info);
         self
     }
 
@@ -458,6 +499,11 @@ impl<'a, 'b> ExecuteDepositCpiBuilder<'a, 'b> {
                 .expect("system_program is not set"),
 
             vault: self.instruction.vault.expect("vault is not set"),
+
+            associated_protocols_info: self
+                .instruction
+                .associated_protocols_info
+                .expect("associated_protocols_info is not set"),
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -475,6 +521,7 @@ struct ExecuteDepositCpiBuilderInstruction<'a, 'b> {
     protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    associated_protocols_info: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

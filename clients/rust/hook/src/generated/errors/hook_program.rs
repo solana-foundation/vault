@@ -27,6 +27,9 @@ pub enum HookProgramError {
     /// 6005 - Signer is not the vault authority
     #[error("Signer is not the vault authority")]
     UnauthorizedAuthority = 0x1775,
+    /// 6006 - At least 2 associated protocols are required
+    #[error("At least 2 associated protocols are required")]
+    InsufficientAssociatedProtocols = 0x1776,
 }
 
 impl From<HookProgramError> for solana_program_error::ProgramError {
