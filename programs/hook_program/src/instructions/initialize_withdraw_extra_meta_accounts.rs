@@ -6,8 +6,7 @@ use spl_tlv_account_resolution::{
 use vault::state::WITHDRAW_ACCOUNT_METAS_SEED;
 
 use crate::state::{
-    WithdrawHookInstruction, EXTRA_ACCOUNT_METAS_SEED, VAULT_ASSOCIATED_PROTOCOLS_SEED,
-    VAULT_PROGRAM_ID, VAULT_PROTOCOL_DEPOSIT_SEED, VAULT_SEED,
+    WithdrawHookInstruction, EXTRA_ACCOUNT_METAS_SEED, VAULT_ASSOCIATED_PROTOCOLS_SEED, VAULT_SEED,
 };
 
 #[derive(Accounts)]
