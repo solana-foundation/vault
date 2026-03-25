@@ -3,10 +3,9 @@ use anchor_spl::token_interface::{Mint, TokenInterface};
 use spl_tlv_account_resolution::{
     account::ExtraAccountMeta, seeds::Seed, state::ExtraAccountMetaList,
 };
+use vault::state::WITHDRAW_ACCOUNT_METAS_SEED;
 
-use crate::state::{
-    WithdrawHookInstruction, EXTRA_ACCOUNT_METAS_SEED, WITHDRAW_ACCOUNT_METAS_SEED,
-};
+use crate::state::{WithdrawHookInstruction, EXTRA_ACCOUNT_METAS_SEED};
 
 #[derive(Accounts)]
 pub struct InitializeWithdrawExtraMetaAccounts<'info> {
