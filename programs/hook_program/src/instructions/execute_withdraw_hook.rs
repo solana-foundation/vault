@@ -1,7 +1,16 @@
-use anchor_lang::{prelude::*, solana_program::program::invoke};
+use anchor_lang::{
+    prelude::*,
+    solana_program::program::{invoke, set_return_data},
+};
 use anchor_spl::token_interface::Mint;
 
-use crate::{errors::HookProgramError, state::protocol_deposit};
+use crate::{
+    errors::HookProgramError,
+    state::{
+        get_nav, protocol_withdraw, validate_protocols, VaultAssociatedProtocols,
+        VAULT_ASSOCIATED_PROTOCOLS_SEED,
+    },
+};
 
 #[derive(Accounts)]
 pub struct ExecuteWithdrawHook<'info> {
@@ -15,6 +24,11 @@ pub struct ExecuteWithdrawHook<'info> {
     pub system_program: Program<'info, System>,
     /// CHECK: This is the downstream protocol vault
     pub vault: UncheckedAccount<'info>,
+    #[account(
+        seeds = [VAULT_ASSOCIATED_PROTOCOLS_SEED, share_mint.key().as_ref()],
+        bump
+    )]
+    pub associated_protocols_info: Account<'info, VaultAssociatedProtocols>,
 }
 
 impl<'info> ExecuteWithdrawHook<'info> {
@@ -23,7 +37,7 @@ impl<'info> ExecuteWithdrawHook<'info> {
             .first()
             .ok_or(error!(HookProgramError::InvalidAccountData))?;
 
-        let instruction = protocol_deposit(
+        let instruction = protocol_withdraw(
             &self.protocol.key(),
             self.signer.key,
             &self.share_mint.key(),
@@ -45,6 +59,19 @@ impl<'info> ExecuteWithdrawHook<'info> {
 }
 
 pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ExecuteWithdrawHook<'info>>) -> Result<()> {
+    validate_protocols(
+        &ctx.accounts.associated_protocols_info.protocols,
+        ctx.accounts.protocol.key,
+    )?;
     ctx.accounts.invoke_withdraw(ctx.remaining_accounts)?;
+    let total = get_nav(
+        &ctx.accounts.associated_protocols_info.protocols,
+        &ctx.accounts.share_mint.key(),
+        ctx.remaining_accounts,
+        ctx.program_id,
+    )?;
+    msg!("Nav values is: {:?}", total);
+    let data = total.try_to_vec()?;
+    set_return_data(&data);
     Ok(())
 }

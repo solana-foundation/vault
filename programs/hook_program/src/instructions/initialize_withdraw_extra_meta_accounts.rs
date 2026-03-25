@@ -5,7 +5,10 @@ use spl_tlv_account_resolution::{
 };
 use vault::state::WITHDRAW_ACCOUNT_METAS_SEED;
 
-use crate::state::{WithdrawHookInstruction, EXTRA_ACCOUNT_METAS_SEED};
+use crate::state::{
+    WithdrawHookInstruction, EXTRA_ACCOUNT_METAS_SEED, VAULT_ASSOCIATED_PROTOCOLS_SEED,
+    VAULT_PROGRAM_ID, VAULT_PROTOCOL_DEPOSIT_SEED, VAULT_SEED,
+};
 
 #[derive(Accounts)]
 pub struct InitializeWithdrawExtraMetaAccounts<'info> {
@@ -45,11 +48,21 @@ pub fn handler<'info>(ctx: Context<InitializeWithdrawExtraMetaAccounts>) -> Resu
 }
 
 fn get_extra_metas() -> Result<Vec<ExtraAccountMeta>> {
+    let associated_protocols_meta = ExtraAccountMeta::new_with_seeds(
+        &[
+            Seed::Literal {
+                bytes: VAULT_ASSOCIATED_PROTOCOLS_SEED.to_vec(),
+            },
+            Seed::AccountKey { index: 1 }, // share mint
+        ],
+        false,
+        false,
+    )?;
     let vault_state_meta = ExtraAccountMeta::new_external_pda_with_seeds(
         3, // external protocol token program index
         &[
             Seed::Literal {
-                bytes: "vault".as_bytes().to_vec(),
+                bytes: VAULT_SEED.to_vec(),
             },
             Seed::AccountKey { index: 1 }, // share mint
         ],
@@ -57,9 +70,9 @@ fn get_extra_metas() -> Result<Vec<ExtraAccountMeta>> {
         true,
     )?;
 
-    Ok([vault_state_meta].to_vec())
+    Ok([associated_protocols_meta, vault_state_meta].to_vec())
 }
 
 fn get_extra_metas_size() -> usize {
-    ExtraAccountMetaList::size_of(1).unwrap()
+    ExtraAccountMetaList::size_of(2).unwrap()
 }

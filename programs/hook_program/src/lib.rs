@@ -30,9 +30,9 @@ pub mod hook_program {
     /// protocol's withdraw hook via CPI using the `WithdrawHookInstruction` discriminator.
     #[instruction(discriminator = WithdrawHookInstruction::SPL_DISCRIMINATOR_SLICE)]
     pub fn execute_withdraw<'info>(
-        ctx: Context<'_, '_, '_, 'info, ExecuteDepositHook<'info>>,
+        ctx: Context<'_, '_, '_, 'info, ExecuteWithdrawHook<'info>>,
     ) -> Result<()> {
-        instructions::execute_deposit_hook::handler(ctx)
+        instructions::execute_withdraw_hook::handler(ctx)
     }
 
     /// Returns the vault's current Net Asset Value (NAV) as transaction return data.
@@ -71,5 +71,12 @@ pub mod hook_program {
         ctx: Context<InitializeDepositExtraMetaAccounts>,
     ) -> Result<()> {
         instructions::initialize_deposit_extra_meta_accounts::handler(ctx)
+    }
+
+    /// Initializes the withdraw hook extra meta accounts needed for the withdraw hook
+    pub fn initialize_withdraw_extra_meta_accounts(
+        ctx: Context<InitializeWithdrawExtraMetaAccounts>,
+    ) -> Result<()> {
+        instructions::initialize_withdraw_extra_meta_accounts::handler(ctx)
     }
 }

@@ -749,6 +749,82 @@ pub fn init_deposit_hook(
     return svm.send_transaction(tx);
 }
 
+pub fn init_withdraw_hook(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: &Pubkey,
+    vault: &Pubkey,
+    hook_program: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    // Build initialize_withdraw_hook instruction using the Anchor discriminator computed at runtime
+    let disc = {
+        let hash = solana_sdk::hash::hash(b"global:initialize_withdraw_hook");
+        let b = hash.to_bytes();
+        [b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]]
+    };
+    let mut data = disc.to_vec();
+    data.extend_from_slice(hook_program.as_ref());
+
+    let ix = solana_sdk::instruction::Instruction {
+        program_id: vault_client::sdk::program_id(),
+        accounts: vec![
+            solana_sdk::instruction::AccountMeta::new_readonly(authority.pubkey(), true),
+            solana_sdk::instruction::AccountMeta::new_readonly(*share_mint, false),
+            solana_sdk::instruction::AccountMeta::new(*vault, false),
+        ],
+        data,
+    };
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        blockhash,
+    );
+
+    return svm.send_transaction(tx);
+}
+
+pub fn init_withdraw_extra_meta_accounts(
+    svm: &mut LiteSVM,
+    payer: &Keypair,
+    asset_mint: &Pubkey,
+    share_mint: &Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let (extra_metas, _) = Pubkey::find_program_address(
+        &[b"extra_account_metas", b"withdraw", share_mint.as_ref()],
+        &hook_client::sdk::program_id(),
+    );
+
+    let disc = {
+        let hash = solana_sdk::hash::hash(b"global:initialize_withdraw_extra_meta_accounts");
+        let b = hash.to_bytes();
+        [b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]]
+    };
+
+    let ix = solana_sdk::instruction::Instruction {
+        program_id: hook_client::sdk::program_id(),
+        accounts: vec![
+            solana_sdk::instruction::AccountMeta::new(payer.pubkey(), true),
+            solana_sdk::instruction::AccountMeta::new_readonly(*asset_mint, false),
+            solana_sdk::instruction::AccountMeta::new_readonly(*share_mint, false),
+            solana_sdk::instruction::AccountMeta::new(extra_metas, false),
+            solana_sdk::instruction::AccountMeta::new_readonly(
+                anchor_spl::token::spl_token::id(),
+                false,
+            ),
+            solana_sdk::instruction::AccountMeta::new_readonly(system_program::ID, false),
+        ],
+        data: disc.to_vec(),
+    };
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(&[ix], Some(&payer.pubkey()), &[payer], blockhash);
+
+    return svm.send_transaction(tx);
+}
+
 pub fn init_deposit_extra_meta_accounts(
     svm: &mut LiteSVM,
     payer: &Keypair,

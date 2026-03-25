@@ -145,6 +145,16 @@ pub mod vault {
         instructions::initialize_deposit_hook_extension::handler(ctx, hook_program)
     }
 
+    /// Initializes the withdraw hook extension for a vault (one-time, pre-init only).
+    /// Stores the provided extension inside `vault.extensions` as `VaultExtension::WithdrawHook`.
+    /// Only the vault authority can call this.
+    pub fn initialize_withdraw_hook(
+        ctx: Context<InitializeWithdrawHook>,
+        hook_program: Pubkey,
+    ) -> Result<()> {
+        instructions::initialize_withdraw_hook_extension::handler(ctx, hook_program)
+    }
+
     /// Updates the deposit fee configuration for an already-initialized deposit fee extension.
     /// Finds the existing `VaultExtension::DepositFee` entry and replaces it in-place.
     /// Only the vault authority can call this.

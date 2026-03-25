@@ -9,3 +9,4 @@ mod mint;
 mod redeem;
 mod update_vault;
 mod withdraw;
+mod withdraw_hook;

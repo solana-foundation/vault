@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::state::VAULT_PROTOCOL_DEPOSIT_SEED;
+use crate::{errors::HookProgramError, state::VAULT_PROTOCOL_DEPOSIT_SEED};
 
 #[account]
 #[derive(InitSpace)]
@@ -18,15 +18,6 @@ pub struct ProtocolDeposits {
     pub protocol: Pubkey,
     pub amount: u64,
     pub bump: u8,
-}
-
-#[account]
-#[derive(InitSpace)]
-pub struct NavReturnData {
-    /// Current Net Asset Value in vault base units
-    pub nav: u64,
-    /// Unix timestamp of last NAV update
-    pub update_timestamp: i64,
 }
 
 pub fn get_nav<'info>(
@@ -62,4 +53,23 @@ pub fn get_nav<'info>(
             .ok_or_else(|| error!(ErrorCode::AccountDidNotDeserialize))?;
     }
     Ok(total)
+}
+
+pub fn validate_protocols<'info>(protocols: &Vec<Pubkey>, protocol: &Pubkey) -> Result<()> {
+    require!(
+        protocols.len() >= 2,
+        HookProgramError::InsufficientAssociatedProtocols
+    );
+
+    require!(
+        protocols.contains(&vault::id()),
+        HookProgramError::ProtocolNotFound
+    );
+
+    require!(
+        protocols.contains(protocol),
+        HookProgramError::ProtocolNotFound
+    );
+
+    Ok(())
 }

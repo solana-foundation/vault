@@ -10,6 +10,7 @@ pub(crate) mod r#deposit;
 pub(crate) mod r#initialize_deposit_fees;
 pub(crate) mod r#initialize_deposit_hook;
 pub(crate) mod r#initialize_vault;
+pub(crate) mod r#initialize_withdraw_hook;
 pub(crate) mod r#initialize_withdrawal_fees;
 pub(crate) mod r#mint;
 pub(crate) mod r#redeem;
@@ -20,7 +21,7 @@ pub(crate) mod r#withdraw;
 
 pub use self::{
     r#close_vault::*, r#create_vault::*, r#deposit::*, r#initialize_deposit_fees::*,
-    r#initialize_deposit_hook::*, r#initialize_vault::*, r#initialize_withdrawal_fees::*,
-    r#mint::*, r#redeem::*, r#update_deposit_fees::*, r#update_vault::*,
-    r#update_withdrawal_fees::*, r#withdraw::*,
+    r#initialize_deposit_hook::*, r#initialize_vault::*, r#initialize_withdraw_hook::*,
+    r#initialize_withdrawal_fees::*, r#mint::*, r#redeem::*, r#update_deposit_fees::*,
+    r#update_vault::*, r#update_withdrawal_fees::*, r#withdraw::*,
 };

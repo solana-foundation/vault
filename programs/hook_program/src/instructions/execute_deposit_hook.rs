@@ -6,10 +6,11 @@ use anchor_spl::token_interface::Mint;
 
 use crate::{
     errors::HookProgramError,
-    state::{get_nav, protocol_deposit, VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED},
+    state::{
+        get_nav, protocol_deposit, validate_protocols, VaultAssociatedProtocols,
+        VAULT_ASSOCIATED_PROTOCOLS_SEED,
+    },
 };
-
-use super::get_nav::GetNav;
 
 #[derive(Accounts)]
 pub struct ExecuteDepositHook<'info> {
@@ -31,27 +32,6 @@ pub struct ExecuteDepositHook<'info> {
 }
 
 impl<'info> ExecuteDepositHook<'info> {
-    pub fn validate_protocols(&self) -> Result<()> {
-        let protocols = &self.associated_protocols_info.protocols;
-
-        require!(
-            protocols.len() >= 2,
-            HookProgramError::InsufficientAssociatedProtocols
-        );
-
-        require!(
-            protocols.contains(&vault::id()),
-            HookProgramError::ProtocolNotFound
-        );
-
-        require!(
-            protocols.contains(&self.protocol.key()),
-            HookProgramError::ProtocolNotFound
-        );
-
-        Ok(())
-    }
-
     pub fn invoke_deposit(&self, additional_accounts: &[AccountInfo<'info>]) -> Result<()> {
         let downstream_vault = additional_accounts
             .first()
@@ -79,7 +59,10 @@ impl<'info> ExecuteDepositHook<'info> {
 }
 
 pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ExecuteDepositHook<'info>>) -> Result<()> {
-    ctx.accounts.validate_protocols()?;
+    validate_protocols(
+        &ctx.accounts.associated_protocols_info.protocols,
+        ctx.accounts.protocol.key,
+    )?;
     ctx.accounts.invoke_deposit(ctx.remaining_accounts)?;
     let total = get_nav(
         &ctx.accounts.associated_protocols_info.protocols,
