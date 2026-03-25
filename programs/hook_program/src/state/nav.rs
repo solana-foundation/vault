@@ -20,15 +20,6 @@ pub struct ProtocolDeposits {
     pub bump: u8,
 }
 
-#[account]
-#[derive(InitSpace)]
-pub struct NavReturnData {
-    /// Current Net Asset Value in vault base units
-    pub nav: u64,
-    /// Unix timestamp of last NAV update
-    pub update_timestamp: i64,
-}
-
 pub fn get_nav<'info>(
     protocols: &[Pubkey],
     share_mint: &Pubkey,
