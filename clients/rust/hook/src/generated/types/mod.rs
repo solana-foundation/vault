@@ -7,5 +7,6 @@
 pub(crate) mod r#deposit_hook;
 pub(crate) mod r#fee_type;
 pub(crate) mod r#vault_extension;
+pub(crate) mod r#withdraw_hook;
 
-pub use self::{r#deposit_hook::*, r#fee_type::*, r#vault_extension::*};
+pub use self::{r#deposit_hook::*, r#fee_type::*, r#vault_extension::*, r#withdraw_hook::*};

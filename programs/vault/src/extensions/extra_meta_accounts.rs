@@ -4,7 +4,9 @@ use anchor_lang::{
 };
 use spl_discriminator::{ArrayDiscriminator, SplDiscriminate};
 
-use crate::state::{DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED, WITHDRAW_ACCOUNT_METAS_SEED};
+use crate::state::{
+    DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED, WITHDRAW_ACCOUNT_METAS_SEED,
+};
 
 pub enum VaultStandardInstruction {
     DepositHook,

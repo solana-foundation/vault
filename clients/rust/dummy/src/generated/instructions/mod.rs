@@ -6,5 +6,6 @@
 
 pub(crate) mod r#create_vault;
 pub(crate) mod r#deposit;
+pub(crate) mod r#withdraw;
 
-pub use self::{r#create_vault::*, r#deposit::*};
+pub use self::{r#create_vault::*, r#deposit::*, r#withdraw::*};

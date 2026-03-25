@@ -4,7 +4,7 @@
 //!
 //! <https://github.com/codama-idl/codama>
 
-use crate::generated::types::{DepositHook, FeeType};
+use crate::generated::types::{DepositHook, FeeType, WithdrawHook};
 use borsh::{BorshDeserialize, BorshSerialize};
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
@@ -13,4 +13,5 @@ pub enum VaultExtension {
     DepositFee(FeeType),
     WithdrawalFee(FeeType),
     DepositHook(DepositHook),
+    WithdrawHook(WithdrawHook),
 }
