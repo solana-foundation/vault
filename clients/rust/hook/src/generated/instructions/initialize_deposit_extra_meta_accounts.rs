@@ -20,8 +20,6 @@ pub struct InitializeDepositExtraMetaAccounts {
 
     pub extra_metas: solana_pubkey::Pubkey,
 
-    pub token_program: solana_pubkey::Pubkey,
-
     pub system_program: solana_pubkey::Pubkey,
 }
 
@@ -36,7 +34,7 @@ impl InitializeDepositExtraMetaAccounts {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.payer, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
@@ -48,10 +46,6 @@ impl InitializeDepositExtraMetaAccounts {
         ));
         accounts.push(solana_instruction::AccountMeta::new(
             self.extra_metas,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.token_program,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -103,15 +97,13 @@ impl Default for InitializeDepositExtraMetaAccountsInstructionData {
 ///   1. `[]` asset_mint
 ///   2. `[]` share_mint_address
 ///   3. `[writable]` extra_metas
-///   4. `[optional]` token_program (default to `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`)
-///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeDepositExtraMetaAccountsBuilder {
     payer: Option<solana_pubkey::Pubkey>,
     asset_mint: Option<solana_pubkey::Pubkey>,
     share_mint_address: Option<solana_pubkey::Pubkey>,
     extra_metas: Option<solana_pubkey::Pubkey>,
-    token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
@@ -142,13 +134,6 @@ impl InitializeDepositExtraMetaAccountsBuilder {
     #[inline(always)]
     pub fn extra_metas(&mut self, extra_metas: solana_pubkey::Pubkey) -> &mut Self {
         self.extra_metas = Some(extra_metas);
-        self
-    }
-
-    /// `[optional account, default to 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA']`
-    #[inline(always)]
-    pub fn token_program(&mut self, token_program: solana_pubkey::Pubkey) -> &mut Self {
-        self.token_program = Some(token_program);
         self
     }
 
@@ -185,9 +170,6 @@ impl InitializeDepositExtraMetaAccountsBuilder {
                 .share_mint_address
                 .expect("share_mint_address is not set"),
             extra_metas: self.extra_metas.expect("extra_metas is not set"),
-            token_program: self.token_program.unwrap_or(solana_pubkey::pubkey!(
-                "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-            )),
             system_program: self
                 .system_program
                 .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
@@ -207,8 +189,6 @@ pub struct InitializeDepositExtraMetaAccountsCpiAccounts<'a, 'b> {
 
     pub extra_metas: &'b solana_account_info::AccountInfo<'a>,
 
-    pub token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -225,8 +205,6 @@ pub struct InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
 
     pub extra_metas: &'b solana_account_info::AccountInfo<'a>,
 
-    pub token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -241,7 +219,6 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
             asset_mint: accounts.asset_mint,
             share_mint_address: accounts.share_mint_address,
             extra_metas: accounts.extra_metas,
-            token_program: accounts.token_program,
             system_program: accounts.system_program,
         }
     }
@@ -272,7 +249,7 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.payer.key, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
@@ -284,10 +261,6 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
         ));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.extra_metas.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.token_program.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -310,13 +283,12 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(6 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.payer.clone());
         account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint_address.clone());
         account_infos.push(self.extra_metas.clone());
-        account_infos.push(self.token_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -338,8 +310,7 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpi<'a, 'b> {
 ///   1. `[]` asset_mint
 ///   2. `[]` share_mint_address
 ///   3. `[writable]` extra_metas
-///   4. `[]` token_program
-///   5. `[]` system_program
+///   4. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeDepositExtraMetaAccountsCpiBuilder<'a, 'b> {
     instruction: Box<InitializeDepositExtraMetaAccountsCpiBuilderInstruction<'a, 'b>>,
@@ -353,7 +324,6 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpiBuilder<'a, 'b> {
             asset_mint: None,
             share_mint_address: None,
             extra_metas: None,
-            token_program: None,
             system_program: None,
             __remaining_accounts: Vec::new(),
         });
@@ -390,15 +360,6 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpiBuilder<'a, 'b> {
         extra_metas: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.extra_metas = Some(extra_metas);
-        self
-    }
-
-    #[inline(always)]
-    pub fn token_program(
-        &mut self,
-        token_program: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.token_program = Some(token_program);
         self
     }
 
@@ -466,11 +427,6 @@ impl<'a, 'b> InitializeDepositExtraMetaAccountsCpiBuilder<'a, 'b> {
                 .extra_metas
                 .expect("extra_metas is not set"),
 
-            token_program: self
-                .instruction
-                .token_program
-                .expect("token_program is not set"),
-
             system_program: self
                 .instruction
                 .system_program
@@ -490,7 +446,6 @@ struct InitializeDepositExtraMetaAccountsCpiBuilderInstruction<'a, 'b> {
     asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint_address: Option<&'b solana_account_info::AccountInfo<'a>>,
     extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
-    token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,

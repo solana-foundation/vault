@@ -1,7 +1,15 @@
-use anchor_lang::{prelude::*, solana_program::program::invoke};
+use anchor_lang::{
+    prelude::*,
+    solana_program::program::{invoke, set_return_data},
+};
 use anchor_spl::token_interface::Mint;
 
-use crate::{errors::HookProgramError, state::protocol_deposit};
+use crate::{
+    errors::HookProgramError,
+    state::{get_nav, protocol_deposit, VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED},
+};
+
+use super::get_nav::GetNav;
 
 #[derive(Accounts)]
 pub struct ExecuteDepositHook<'info> {
@@ -15,9 +23,35 @@ pub struct ExecuteDepositHook<'info> {
     pub system_program: Program<'info, System>,
     /// CHECK: This is the downstream protocol vault
     pub vault: UncheckedAccount<'info>,
+    #[account(
+        seeds = [VAULT_ASSOCIATED_PROTOCOLS_SEED, share_mint.key().as_ref()],
+        bump
+    )]
+    pub associated_protocols_info: Account<'info, VaultAssociatedProtocols>,
 }
 
 impl<'info> ExecuteDepositHook<'info> {
+    pub fn validate_protocols(&self) -> Result<()> {
+        let protocols = &self.associated_protocols_info.protocols;
+
+        require!(
+            protocols.len() >= 2,
+            HookProgramError::InsufficientAssociatedProtocols
+        );
+
+        require!(
+            protocols.contains(&vault::id()),
+            HookProgramError::ProtocolNotFound
+        );
+
+        require!(
+            protocols.contains(&self.protocol.key()),
+            HookProgramError::ProtocolNotFound
+        );
+
+        Ok(())
+    }
+
     pub fn invoke_deposit(&self, additional_accounts: &[AccountInfo<'info>]) -> Result<()> {
         let downstream_vault = additional_accounts
             .first()
@@ -45,6 +79,15 @@ impl<'info> ExecuteDepositHook<'info> {
 }
 
 pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ExecuteDepositHook<'info>>) -> Result<()> {
+    ctx.accounts.validate_protocols()?;
     ctx.accounts.invoke_deposit(ctx.remaining_accounts)?;
+    let total = get_nav(
+        &ctx.accounts.associated_protocols_info.protocols,
+        &ctx.accounts.share_mint.key(),
+        ctx.remaining_accounts,
+        ctx.program_id,
+    )?;
+    let data = total.try_to_vec()?;
+    set_return_data(&data);
     Ok(())
 }

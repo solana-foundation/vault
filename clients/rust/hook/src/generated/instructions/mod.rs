@@ -10,10 +10,9 @@ pub(crate) mod r#get_nav;
 pub(crate) mod r#init_vault_associated_protocols;
 pub(crate) mod r#initialize_deposit_extra_meta_accounts;
 pub(crate) mod r#remove_associated_protocol;
-pub(crate) mod r#update_nav;
 
 pub use self::{
     r#add_associated_protocol::*, r#execute_deposit::*, r#get_nav::*,
     r#init_vault_associated_protocols::*, r#initialize_deposit_extra_meta_accounts::*,
-    r#remove_associated_protocol::*, r#update_nav::*,
+    r#remove_associated_protocol::*,
 };

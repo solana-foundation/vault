@@ -1,10 +1,13 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{Mint, TokenInterface};
+use anchor_spl::token_interface::Mint;
 use spl_tlv_account_resolution::{
     account::ExtraAccountMeta, seeds::Seed, state::ExtraAccountMetaList,
 };
 
-use crate::state::{DepositHookInstruction, DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED};
+use crate::state::{
+    DepositHookInstruction, DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED,
+    VAULT_ASSOCIATED_PROTOCOLS_SEED, VAULT_SEED,
+};
 
 #[derive(Accounts)]
 pub struct InitializeDepositExtraMetaAccounts<'info> {
@@ -25,7 +28,6 @@ pub struct InitializeDepositExtraMetaAccounts<'info> {
     )]
     pub extra_metas: AccountInfo<'info>,
 
-    pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
@@ -44,11 +46,23 @@ pub fn handler<'info>(ctx: Context<InitializeDepositExtraMetaAccounts>) -> Resul
 }
 
 fn get_extra_metas() -> Result<Vec<ExtraAccountMeta>> {
+    // Must be first: lands at index 6 = `associated_protocols_info` in ExecuteDepositHook
+    let associated_protocols_meta = ExtraAccountMeta::new_with_seeds(
+        &[
+            Seed::Literal {
+                bytes: VAULT_ASSOCIATED_PROTOCOLS_SEED.to_vec(),
+            },
+            Seed::AccountKey { index: 1 }, // share mint
+        ],
+        false,
+        false,
+    )?;
+    // Must be second: lands at index 7 = remaining_accounts[0] used by invoke_deposit
     let vault_state_meta = ExtraAccountMeta::new_external_pda_with_seeds(
         3, // external protocol token program index
         &[
             Seed::Literal {
-                bytes: "vault".as_bytes().to_vec(),
+                bytes: VAULT_SEED.to_vec(),
             },
             Seed::AccountKey { index: 1 }, // share mint
         ],
@@ -56,9 +70,9 @@ fn get_extra_metas() -> Result<Vec<ExtraAccountMeta>> {
         true,
     )?;
 
-    Ok([vault_state_meta].to_vec())
+    Ok([associated_protocols_meta, vault_state_meta].to_vec())
 }
 
 fn get_extra_metas_size() -> usize {
-    ExtraAccountMetaList::size_of(1).unwrap()
+    ExtraAccountMetaList::size_of(2).unwrap()
 }

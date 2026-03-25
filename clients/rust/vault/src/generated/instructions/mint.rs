@@ -31,8 +31,6 @@ pub struct Mint {
 
     pub protocol: Option<solana_pubkey::Pubkey>,
 
-    pub nav_return_data: Option<solana_pubkey::Pubkey>,
-
     pub hook_program: Option<solana_pubkey::Pubkey>,
 
     pub asset_token_program: solana_pubkey::Pubkey,
@@ -40,8 +38,6 @@ pub struct Mint {
     pub share_token_program: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
-
-    pub instructions: Option<solana_pubkey::Pubkey>,
 }
 
 impl Mint {
@@ -56,7 +52,7 @@ impl Mint {
         args: MintInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(14 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.user, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
@@ -98,17 +94,6 @@ impl Mint {
                 false,
             ));
         }
-        if let Some(nav_return_data) = self.nav_return_data {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                nav_return_data,
-                false,
-            ));
-        } else {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                crate::VAULT_ID,
-                false,
-            ));
-        }
         if let Some(hook_program) = self.hook_program {
             accounts.push(solana_instruction::AccountMeta::new_readonly(
                 hook_program,
@@ -132,17 +117,6 @@ impl Mint {
             self.system_program,
             false,
         ));
-        if let Some(instructions) = self.instructions {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                instructions,
-                false,
-            ));
-        } else {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                crate::VAULT_ID,
-                false,
-            ));
-        }
         accounts.extend_from_slice(remaining_accounts);
         let mut data = MintInstructionData::new().try_to_vec().unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -207,12 +181,10 @@ impl MintInstructionArgs {
 ///   7. `[writable]` user_shares_account
 ///   8. `[optional]` extra_metas
 ///   9. `[optional]` protocol
-///   10. `[optional]` nav_return_data
-///   11. `[optional]` hook_program
-///   12. `[]` asset_token_program
-///   13. `[]` share_token_program
-///   14. `[optional]` system_program (default to `11111111111111111111111111111111`)
-///   15. `[optional]` instructions
+///   10. `[optional]` hook_program
+///   11. `[]` asset_token_program
+///   12. `[]` share_token_program
+///   13. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct MintBuilder {
     user: Option<solana_pubkey::Pubkey>,
@@ -225,12 +197,10 @@ pub struct MintBuilder {
     user_shares_account: Option<solana_pubkey::Pubkey>,
     extra_metas: Option<solana_pubkey::Pubkey>,
     protocol: Option<solana_pubkey::Pubkey>,
-    nav_return_data: Option<solana_pubkey::Pubkey>,
     hook_program: Option<solana_pubkey::Pubkey>,
     asset_token_program: Option<solana_pubkey::Pubkey>,
     share_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
-    instructions: Option<solana_pubkey::Pubkey>,
     shares: Option<u64>,
     max_assets: Option<u64>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
@@ -305,13 +275,6 @@ impl MintBuilder {
 
     /// `[optional account]`
     #[inline(always)]
-    pub fn nav_return_data(&mut self, nav_return_data: Option<solana_pubkey::Pubkey>) -> &mut Self {
-        self.nav_return_data = nav_return_data;
-        self
-    }
-
-    /// `[optional account]`
-    #[inline(always)]
     pub fn hook_program(&mut self, hook_program: Option<solana_pubkey::Pubkey>) -> &mut Self {
         self.hook_program = hook_program;
         self
@@ -333,13 +296,6 @@ impl MintBuilder {
     #[inline(always)]
     pub fn system_program(&mut self, system_program: solana_pubkey::Pubkey) -> &mut Self {
         self.system_program = Some(system_program);
-        self
-    }
-
-    /// `[optional account]`
-    #[inline(always)]
-    pub fn instructions(&mut self, instructions: Option<solana_pubkey::Pubkey>) -> &mut Self {
-        self.instructions = instructions;
         self
     }
 
@@ -389,7 +345,6 @@ impl MintBuilder {
                 .expect("user_shares_account is not set"),
             extra_metas: self.extra_metas,
             protocol: self.protocol,
-            nav_return_data: self.nav_return_data,
             hook_program: self.hook_program,
             asset_token_program: self
                 .asset_token_program
@@ -400,7 +355,6 @@ impl MintBuilder {
             system_program: self
                 .system_program
                 .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
-            instructions: self.instructions,
         };
         let args = MintInstructionArgs {
             shares: self.shares.clone().expect("shares is not set"),
@@ -433,8 +387,6 @@ pub struct MintCpiAccounts<'a, 'b> {
 
     pub protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
 
-    pub nav_return_data: Option<&'b solana_account_info::AccountInfo<'a>>,
-
     pub hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
 
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
@@ -442,8 +394,6 @@ pub struct MintCpiAccounts<'a, 'b> {
     pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
-    pub instructions: Option<&'b solana_account_info::AccountInfo<'a>>,
 }
 
 /// `mint` CPI instruction.
@@ -471,8 +421,6 @@ pub struct MintCpi<'a, 'b> {
 
     pub protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
 
-    pub nav_return_data: Option<&'b solana_account_info::AccountInfo<'a>>,
-
     pub hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
 
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
@@ -480,8 +428,6 @@ pub struct MintCpi<'a, 'b> {
     pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
-    pub instructions: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// The arguments for the instruction.
     pub __args: MintInstructionArgs,
 }
@@ -504,12 +450,10 @@ impl<'a, 'b> MintCpi<'a, 'b> {
             user_shares_account: accounts.user_shares_account,
             extra_metas: accounts.extra_metas,
             protocol: accounts.protocol,
-            nav_return_data: accounts.nav_return_data,
             hook_program: accounts.hook_program,
             asset_token_program: accounts.asset_token_program,
             share_token_program: accounts.share_token_program,
             system_program: accounts.system_program,
-            instructions: accounts.instructions,
             __args: args,
         }
     }
@@ -540,7 +484,7 @@ impl<'a, 'b> MintCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(16 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(14 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.user.key, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
@@ -589,17 +533,6 @@ impl<'a, 'b> MintCpi<'a, 'b> {
                 false,
             ));
         }
-        if let Some(nav_return_data) = self.nav_return_data {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                *nav_return_data.key,
-                false,
-            ));
-        } else {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                crate::VAULT_ID,
-                false,
-            ));
-        }
         if let Some(hook_program) = self.hook_program {
             accounts.push(solana_instruction::AccountMeta::new_readonly(
                 *hook_program.key,
@@ -623,17 +556,6 @@ impl<'a, 'b> MintCpi<'a, 'b> {
             *self.system_program.key,
             false,
         ));
-        if let Some(instructions) = self.instructions {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                *instructions.key,
-                false,
-            ));
-        } else {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                crate::VAULT_ID,
-                false,
-            ));
-        }
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -650,7 +572,7 @@ impl<'a, 'b> MintCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(17 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(15 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.user.clone());
         account_infos.push(self.asset_mint.clone());
@@ -666,18 +588,12 @@ impl<'a, 'b> MintCpi<'a, 'b> {
         if let Some(protocol) = self.protocol {
             account_infos.push(protocol.clone());
         }
-        if let Some(nav_return_data) = self.nav_return_data {
-            account_infos.push(nav_return_data.clone());
-        }
         if let Some(hook_program) = self.hook_program {
             account_infos.push(hook_program.clone());
         }
         account_infos.push(self.asset_token_program.clone());
         account_infos.push(self.share_token_program.clone());
         account_infos.push(self.system_program.clone());
-        if let Some(instructions) = self.instructions {
-            account_infos.push(instructions.clone());
-        }
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -704,12 +620,10 @@ impl<'a, 'b> MintCpi<'a, 'b> {
 ///   7. `[writable]` user_shares_account
 ///   8. `[optional]` extra_metas
 ///   9. `[optional]` protocol
-///   10. `[optional]` nav_return_data
-///   11. `[optional]` hook_program
-///   12. `[]` asset_token_program
-///   13. `[]` share_token_program
-///   14. `[]` system_program
-///   15. `[optional]` instructions
+///   10. `[optional]` hook_program
+///   11. `[]` asset_token_program
+///   12. `[]` share_token_program
+///   13. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct MintCpiBuilder<'a, 'b> {
     instruction: Box<MintCpiBuilderInstruction<'a, 'b>>,
@@ -729,12 +643,10 @@ impl<'a, 'b> MintCpiBuilder<'a, 'b> {
             user_shares_account: None,
             extra_metas: None,
             protocol: None,
-            nav_return_data: None,
             hook_program: None,
             asset_token_program: None,
             share_token_program: None,
             system_program: None,
-            instructions: None,
             shares: None,
             max_assets: None,
             __remaining_accounts: Vec::new(),
@@ -827,16 +739,6 @@ impl<'a, 'b> MintCpiBuilder<'a, 'b> {
 
     /// `[optional account]`
     #[inline(always)]
-    pub fn nav_return_data(
-        &mut self,
-        nav_return_data: Option<&'b solana_account_info::AccountInfo<'a>>,
-    ) -> &mut Self {
-        self.instruction.nav_return_data = nav_return_data;
-        self
-    }
-
-    /// `[optional account]`
-    #[inline(always)]
     pub fn hook_program(
         &mut self,
         hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
@@ -869,16 +771,6 @@ impl<'a, 'b> MintCpiBuilder<'a, 'b> {
         system_program: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.system_program = Some(system_program);
-        self
-    }
-
-    /// `[optional account]`
-    #[inline(always)]
-    pub fn instructions(
-        &mut self,
-        instructions: Option<&'b solana_account_info::AccountInfo<'a>>,
-    ) -> &mut Self {
-        self.instruction.instructions = instructions;
         self
     }
 
@@ -972,8 +864,6 @@ impl<'a, 'b> MintCpiBuilder<'a, 'b> {
 
             protocol: self.instruction.protocol,
 
-            nav_return_data: self.instruction.nav_return_data,
-
             hook_program: self.instruction.hook_program,
 
             asset_token_program: self
@@ -990,8 +880,6 @@ impl<'a, 'b> MintCpiBuilder<'a, 'b> {
                 .instruction
                 .system_program
                 .expect("system_program is not set"),
-
-            instructions: self.instruction.instructions,
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -1014,12 +902,10 @@ struct MintCpiBuilderInstruction<'a, 'b> {
     user_shares_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
     protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
-    nav_return_data: Option<&'b solana_account_info::AccountInfo<'a>>,
     hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
-    instructions: Option<&'b solana_account_info::AccountInfo<'a>>,
     shares: Option<u64>,
     max_assets: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

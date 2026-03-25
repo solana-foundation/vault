@@ -3,7 +3,7 @@ use vault::state::VaultConfig;
 
 use crate::{
     errors::HookProgramError,
-    state::{VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS},
+    state::{VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED},
 };
 
 #[derive(Accounts)]
@@ -20,7 +20,7 @@ pub struct InitVaultAssociatedProtocols<'info> {
         init,
         payer = authority,
         space = 8 + VaultAssociatedProtocols::INIT_SPACE,
-        seeds = [VAULT_ASSOCIATED_PROTOCOLS, vault.key().as_ref()],
+        seeds = [VAULT_ASSOCIATED_PROTOCOLS_SEED, vault.share_mint_address.key().as_ref()],
         bump
     )]
     pub vault_associated_protocols: Account<'info, VaultAssociatedProtocols>,

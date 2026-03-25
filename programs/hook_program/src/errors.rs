@@ -14,4 +14,6 @@ pub enum HookProgramError {
     InvalidAccountData,
     #[msg("Signer is not the vault authority")]
     UnauthorizedAuthority,
+    #[msg("At least 2 associated protocols are required")]
+    InsufficientAssociatedProtocols,
 }
