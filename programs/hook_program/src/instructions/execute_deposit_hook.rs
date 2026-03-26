@@ -9,8 +9,6 @@ use crate::{
     state::{get_nav, protocol_deposit, VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED},
 };
 
-use super::get_nav::GetNav;
-
 #[derive(Accounts)]
 pub struct ExecuteDepositHook<'info> {
     // This should be the vault authority
@@ -52,7 +50,11 @@ impl<'info> ExecuteDepositHook<'info> {
         Ok(())
     }
 
-    pub fn invoke_deposit(&self, additional_accounts: &[AccountInfo<'info>]) -> Result<()> {
+    pub fn invoke_deposit(
+        &self,
+        additional_accounts: &[AccountInfo<'info>],
+        deposit_amount: u64,
+    ) -> Result<()> {
         let downstream_vault = additional_accounts
             .first()
             .ok_or(error!(HookProgramError::InvalidAccountData))?;
@@ -63,6 +65,7 @@ impl<'info> ExecuteDepositHook<'info> {
             &self.share_mint.key(),
             &downstream_vault.key(),
             &self.system_program.key(),
+            deposit_amount,
         );
 
         let mut cpi_account_infos = vec![
@@ -78,15 +81,22 @@ impl<'info> ExecuteDepositHook<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ExecuteDepositHook<'info>>) -> Result<()> {
+pub fn handler<'info>(
+    ctx: Context<'_, '_, '_, 'info, ExecuteDepositHook<'info>>,
+    deposit_amount: u64,
+) -> Result<()> {
     ctx.accounts.validate_protocols()?;
-    ctx.accounts.invoke_deposit(ctx.remaining_accounts)?;
-    let total = get_nav(
+    ctx.accounts
+        .invoke_deposit(ctx.remaining_accounts, deposit_amount)?;
+    let mut total = get_nav(
         &ctx.accounts.associated_protocols_info.protocols,
         &ctx.accounts.share_mint.key(),
         ctx.remaining_accounts,
         ctx.program_id,
     )?;
+    total = total
+        .checked_sub(deposit_amount)
+        .ok_or(HookProgramError::ArithmeticError)?;
     let data = total.try_to_vec()?;
     set_return_data(&data);
     Ok(())

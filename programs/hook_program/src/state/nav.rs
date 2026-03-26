@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use anchor_spl::token::TokenAccount;
 
 use crate::state::VAULT_PROTOCOL_DEPOSIT_SEED;
 
@@ -13,10 +14,10 @@ pub struct VaultAssociatedProtocols {
 
 #[account]
 #[derive(InitSpace)]
-pub struct ProtocolDeposits {
+pub struct AssociatedProtocol {
     pub vault: Pubkey,
     pub protocol: Pubkey,
-    pub amount: u64,
+    pub token_account: Pubkey,
     pub bump: u8,
 }
 
@@ -38,14 +39,23 @@ pub fn get_nav<'info>(
             program_id,
         );
 
-        let amount = remaining_accounts
+        let protocol_deposits = remaining_accounts
             .iter()
             .find(|a| a.key() == pda)
             .and_then(|deposit_account| {
                 let data = deposit_account.try_borrow_data().ok()?;
-                ProtocolDeposits::try_deserialize(&mut data.as_ref()).ok()
+                AssociatedProtocol::try_deserialize(&mut data.as_ref()).ok()
             })
-            .map(|deposit| deposit.amount)
+            .ok_or_else(|| error!(ErrorCode::AccountDidNotDeserialize))?;
+
+        let amount = remaining_accounts
+            .iter()
+            .find(|a| a.key() == protocol_deposits.token_account)
+            .and_then(|token_account| {
+                let data = token_account.try_borrow_data().ok()?;
+                TokenAccount::try_deserialize(&mut data.as_ref()).ok()
+            })
+            .map(|token_account| token_account.amount)
             .unwrap_or(0);
 
         total = total

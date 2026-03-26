@@ -186,6 +186,7 @@ impl<'info> DepositAndMint<'info> {
         &mut self,
         hook_program: Pubkey,
         remaining_accounts: &[AccountInfo<'info>],
+        deposit_amount: u64,
     ) -> Result<u64> {
         let extra_metas = &self
             .extra_metas
@@ -204,6 +205,7 @@ impl<'info> DepositAndMint<'info> {
             &extra_metas.key(),
             &protocol.key(),
             &self.system_program.key(),
+            deposit_amount,
         );
 
         let validation_pubkey =
@@ -238,6 +240,15 @@ impl<'info> DepositAndMint<'info> {
         // The vault PDA signs so the hook program can authenticate this call.
         let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
 
+        // Forward remaining accounts into the hook instruction so they are
+        // visible as ctx.remaining_accounts inside the hook program.
+        for account in remaining_accounts.iter() {
+            instruction.accounts.push(AccountMeta {
+                pubkey: account.key(),
+                is_signer: account.is_signer,
+                is_writable: account.is_writable,
+            });
+        }
         cpi_account_infos.extend_from_slice(remaining_accounts);
 
         invoke_signed(&instruction, &cpi_account_infos, seeds)?;
@@ -302,9 +313,9 @@ pub fn handler<'info>(
         let remaining = ctx.remaining_accounts;
         ctx.accounts
             .delegate_reserve(hook_program_account.clone(), remaining_amount)?;
-        let nav = ctx
-            .accounts
-            .execute_deposit_hook(hook_program_pubkey, remaining)?;
+        let nav =
+            ctx.accounts
+                .execute_deposit_hook(hook_program_pubkey, remaining, remaining_amount)?;
         reserve_balance = nav;
     }
 
@@ -318,14 +329,16 @@ pub fn handler<'info>(
         updated_reserve_amount <= ctx.accounts.vault.vault_asset_cap,
         VaultProgramError::MaxVaultAssetCapExceeded
     );
-
+    msg!("Reserve Balance: {:?}", reserve_balance);
+    msg!("reserve_amount_before Balance: {:?}", reserve_amount_before);
+    msg!("actual_transferred_amount: {:?}", actual_transferred_amount);
     let shares = ctx.accounts.vault.get_shares_from_assets(
         reserve_balance,
         ctx.accounts.share_mint.supply,
         actual_transferred_amount,
         Rounding::Down,
     )?;
-
+    msg!("Shares: {:?}", shares);
     if shares == 0 {
         return Err(VaultProgramError::InsufficientDepositAmount.into());
     }

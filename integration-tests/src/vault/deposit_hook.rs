@@ -167,6 +167,24 @@ fn test_deposit_with_hook() {
     svm.send_transaction(tx)
         .expect("init vault associated protocols failed");
 
+    // Derive associated_protocol PDAs
+    let (vault_associated_protocol_pubkey, _) = Pubkey::find_program_address(
+        &[
+            b"vault_protocol_deposit",
+            share_mint.pubkey().as_ref(),
+            program_id().as_ref(),
+        ],
+        &hook_program_id(),
+    );
+    let (dummy_associated_protocol_pubkey, _) = Pubkey::find_program_address(
+        &[
+            b"vault_protocol_deposit",
+            share_mint.pubkey().as_ref(),
+            dummy_program_id().as_ref(),
+        ],
+        &hook_program_id(),
+    );
+
     // Add vault program as associated protocol
     let add_vault_protocol_ix = hook_client::sdk::IntoSdkInstruction::into_sdk_instruction(
         AddAssociatedProtocolBuilder::new()
@@ -174,6 +192,8 @@ fn test_deposit_with_hook() {
             .vault(vault_pubkey)
             .vault_associated_protocols(vault_associated_protocols_pubkey)
             .protocol(program_id())
+            .associated_protocol(vault_associated_protocol_pubkey)
+            .token_account(reserve_pubkey)
             .instruction(),
     );
     let blockhash = svm.latest_blockhash();
@@ -193,6 +213,8 @@ fn test_deposit_with_hook() {
             .vault(vault_pubkey)
             .vault_associated_protocols(vault_associated_protocols_pubkey)
             .protocol(dummy_program_id())
+            .associated_protocol(dummy_associated_protocol_pubkey)
+            .token_account(dummy_vault_pubkey)
             .instruction(),
     );
     let blockhash = svm.latest_blockhash();
@@ -236,11 +258,6 @@ fn test_deposit_with_hook() {
         &hook_program_id(),
     );
 
-    let (nav_return_data_pubkey, _) = Pubkey::find_program_address(
-        &[b"vault_nav_data", vault_pubkey.as_ref()],
-        &hook_program_id(),
-    );
-
     let mut ix = vault_client::sdk::IntoSdkInstruction::into_sdk_instruction(
         DepositBuilder::new()
             .user(user.pubkey())
@@ -269,6 +286,22 @@ fn test_deposit_with_hook() {
         dummy_vault_pubkey,
         false,
     ));
+    // Associated-protocol PDAs and their token accounts needed by get_nav.
+    ix.accounts
+        .push(solana_sdk::instruction::AccountMeta::new_readonly(
+            vault_associated_protocol_pubkey,
+            false,
+        ));
+    ix.accounts
+        .push(solana_sdk::instruction::AccountMeta::new_readonly(
+            reserve_pubkey,
+            false,
+        ));
+    ix.accounts
+        .push(solana_sdk::instruction::AccountMeta::new_readonly(
+            dummy_associated_protocol_pubkey,
+            false,
+        ));
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);

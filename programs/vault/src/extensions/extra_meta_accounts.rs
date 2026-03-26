@@ -59,8 +59,10 @@ pub fn create_deposit_hook_ix(
     extra_meta_accounts: &Pubkey,
     protocol: &Pubkey,
     system_program: &Pubkey,
+    deposit_amount: u64,
 ) -> Instruction {
-    let data = VaultStandardInstruction::DepositHook.pack();
+    let mut data = VaultStandardInstruction::DepositHook.pack();
+    data.extend_from_slice(&deposit_amount.to_le_bytes());
 
     let accounts = vec![
         AccountMeta::new(*signer, true),

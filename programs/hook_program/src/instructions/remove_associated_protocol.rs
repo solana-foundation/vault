@@ -3,7 +3,10 @@ use vault::state::VaultConfig;
 
 use crate::{
     errors::HookProgramError,
-    state::{VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED},
+    state::{
+        AssociatedProtocol, VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED,
+        VAULT_PROTOCOL_DEPOSIT_SEED,
+    },
 };
 
 #[derive(Accounts)]
@@ -25,6 +28,18 @@ pub struct RemoveAssociatedProtocol<'info> {
 
     /// CHECK: This is the protocol to remove
     pub protocol: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        close = authority,
+        seeds = [
+            VAULT_PROTOCOL_DEPOSIT_SEED,
+            vault.share_mint_address.key().as_ref(),
+            protocol.key().as_ref(),
+        ],
+        bump = associated_protocol.bump,
+    )]
+    pub associated_protocol: Account<'info, AssociatedProtocol>,
 }
 
 pub fn handler(ctx: Context<RemoveAssociatedProtocol>) -> Result<()> {

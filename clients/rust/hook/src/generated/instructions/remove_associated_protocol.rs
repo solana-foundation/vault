@@ -19,6 +19,8 @@ pub struct RemoveAssociatedProtocol {
     pub vault_associated_protocols: solana_pubkey::Pubkey,
 
     pub protocol: solana_pubkey::Pubkey,
+
+    pub associated_protocol: solana_pubkey::Pubkey,
 }
 
 impl RemoveAssociatedProtocol {
@@ -32,7 +34,7 @@ impl RemoveAssociatedProtocol {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.authority, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.vault, false,
@@ -43,6 +45,10 @@ impl RemoveAssociatedProtocol {
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.protocol,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.associated_protocol,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -90,12 +96,14 @@ impl Default for RemoveAssociatedProtocolInstructionData {
 ///   1. `[]` vault
 ///   2. `[writable]` vault_associated_protocols
 ///   3. `[]` protocol
+///   4. `[writable]` associated_protocol
 #[derive(Clone, Debug, Default)]
 pub struct RemoveAssociatedProtocolBuilder {
     authority: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     vault_associated_protocols: Option<solana_pubkey::Pubkey>,
     protocol: Option<solana_pubkey::Pubkey>,
+    associated_protocol: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -131,6 +139,12 @@ impl RemoveAssociatedProtocolBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn associated_protocol(&mut self, associated_protocol: solana_pubkey::Pubkey) -> &mut Self {
+        self.associated_protocol = Some(associated_protocol);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -157,6 +171,9 @@ impl RemoveAssociatedProtocolBuilder {
                 .vault_associated_protocols
                 .expect("vault_associated_protocols is not set"),
             protocol: self.protocol.expect("protocol is not set"),
+            associated_protocol: self
+                .associated_protocol
+                .expect("associated_protocol is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
@@ -172,6 +189,8 @@ pub struct RemoveAssociatedProtocolCpiAccounts<'a, 'b> {
     pub vault_associated_protocols: &'b solana_account_info::AccountInfo<'a>,
 
     pub protocol: &'b solana_account_info::AccountInfo<'a>,
+
+    pub associated_protocol: &'b solana_account_info::AccountInfo<'a>,
 }
 
 /// `remove_associated_protocol` CPI instruction.
@@ -186,6 +205,8 @@ pub struct RemoveAssociatedProtocolCpi<'a, 'b> {
     pub vault_associated_protocols: &'b solana_account_info::AccountInfo<'a>,
 
     pub protocol: &'b solana_account_info::AccountInfo<'a>,
+
+    pub associated_protocol: &'b solana_account_info::AccountInfo<'a>,
 }
 
 impl<'a, 'b> RemoveAssociatedProtocolCpi<'a, 'b> {
@@ -199,6 +220,7 @@ impl<'a, 'b> RemoveAssociatedProtocolCpi<'a, 'b> {
             vault: accounts.vault,
             vault_associated_protocols: accounts.vault_associated_protocols,
             protocol: accounts.protocol,
+            associated_protocol: accounts.associated_protocol,
         }
     }
 
@@ -228,7 +250,7 @@ impl<'a, 'b> RemoveAssociatedProtocolCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(
             *self.authority.key,
             true,
@@ -243,6 +265,10 @@ impl<'a, 'b> RemoveAssociatedProtocolCpi<'a, 'b> {
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.protocol.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.associated_protocol.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -261,12 +287,13 @@ impl<'a, 'b> RemoveAssociatedProtocolCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(6 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.authority.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.vault_associated_protocols.clone());
         account_infos.push(self.protocol.clone());
+        account_infos.push(self.associated_protocol.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -287,6 +314,7 @@ impl<'a, 'b> RemoveAssociatedProtocolCpi<'a, 'b> {
 ///   1. `[]` vault
 ///   2. `[writable]` vault_associated_protocols
 ///   3. `[]` protocol
+///   4. `[writable]` associated_protocol
 #[derive(Clone, Debug)]
 pub struct RemoveAssociatedProtocolCpiBuilder<'a, 'b> {
     instruction: Box<RemoveAssociatedProtocolCpiBuilderInstruction<'a, 'b>>,
@@ -300,6 +328,7 @@ impl<'a, 'b> RemoveAssociatedProtocolCpiBuilder<'a, 'b> {
             vault: None,
             vault_associated_protocols: None,
             protocol: None,
+            associated_protocol: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -329,6 +358,15 @@ impl<'a, 'b> RemoveAssociatedProtocolCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn protocol(&mut self, protocol: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.protocol = Some(protocol);
+        self
+    }
+
+    #[inline(always)]
+    pub fn associated_protocol(
+        &mut self,
+        associated_protocol: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.associated_protocol = Some(associated_protocol);
         self
     }
 
@@ -383,6 +421,11 @@ impl<'a, 'b> RemoveAssociatedProtocolCpiBuilder<'a, 'b> {
                 .expect("vault_associated_protocols is not set"),
 
             protocol: self.instruction.protocol.expect("protocol is not set"),
+
+            associated_protocol: self
+                .instruction
+                .associated_protocol
+                .expect("associated_protocol is not set"),
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -398,6 +441,7 @@ struct RemoveAssociatedProtocolCpiBuilderInstruction<'a, 'b> {
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault_associated_protocols: Option<&'b solana_account_info::AccountInfo<'a>>,
     protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
+    associated_protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }
