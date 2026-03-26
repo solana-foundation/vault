@@ -329,16 +329,14 @@ pub fn handler<'info>(
         updated_reserve_amount <= ctx.accounts.vault.vault_asset_cap,
         VaultProgramError::MaxVaultAssetCapExceeded
     );
-    msg!("Reserve Balance: {:?}", reserve_balance);
-    msg!("reserve_amount_before Balance: {:?}", reserve_amount_before);
-    msg!("actual_transferred_amount: {:?}", actual_transferred_amount);
+
     let shares = ctx.accounts.vault.get_shares_from_assets(
         reserve_balance,
         ctx.accounts.share_mint.supply,
         actual_transferred_amount,
         Rounding::Down,
     )?;
-    msg!("Shares: {:?}", shares);
+
     if shares == 0 {
         return Err(VaultProgramError::InsufficientDepositAmount.into());
     }
