@@ -9,7 +9,7 @@ use hook_client::{
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::{Account, ReadableAccount},
+    account::ReadableAccount,
     program_pack::Pack,
     pubkey::Pubkey,
     signature::Keypair,
@@ -23,25 +23,6 @@ use crate::vault::helper_functions::{
     create_ata, create_mint, create_vault, deposit, get_vault_asset_balance, helper_mint_to,
     init_vault, init_withdraw_extra_meta_accounts, init_withdraw_hook, update_vault,
 };
-
-/// Compute an Anchor account discriminator: sha256("account:<AccountName>")[..8]
-fn account_discriminator(name: &str) -> [u8; 8] {
-    let preimage = format!("account:{}", name);
-    let hash = solana_sdk::hash::hash(preimage.as_bytes());
-    let b = hash.to_bytes();
-    [b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]]
-}
-
-/// Serialize a ProtocolDeposits account: discriminator + vault(32) + protocol(32) + amount(8) +
-/// bump(1)
-fn protocol_deposits_data(vault: &Pubkey, protocol: &Pubkey, amount: u64, bump: u8) -> Vec<u8> {
-    let mut data = account_discriminator("ProtocolDeposits").to_vec();
-    data.extend_from_slice(vault.as_ref());
-    data.extend_from_slice(protocol.as_ref());
-    data.extend_from_slice(&amount.to_le_bytes());
-    data.push(bump);
-    data
-}
 
 #[test]
 fn test_withdraw_with_hook() {
@@ -189,6 +170,24 @@ fn test_withdraw_with_hook() {
     svm.send_transaction(tx)
         .expect("init vault associated protocols failed");
 
+    // Derive associated_protocol PDAs
+    let (vault_associated_protocol_pubkey, _) = Pubkey::find_program_address(
+        &[
+            b"vault_protocol_deposit",
+            share_mint.pubkey().as_ref(),
+            program_id().as_ref(),
+        ],
+        &hook_program_id(),
+    );
+    let (dummy_associated_protocol_pubkey, _) = Pubkey::find_program_address(
+        &[
+            b"vault_protocol_deposit",
+            share_mint.pubkey().as_ref(),
+            dummy_program_id().as_ref(),
+        ],
+        &hook_program_id(),
+    );
+
     // Add vault program as associated protocol
     let add_vault_protocol_ix = hook_client::sdk::IntoSdkInstruction::into_sdk_instruction(
         AddAssociatedProtocolBuilder::new()
@@ -196,6 +195,8 @@ fn test_withdraw_with_hook() {
             .vault(vault_pubkey)
             .vault_associated_protocols(vault_associated_protocols_pubkey)
             .protocol(program_id())
+            .associated_protocol(vault_associated_protocol_pubkey)
+            .token_account(reserve_pubkey)
             .instruction(),
     );
     let blockhash = svm.latest_blockhash();
@@ -215,6 +216,8 @@ fn test_withdraw_with_hook() {
             .vault(vault_pubkey)
             .vault_associated_protocols(vault_associated_protocols_pubkey)
             .protocol(dummy_program_id())
+            .associated_protocol(dummy_associated_protocol_pubkey)
+            .token_account(dummy_vault_pubkey)
             .instruction(),
     );
     let blockhash = svm.latest_blockhash();
@@ -277,34 +280,6 @@ fn test_withdraw_with_hook() {
             .amount;
     assert!(user_shares_after_deposit > 0);
 
-    // Inject a ProtocolDeposits account for the vault program so that get_nav returns
-    // the correct reserve balance during the withdraw hook execution.
-    let (vault_protocol_deposits_pda, vault_protocol_deposits_bump) = Pubkey::find_program_address(
-        &[
-            b"vault_protocol_deposit",
-            share_mint.pubkey().as_ref(),
-            program_id().as_ref(),
-        ],
-        &hook_program_id(),
-    );
-    let protocol_deposits_data = protocol_deposits_data(
-        &vault_pubkey,
-        &program_id(),
-        reserve_balance_after_deposit,
-        vault_protocol_deposits_bump,
-    );
-    svm.set_account(
-        vault_protocol_deposits_pda,
-        Account {
-            lamports: 1_000_000,
-            data: protocol_deposits_data,
-            owner: HOOK_PROGRAM_ID,
-            executable: false,
-            rent_epoch: 0,
-        },
-    )
-    .expect("set_account for protocol deposits failed");
-
     let withdraw_amount = 100_000u64;
     let (withdraw_extra_meta_pubkey, _) = Pubkey::find_program_address(
         &[
@@ -344,6 +319,22 @@ fn test_withdraw_with_hook() {
         dummy_vault_pubkey,
         false,
     ));
+    // Associated-protocol PDAs and their token accounts needed by get_nav.
+    ix.accounts
+        .push(solana_sdk::instruction::AccountMeta::new_readonly(
+            vault_associated_protocol_pubkey,
+            false,
+        ));
+    ix.accounts
+        .push(solana_sdk::instruction::AccountMeta::new_readonly(
+            reserve_pubkey,
+            false,
+        ));
+    ix.accounts
+        .push(solana_sdk::instruction::AccountMeta::new_readonly(
+            dummy_associated_protocol_pubkey,
+            false,
+        ));
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);

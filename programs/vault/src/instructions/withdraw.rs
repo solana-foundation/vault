@@ -185,6 +185,15 @@ impl<'info> Withdraw<'info> {
 
         let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
 
+        // Forward remaining accounts into the hook instruction so they are
+        // visible as ctx.remaining_accounts inside the hook program.
+        for account in remaining_accounts.iter() {
+            instruction.accounts.push(AccountMeta {
+                pubkey: account.key(),
+                is_signer: account.is_signer,
+                is_writable: account.is_writable,
+            });
+        }
         cpi_account_infos.extend_from_slice(remaining_accounts);
 
         invoke_signed(&instruction, &cpi_account_infos, seeds)?;
