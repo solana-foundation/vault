@@ -16,4 +16,6 @@ pub enum HookProgramError {
     UnauthorizedAuthority,
     #[msg("At least 2 associated protocols are required")]
     InsufficientAssociatedProtocols,
+    #[msg("Something happened while performing an arithmetic operation.")]
+    ArithmeticError,
 }

@@ -3,7 +3,10 @@ use vault::state::VaultConfig;
 
 use crate::{
     errors::HookProgramError,
-    state::{VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED},
+    state::{
+        AssociatedProtocol, VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED,
+        VAULT_PROTOCOL_DEPOSIT_SEED,
+    },
 };
 
 // Must match the #[max_len(10)] on VaultAssociatedProtocols::protocols
@@ -28,6 +31,24 @@ pub struct AddAssociatedProtocol<'info> {
 
     /// CHECK: This is the protocol to associate
     pub protocol: AccountInfo<'info>,
+
+    #[account(
+        init,
+        payer = authority,
+        space = 8 + AssociatedProtocol::INIT_SPACE,
+        seeds = [
+            VAULT_PROTOCOL_DEPOSIT_SEED,
+            vault.share_mint_address.key().as_ref(),
+            protocol.key().as_ref(),
+        ],
+        bump,
+    )]
+    pub associated_protocol: Account<'info, AssociatedProtocol>,
+
+    /// CHECK: Token account belonging to the protocol that tracks its deposits
+    pub token_account: AccountInfo<'info>,
+
+    pub system_program: Program<'info, System>,
 }
 
 pub fn handler(ctx: Context<AddAssociatedProtocol>) -> Result<()> {
@@ -45,5 +66,12 @@ pub fn handler(ctx: Context<AddAssociatedProtocol>) -> Result<()> {
     );
 
     vap.protocols.push(protocol_key);
+
+    let ap = &mut ctx.accounts.associated_protocol;
+    ap.vault = ctx.accounts.vault.key();
+    ap.protocol = protocol_key;
+    ap.token_account = ctx.accounts.token_account.key();
+    ap.bump = ctx.bumps.associated_protocol;
+
     Ok(())
 }

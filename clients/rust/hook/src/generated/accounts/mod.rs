@@ -4,7 +4,8 @@
 //!
 //! <https://github.com/codama-idl/codama>
 
+pub(crate) mod r#associated_protocol;
 pub(crate) mod r#vault_associated_protocols;
 pub(crate) mod r#vault_config;
 
-pub use self::{r#vault_associated_protocols::*, r#vault_config::*};
+pub use self::{r#associated_protocol::*, r#vault_associated_protocols::*, r#vault_config::*};

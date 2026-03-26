@@ -30,6 +30,9 @@ pub enum HookProgramError {
     /// 6006 - At least 2 associated protocols are required
     #[error("At least 2 associated protocols are required")]
     InsufficientAssociatedProtocols = 0x1776,
+    /// 6007 - Something happened while performing an arithmetic operation.
+    #[error("Something happened while performing an arithmetic operation.")]
+    ArithmeticError = 0x1777,
 }
 
 impl From<HookProgramError> for solana_program_error::ProgramError {

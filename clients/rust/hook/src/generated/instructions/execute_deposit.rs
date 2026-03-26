@@ -27,14 +27,18 @@ pub struct ExecuteDeposit {
 }
 
 impl ExecuteDeposit {
-    pub fn instruction(&self) -> solana_instruction::Instruction {
-        self.instruction_with_remaining_accounts(&[])
+    pub fn instruction(
+        &self,
+        args: ExecuteDepositInstructionArgs,
+    ) -> solana_instruction::Instruction {
+        self.instruction_with_remaining_accounts(args, &[])
     }
 
     #[allow(clippy::arithmetic_side_effects)]
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
+        args: ExecuteDepositInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
         let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
@@ -66,7 +70,9 @@ impl ExecuteDeposit {
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let data = ExecuteDepositInstructionData::new().try_to_vec().unwrap();
+        let mut data = ExecuteDepositInstructionData::new().try_to_vec().unwrap();
+        let mut args = args.try_to_vec().unwrap();
+        data.append(&mut args);
 
         solana_instruction::Instruction {
             program_id: crate::HOOK_PROGRAM_ID,
@@ -100,6 +106,18 @@ impl Default for ExecuteDepositInstructionData {
     }
 }
 
+#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct ExecuteDepositInstructionArgs {
+    pub deposit_amount: u64,
+}
+
+impl ExecuteDepositInstructionArgs {
+    pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error> {
+        borsh::to_vec(self)
+    }
+}
+
 /// Instruction builder for `ExecuteDeposit`.
 ///
 /// ### Accounts:
@@ -120,6 +138,7 @@ pub struct ExecuteDepositBuilder {
     system_program: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     associated_protocols_info: Option<solana_pubkey::Pubkey>,
+    deposit_amount: Option<u64>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -174,6 +193,12 @@ impl ExecuteDepositBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn deposit_amount(&mut self, deposit_amount: u64) -> &mut Self {
+        self.deposit_amount = Some(deposit_amount);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -206,8 +231,14 @@ impl ExecuteDepositBuilder {
                 .associated_protocols_info
                 .expect("associated_protocols_info is not set"),
         };
+        let args = ExecuteDepositInstructionArgs {
+            deposit_amount: self
+                .deposit_amount
+                .clone()
+                .expect("deposit_amount is not set"),
+        };
 
-        accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
+        accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
     }
 }
 
@@ -246,12 +277,15 @@ pub struct ExecuteDepositCpi<'a, 'b> {
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub associated_protocols_info: &'b solana_account_info::AccountInfo<'a>,
+    /// The arguments for the instruction.
+    pub __args: ExecuteDepositInstructionArgs,
 }
 
 impl<'a, 'b> ExecuteDepositCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_account_info::AccountInfo<'a>,
         accounts: ExecuteDepositCpiAccounts<'a, 'b>,
+        args: ExecuteDepositInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
@@ -262,6 +296,7 @@ impl<'a, 'b> ExecuteDepositCpi<'a, 'b> {
             system_program: accounts.system_program,
             vault: accounts.vault,
             associated_protocols_info: accounts.associated_protocols_info,
+            __args: args,
         }
     }
 
@@ -327,7 +362,9 @@ impl<'a, 'b> ExecuteDepositCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let data = ExecuteDepositInstructionData::new().try_to_vec().unwrap();
+        let mut data = ExecuteDepositInstructionData::new().try_to_vec().unwrap();
+        let mut args = self.__args.try_to_vec().unwrap();
+        data.append(&mut args);
 
         let instruction = solana_instruction::Instruction {
             program_id: crate::HOOK_PROGRAM_ID,
@@ -382,6 +419,7 @@ impl<'a, 'b> ExecuteDepositCpiBuilder<'a, 'b> {
             system_program: None,
             vault: None,
             associated_protocols_info: None,
+            deposit_amount: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -441,6 +479,12 @@ impl<'a, 'b> ExecuteDepositCpiBuilder<'a, 'b> {
         self
     }
 
+    #[inline(always)]
+    pub fn deposit_amount(&mut self, deposit_amount: u64) -> &mut Self {
+        self.instruction.deposit_amount = Some(deposit_amount);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -479,6 +523,13 @@ impl<'a, 'b> ExecuteDepositCpiBuilder<'a, 'b> {
     #[allow(clippy::clone_on_copy)]
     #[allow(clippy::vec_init_then_push)]
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
+        let args = ExecuteDepositInstructionArgs {
+            deposit_amount: self
+                .instruction
+                .deposit_amount
+                .clone()
+                .expect("deposit_amount is not set"),
+        };
         let instruction = ExecuteDepositCpi {
             __program: self.instruction.__program,
 
@@ -504,6 +555,7 @@ impl<'a, 'b> ExecuteDepositCpiBuilder<'a, 'b> {
                 .instruction
                 .associated_protocols_info
                 .expect("associated_protocols_info is not set"),
+            __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -522,6 +574,7 @@ struct ExecuteDepositCpiBuilderInstruction<'a, 'b> {
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     associated_protocols_info: Option<&'b solana_account_info::AccountInfo<'a>>,
+    deposit_amount: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

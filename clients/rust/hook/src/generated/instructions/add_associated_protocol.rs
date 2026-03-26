@@ -18,6 +18,12 @@ pub struct AddAssociatedProtocol {
     pub vault_associated_protocols: solana_pubkey::Pubkey,
 
     pub protocol: solana_pubkey::Pubkey,
+
+    pub associated_protocol: solana_pubkey::Pubkey,
+
+    pub token_account: solana_pubkey::Pubkey,
+
+    pub system_program: solana_pubkey::Pubkey,
 }
 
 impl AddAssociatedProtocol {
@@ -31,7 +37,7 @@ impl AddAssociatedProtocol {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.authority, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.vault, false,
@@ -42,6 +48,18 @@ impl AddAssociatedProtocol {
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.protocol,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.associated_protocol,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.token_account,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.system_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
@@ -89,12 +107,18 @@ impl Default for AddAssociatedProtocolInstructionData {
 ///   1. `[]` vault
 ///   2. `[writable]` vault_associated_protocols
 ///   3. `[]` protocol
+///   4. `[writable]` associated_protocol
+///   5. `[]` token_account
+///   6. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct AddAssociatedProtocolBuilder {
     authority: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     vault_associated_protocols: Option<solana_pubkey::Pubkey>,
     protocol: Option<solana_pubkey::Pubkey>,
+    associated_protocol: Option<solana_pubkey::Pubkey>,
+    token_account: Option<solana_pubkey::Pubkey>,
+    system_program: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -130,6 +154,25 @@ impl AddAssociatedProtocolBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn associated_protocol(&mut self, associated_protocol: solana_pubkey::Pubkey) -> &mut Self {
+        self.associated_protocol = Some(associated_protocol);
+        self
+    }
+
+    #[inline(always)]
+    pub fn token_account(&mut self, token_account: solana_pubkey::Pubkey) -> &mut Self {
+        self.token_account = Some(token_account);
+        self
+    }
+
+    /// `[optional account, default to '11111111111111111111111111111111']`
+    #[inline(always)]
+    pub fn system_program(&mut self, system_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.system_program = Some(system_program);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -156,6 +199,13 @@ impl AddAssociatedProtocolBuilder {
                 .vault_associated_protocols
                 .expect("vault_associated_protocols is not set"),
             protocol: self.protocol.expect("protocol is not set"),
+            associated_protocol: self
+                .associated_protocol
+                .expect("associated_protocol is not set"),
+            token_account: self.token_account.expect("token_account is not set"),
+            system_program: self
+                .system_program
+                .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
         };
 
         accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
@@ -171,6 +221,12 @@ pub struct AddAssociatedProtocolCpiAccounts<'a, 'b> {
     pub vault_associated_protocols: &'b solana_account_info::AccountInfo<'a>,
 
     pub protocol: &'b solana_account_info::AccountInfo<'a>,
+
+    pub associated_protocol: &'b solana_account_info::AccountInfo<'a>,
+
+    pub token_account: &'b solana_account_info::AccountInfo<'a>,
+
+    pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
 /// `add_associated_protocol` CPI instruction.
@@ -185,6 +241,12 @@ pub struct AddAssociatedProtocolCpi<'a, 'b> {
     pub vault_associated_protocols: &'b solana_account_info::AccountInfo<'a>,
 
     pub protocol: &'b solana_account_info::AccountInfo<'a>,
+
+    pub associated_protocol: &'b solana_account_info::AccountInfo<'a>,
+
+    pub token_account: &'b solana_account_info::AccountInfo<'a>,
+
+    pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
 impl<'a, 'b> AddAssociatedProtocolCpi<'a, 'b> {
@@ -198,6 +260,9 @@ impl<'a, 'b> AddAssociatedProtocolCpi<'a, 'b> {
             vault: accounts.vault,
             vault_associated_protocols: accounts.vault_associated_protocols,
             protocol: accounts.protocol,
+            associated_protocol: accounts.associated_protocol,
+            token_account: accounts.token_account,
+            system_program: accounts.system_program,
         }
     }
 
@@ -227,7 +292,7 @@ impl<'a, 'b> AddAssociatedProtocolCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(
             *self.authority.key,
             true,
@@ -242,6 +307,18 @@ impl<'a, 'b> AddAssociatedProtocolCpi<'a, 'b> {
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.protocol.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.associated_protocol.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.token_account.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.system_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -260,12 +337,15 @@ impl<'a, 'b> AddAssociatedProtocolCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(8 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.authority.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.vault_associated_protocols.clone());
         account_infos.push(self.protocol.clone());
+        account_infos.push(self.associated_protocol.clone());
+        account_infos.push(self.token_account.clone());
+        account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -286,6 +366,9 @@ impl<'a, 'b> AddAssociatedProtocolCpi<'a, 'b> {
 ///   1. `[]` vault
 ///   2. `[writable]` vault_associated_protocols
 ///   3. `[]` protocol
+///   4. `[writable]` associated_protocol
+///   5. `[]` token_account
+///   6. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct AddAssociatedProtocolCpiBuilder<'a, 'b> {
     instruction: Box<AddAssociatedProtocolCpiBuilderInstruction<'a, 'b>>,
@@ -299,6 +382,9 @@ impl<'a, 'b> AddAssociatedProtocolCpiBuilder<'a, 'b> {
             vault: None,
             vault_associated_protocols: None,
             protocol: None,
+            associated_protocol: None,
+            token_account: None,
+            system_program: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -328,6 +414,33 @@ impl<'a, 'b> AddAssociatedProtocolCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn protocol(&mut self, protocol: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.protocol = Some(protocol);
+        self
+    }
+
+    #[inline(always)]
+    pub fn associated_protocol(
+        &mut self,
+        associated_protocol: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.associated_protocol = Some(associated_protocol);
+        self
+    }
+
+    #[inline(always)]
+    pub fn token_account(
+        &mut self,
+        token_account: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.token_account = Some(token_account);
+        self
+    }
+
+    #[inline(always)]
+    pub fn system_program(
+        &mut self,
+        system_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.system_program = Some(system_program);
         self
     }
 
@@ -382,6 +495,21 @@ impl<'a, 'b> AddAssociatedProtocolCpiBuilder<'a, 'b> {
                 .expect("vault_associated_protocols is not set"),
 
             protocol: self.instruction.protocol.expect("protocol is not set"),
+
+            associated_protocol: self
+                .instruction
+                .associated_protocol
+                .expect("associated_protocol is not set"),
+
+            token_account: self
+                .instruction
+                .token_account
+                .expect("token_account is not set"),
+
+            system_program: self
+                .instruction
+                .system_program
+                .expect("system_program is not set"),
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -397,6 +525,9 @@ struct AddAssociatedProtocolCpiBuilderInstruction<'a, 'b> {
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault_associated_protocols: Option<&'b solana_account_info::AccountInfo<'a>>,
     protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
+    associated_protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
+    token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
+    system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

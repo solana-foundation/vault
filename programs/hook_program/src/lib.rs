@@ -21,8 +21,9 @@ pub mod hook_program {
     #[instruction(discriminator = DepositHookInstruction::SPL_DISCRIMINATOR_SLICE)]
     pub fn execute_deposit<'info>(
         ctx: Context<'_, '_, '_, 'info, ExecuteDepositHook<'info>>,
+        deposit_amount: u64,
     ) -> Result<()> {
-        instructions::execute_deposit_hook::handler(ctx)
+        instructions::execute_deposit_hook::handler(ctx, deposit_amount)
     }
 
     /// Transfer hook entrypoint called by the vault program withdraw instruction.
