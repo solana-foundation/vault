@@ -1,4 +1,4 @@
-use crate::state::{DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED};
+use crate::state::{anchor_discriminator, DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED};
 use anchor_lang::prelude::{AccountMeta, ProgramError, Pubkey};
 use spl_discriminator::{ArrayDiscriminator, SplDiscriminate};
 use spl_tlv_account_resolution::solana_instruction::Instruction;
@@ -25,7 +25,7 @@ impl VaultStandardInstruction {
 
     pub fn pack(&self) -> Vec<u8> {
         match self {
-            Self::DepositHook => vec![242u8, 35, 198, 137, 82, 225, 242, 182],
+            Self::DepositHook => anchor_discriminator("global", "deposit").to_vec(),
         }
     }
 }

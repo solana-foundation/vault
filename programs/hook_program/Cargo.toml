@@ -26,6 +26,7 @@ anchor-spl.workspace = true
 solana-instruction.workspace = true
 spl-tlv-account-resolution.workspace = true
 spl-discriminator.workspace = true
+sha2-const-stable.workspace = true
 vault = { path = "../vault", features = ["cpi"] }
 
 [lints.rust]
