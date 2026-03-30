@@ -1,5 +1,6 @@
 use crate::state::{
-    DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED, WITHDRAW_ACCOUNT_METAS_SEED,
+    anchor_discriminator, DEPOSIT_ACCOUNT_METAS_SEED, EXTRA_ACCOUNT_METAS_SEED,
+    WITHDRAW_ACCOUNT_METAS_SEED,
 };
 use anchor_lang::prelude::{AccountMeta, ProgramError, Pubkey};
 use spl_discriminator::{ArrayDiscriminator, SplDiscriminate};
@@ -33,8 +34,8 @@ impl VaultStandardInstruction {
 
     pub fn pack(&self) -> Vec<u8> {
         match self {
-            Self::DepositHook => vec![242u8, 35, 198, 137, 82, 225, 242, 182],
-            Self::WithdrawHook => vec![183u8, 18, 70, 156, 148, 109, 161, 34],
+            Self::DepositHook => anchor_discriminator("global", "deposit").to_vec(),
+            Self::WithdrawHook => anchor_discriminator("global", "withdraw").to_vec(),
         }
     }
 }

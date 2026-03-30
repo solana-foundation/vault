@@ -32,6 +32,27 @@ pub struct ExecuteDepositHook<'info> {
 }
 
 impl<'info> ExecuteDepositHook<'info> {
+    pub fn validate_protocols(&self) -> Result<()> {
+        let protocols = &self.associated_protocols_info.protocols;
+
+        require!(
+            protocols.len() >= 2,
+            HookProgramError::InsufficientAssociatedProtocols
+        );
+
+        require!(
+            protocols.contains(&vault::id()),
+            HookProgramError::ProtocolNotFound
+        );
+
+        require!(
+            protocols.contains(&self.protocol.key()),
+            HookProgramError::ProtocolNotFound
+        );
+
+        Ok(())
+    }
+
     pub fn invoke_deposit(
         &self,
         additional_accounts: &[AccountInfo<'info>],
