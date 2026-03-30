@@ -28,7 +28,7 @@ pub fn handler<'info>(ctx: Context<Withdraw>, assets: u64) -> Result<()> {
         .accounts
         .vault
         .amount_deposit
-        .checked_add(assets)
+        .checked_sub(assets)
         .ok_or(DummyProgramError::ArithmeticError)?;
     Ok(())
 }
