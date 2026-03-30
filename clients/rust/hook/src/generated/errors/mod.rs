@@ -3,7 +3,9 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
-pub(crate) mod hook_program;
-
-pub use self::hook_program::HookProgramError;
+      pub(crate) mod hook_program;
+  
+      pub use self::hook_program::HookProgramError;
+  

@@ -3,91 +3,81 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
 use solana_pubkey::Pubkey;
+use borsh::BorshSerialize;
+use borsh::BorshDeserialize;
+
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AssociatedProtocol {
-    pub discriminator: [u8; 8],
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub vault: Pubkey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub protocol: Pubkey,
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub token_account: Pubkey,
-    pub bump: u8,
+pub discriminator: [u8; 8],
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub vault: Pubkey,
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub protocol: Pubkey,
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub token_account: Pubkey,
+pub bump: u8,
 }
+
 
 pub const ASSOCIATED_PROTOCOL_DISCRIMINATOR: [u8; 8] = [72, 58, 91, 75, 199, 83, 96, 7];
 
 impl AssociatedProtocol {
-    pub const LEN: usize = 105;
-
-    #[inline(always)]
-    pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
-        let mut data = data;
-        Self::deserialize(&mut data)
-    }
+      pub const LEN: usize = 105;
+  
+  
+  
+  #[inline(always)]
+  pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
+    let mut data = data;
+    Self::deserialize(&mut data)
+  }
 }
 
 impl<'a> TryFrom<&solana_account_info::AccountInfo<'a>> for AssociatedProtocol {
-    type Error = std::io::Error;
+  type Error = std::io::Error;
 
-    fn try_from(account_info: &solana_account_info::AccountInfo<'a>) -> Result<Self, Self::Error> {
-        let mut data: &[u8] = &(*account_info.data).borrow();
-        Self::deserialize(&mut data)
-    }
+  fn try_from(account_info: &solana_account_info::AccountInfo<'a>) -> Result<Self, Self::Error> {
+      let mut data: &[u8] = &(*account_info.data).borrow();
+      Self::deserialize(&mut data)
+  }
 }
 
 #[cfg(feature = "fetch")]
 pub fn fetch_associated_protocol(
-    rpc: &solana_client::rpc_client::RpcClient,
-    address: &solana_pubkey::Pubkey,
+  rpc: &solana_client::rpc_client::RpcClient,
+  address: &solana_pubkey::Pubkey,
 ) -> Result<crate::shared::DecodedAccount<AssociatedProtocol>, std::io::Error> {
-    let accounts = fetch_all_associated_protocol(rpc, &[*address])?;
-    Ok(accounts[0].clone())
+  let accounts = fetch_all_associated_protocol(rpc, &[*address])?;
+  Ok(accounts[0].clone())
 }
 
 #[cfg(feature = "fetch")]
 pub fn fetch_all_associated_protocol(
-    rpc: &solana_client::rpc_client::RpcClient,
-    addresses: &[solana_pubkey::Pubkey],
+  rpc: &solana_client::rpc_client::RpcClient,
+  addresses: &[solana_pubkey::Pubkey],
 ) -> Result<Vec<crate::shared::DecodedAccount<AssociatedProtocol>>, std::io::Error> {
-    let accounts = rpc
-        .get_multiple_accounts(addresses)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+    let accounts = rpc.get_multiple_accounts(addresses)
+      .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
     let mut decoded_accounts: Vec<crate::shared::DecodedAccount<AssociatedProtocol>> = Vec::new();
     for i in 0..addresses.len() {
-        let address = addresses[i];
-        let account = accounts[i].as_ref().ok_or(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("Account not found: {}", address),
-        ))?;
-        let data = AssociatedProtocol::from_bytes(&account.data)?;
-        decoded_accounts.push(crate::shared::DecodedAccount {
-            address,
-            account: account.clone(),
-            data,
-        });
+      let address = addresses[i];
+      let account = accounts[i].as_ref()
+        .ok_or(std::io::Error::new(std::io::ErrorKind::Other, format!("Account not found: {}", address)))?;
+      let data = AssociatedProtocol::from_bytes(&account.data)?;
+      decoded_accounts.push(crate::shared::DecodedAccount { address, account: account.clone(), data });
     }
     Ok(decoded_accounts)
 }
 
 #[cfg(feature = "fetch")]
 pub fn fetch_maybe_associated_protocol(
-    rpc: &solana_client::rpc_client::RpcClient,
-    address: &solana_pubkey::Pubkey,
+  rpc: &solana_client::rpc_client::RpcClient,
+  address: &solana_pubkey::Pubkey,
 ) -> Result<crate::shared::MaybeAccount<AssociatedProtocol>, std::io::Error> {
     let accounts = fetch_all_maybe_associated_protocol(rpc, &[*address])?;
     Ok(accounts[0].clone())
@@ -95,52 +85,47 @@ pub fn fetch_maybe_associated_protocol(
 
 #[cfg(feature = "fetch")]
 pub fn fetch_all_maybe_associated_protocol(
-    rpc: &solana_client::rpc_client::RpcClient,
-    addresses: &[solana_pubkey::Pubkey],
+  rpc: &solana_client::rpc_client::RpcClient,
+  addresses: &[solana_pubkey::Pubkey],
 ) -> Result<Vec<crate::shared::MaybeAccount<AssociatedProtocol>>, std::io::Error> {
-    let accounts = rpc
-        .get_multiple_accounts(addresses)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+    let accounts = rpc.get_multiple_accounts(addresses)
+      .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
     let mut decoded_accounts: Vec<crate::shared::MaybeAccount<AssociatedProtocol>> = Vec::new();
     for i in 0..addresses.len() {
-        let address = addresses[i];
-        if let Some(account) = accounts[i].as_ref() {
-            let data = AssociatedProtocol::from_bytes(&account.data)?;
-            decoded_accounts.push(crate::shared::MaybeAccount::Exists(
-                crate::shared::DecodedAccount {
-                    address,
-                    account: account.clone(),
-                    data,
-                },
-            ));
-        } else {
-            decoded_accounts.push(crate::shared::MaybeAccount::NotFound(address));
-        }
+      let address = addresses[i];
+      if let Some(account) = accounts[i].as_ref() {
+        let data = AssociatedProtocol::from_bytes(&account.data)?;
+        decoded_accounts.push(crate::shared::MaybeAccount::Exists(crate::shared::DecodedAccount { address, account: account.clone(), data }));
+      } else {
+        decoded_accounts.push(crate::shared::MaybeAccount::NotFound(address));
+      }
     }
-    Ok(decoded_accounts)
+  Ok(decoded_accounts)
 }
 
-#[cfg(feature = "anchor")]
-impl anchor_lang::AccountDeserialize for AssociatedProtocol {
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+  #[cfg(feature = "anchor")]
+  impl anchor_lang::AccountDeserialize for AssociatedProtocol {
+      fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         Ok(Self::deserialize(buf)?)
-    }
-}
+      }
+  }
 
-#[cfg(feature = "anchor")]
-impl anchor_lang::AccountSerialize for AssociatedProtocol {}
+  #[cfg(feature = "anchor")]
+  impl anchor_lang::AccountSerialize for AssociatedProtocol {}
 
-#[cfg(feature = "anchor")]
-impl anchor_lang::Owner for AssociatedProtocol {
-    fn owner() -> Pubkey {
+  #[cfg(feature = "anchor")]
+  impl anchor_lang::Owner for AssociatedProtocol {
+      fn owner() -> Pubkey {
         crate::HOOK_PROGRAM_ID
-    }
-}
+      }
+  }
 
-#[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::IdlBuild for AssociatedProtocol {}
+  #[cfg(feature = "anchor-idl-build")]
+  impl anchor_lang::IdlBuild for AssociatedProtocol {}
 
-#[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::Discriminator for AssociatedProtocol {
+  
+  #[cfg(feature = "anchor-idl-build")]
+  impl anchor_lang::Discriminator for AssociatedProtocol {
     const DISCRIMINATOR: &[u8] = &[0; 8];
-}
+  }
+
