@@ -136,6 +136,7 @@ impl<'info> Withdraw<'info> {
         &mut self,
         hook_program: Pubkey,
         remaining_accounts: &[AccountInfo<'info>],
+        withdraw_amount: u64,
     ) -> Result<u64> {
         let extra_metas = &self
             .extra_metas
@@ -154,6 +155,7 @@ impl<'info> Withdraw<'info> {
             &extra_metas.key(),
             &protocol.key(),
             &self.system_program.key(),
+            withdraw_amount,
         );
 
         let validation_pubkey =
@@ -269,7 +271,7 @@ pub fn handler<'info>(
         let hook_program_pubkey = withdraw_hook.hook_program_id;
         let remaining = ctx.remaining_accounts;
         ctx.accounts
-            .execute_withdraw_hook(hook_program_pubkey, remaining)?
+            .execute_withdraw_hook(hook_program_pubkey, remaining, assets)?
     } else {
         ctx.accounts.reserve.amount
     };

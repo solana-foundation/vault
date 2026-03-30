@@ -108,9 +108,10 @@ pub fn protocol_withdraw(
     share_mint: &Pubkey,
     vault: &Pubkey,
     system_program: &Pubkey,
+    amount: u64,
 ) -> Instruction {
     let mut data = VaultStandardInstruction::WithdrawHook.pack();
-    data.extend_from_slice(&0u64.to_le_bytes());
+    data.extend_from_slice(&amount.to_le_bytes());
     let accounts = vec![
         AccountMeta::new(*signer, true),
         AccountMeta::new_readonly(*share_mint, false),

@@ -32,8 +32,9 @@ pub mod hook_program {
     #[instruction(discriminator = WithdrawHookInstruction::SPL_DISCRIMINATOR_SLICE)]
     pub fn execute_withdraw<'info>(
         ctx: Context<'_, '_, '_, 'info, ExecuteWithdrawHook<'info>>,
+        withdraw_amount: u64,
     ) -> Result<()> {
-        instructions::execute_withdraw_hook::handler(ctx)
+        instructions::execute_withdraw_hook::handler(ctx, withdraw_amount)
     }
 
     /// Returns the vault's current Net Asset Value (NAV) as transaction return data.

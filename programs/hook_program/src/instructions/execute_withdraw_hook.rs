@@ -32,7 +32,11 @@ pub struct ExecuteWithdrawHook<'info> {
 }
 
 impl<'info> ExecuteWithdrawHook<'info> {
-    pub fn invoke_withdraw(&self, additional_accounts: &[AccountInfo<'info>]) -> Result<()> {
+    pub fn invoke_withdraw(
+        &self,
+        additional_accounts: &[AccountInfo<'info>],
+        amount: u64,
+    ) -> Result<()> {
         let downstream_vault = additional_accounts
             .first()
             .ok_or(error!(HookProgramError::InvalidAccountData))?;
@@ -43,6 +47,7 @@ impl<'info> ExecuteWithdrawHook<'info> {
             &self.share_mint.key(),
             &downstream_vault.key(),
             &self.system_program.key(),
+            amount,
         );
 
         let mut cpi_account_infos = vec![
@@ -58,12 +63,16 @@ impl<'info> ExecuteWithdrawHook<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ExecuteWithdrawHook<'info>>) -> Result<()> {
+pub fn handler<'info>(
+    ctx: Context<'_, '_, '_, 'info, ExecuteWithdrawHook<'info>>,
+    amount: u64,
+) -> Result<()> {
     validate_protocols(
         &ctx.accounts.associated_protocols_info.protocols,
         ctx.accounts.protocol.key,
     )?;
-    ctx.accounts.invoke_withdraw(ctx.remaining_accounts)?;
+    ctx.accounts
+        .invoke_withdraw(ctx.remaining_accounts, amount)?;
     let total = get_nav(
         &ctx.accounts.associated_protocols_info.protocols,
         &ctx.accounts.share_mint.key(),

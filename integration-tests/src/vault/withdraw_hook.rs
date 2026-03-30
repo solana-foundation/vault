@@ -13,11 +13,12 @@ use solana_sdk::{
     signer::Signer, transaction::Transaction,
 };
 use spl_token::state::Account as TokenAccount;
-use vault_client::{sdk::program_id, VaultConfig, WithdrawBuilder};
+use vault_client::{sdk::program_id, DepositBuilder, VaultConfig, WithdrawBuilder};
 
 use crate::vault::helper_functions::{
-    create_ata, create_mint, create_vault, deposit, get_vault_asset_balance, helper_mint_to,
-    init_vault, init_withdraw_extra_meta_accounts, init_withdraw_hook, update_vault,
+    create_ata, create_mint, create_vault, get_vault_asset_balance, helper_mint_to,
+    init_deposit_extra_meta_accounts, init_deposit_hook, init_vault,
+    init_withdraw_extra_meta_accounts, init_withdraw_hook, update_vault,
 };
 
 #[test]
@@ -85,6 +86,16 @@ fn test_withdraw_with_hook() {
     )
     .expect("vault update failed");
 
+    // Add the deposit hook extension
+    init_deposit_hook(
+        &mut svm,
+        &authority,
+        &share_mint.pubkey(),
+        &vault_pubkey,
+        HOOK_PROGRAM_ID,
+    )
+    .expect("init deposit hook failed");
+
     // Add the withdraw hook extension
     init_withdraw_hook(
         &mut svm,
@@ -103,6 +114,16 @@ fn test_withdraw_with_hook() {
         &share_mint.pubkey(),
     )
     .expect("init withdraw extra meta accounts failed");
+
+    // Initialize the extra meta accounts for the deposit hook
+    init_deposit_extra_meta_accounts(
+        &mut svm,
+        &authority,
+        &asset_mint.pubkey(),
+        &share_mint.pubkey(),
+        &vault_pubkey,
+    )
+    .expect("init deposit extra meta accounts failed");
 
     // Assert the extension was added
     let vault_account = svm
@@ -240,29 +261,73 @@ fn test_withdraw_with_hook() {
         &token::ID,
     );
 
-    // Deposit without hook (vault has no deposit hook registered)
     let deposit_amount = 500_000u64;
-    deposit(
-        &mut svm,
-        &user,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        reserve_pubkey,
-        vault_pubkey,
-        fee_recipient_ata,
-        user_asset_ata,
-        user_share_ata,
-        deposit_amount,
-        0,
-        token::ID,
-        token::ID,
-        HOOK_PROGRAM_ID,
-        None,
-        None,
-        None,
-        None,
-    )
-    .expect("deposit failed");
+    let (deposit_extra_meta_pubkey, _) = Pubkey::find_program_address(
+        &[
+            b"extra_account_metas",
+            b"deposit",
+            share_mint.pubkey().as_ref(),
+        ],
+        &hook_program_id(),
+    );
+
+    let mut deposit_ix = vault_client::sdk::IntoSdkInstruction::into_sdk_instruction(
+        DepositBuilder::new()
+            .user(user.pubkey())
+            .asset_mint(asset_mint.pubkey())
+            .share_mint(share_mint.pubkey())
+            .reserve(reserve_pubkey)
+            .vault(vault_pubkey)
+            .fee_recipient(fee_recipient_ata)
+            .extra_metas(Some(deposit_extra_meta_pubkey))
+            .user_assets_account(user_asset_ata)
+            .user_shares_account(user_share_ata)
+            .asset_token_program(token::ID)
+            .share_token_program(token::ID)
+            .hook_program(Some(HOOK_PROGRAM_ID))
+            .protocol(Some(dummy_program_id()))
+            .assets(deposit_amount)
+            .min_shares(0)
+            .instruction(),
+    );
+    deposit_ix
+        .accounts
+        .push(solana_sdk::instruction::AccountMeta::new_readonly(
+            vault_associated_protocols_pubkey,
+            false,
+        ));
+    deposit_ix
+        .accounts
+        .push(solana_sdk::instruction::AccountMeta::new(
+            dummy_vault_pubkey,
+            false,
+        ));
+    deposit_ix
+        .accounts
+        .push(solana_sdk::instruction::AccountMeta::new_readonly(
+            vault_associated_protocol_pubkey,
+            false,
+        ));
+    deposit_ix
+        .accounts
+        .push(solana_sdk::instruction::AccountMeta::new_readonly(
+            reserve_pubkey,
+            false,
+        ));
+    deposit_ix
+        .accounts
+        .push(solana_sdk::instruction::AccountMeta::new_readonly(
+            dummy_associated_protocol_pubkey,
+            false,
+        ));
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[deposit_ix],
+        Some(&user.pubkey()),
+        &[&user],
+        blockhash,
+    );
+    svm.send_transaction(tx).expect("deposit failed");
 
     let reserve_balance_after_deposit =
         TokenAccount::unpack(svm.get_account(&reserve_pubkey).unwrap().data())

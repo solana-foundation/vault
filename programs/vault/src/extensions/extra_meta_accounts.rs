@@ -87,8 +87,10 @@ pub fn create_withdraw_hook_ix(
     extra_meta_accounts: &Pubkey,
     protocol: &Pubkey,
     system_program: &Pubkey,
+    withdraw_amount: u64,
 ) -> Instruction {
-    let data = VaultStandardInstruction::WithdrawHook.pack();
+    let mut data = VaultStandardInstruction::WithdrawHook.pack();
+    data.extend_from_slice(&withdraw_amount.to_le_bytes());
 
     let accounts = vec![
         AccountMeta::new(*signer, true),
