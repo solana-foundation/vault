@@ -268,7 +268,6 @@ pub fn handler<'info>(
             hook_program_account.key().eq(&hook_program_pubkey),
             VaultProgramError::HookExtensionNotInitialized
         );
-        let hook_program_pubkey = withdraw_hook.hook_program_id;
         let remaining = ctx.remaining_accounts;
         ctx.accounts
             .execute_withdraw_hook(hook_program_pubkey, remaining, assets)?
