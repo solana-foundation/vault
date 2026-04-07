@@ -6,7 +6,7 @@ use anchor_spl::{
 
 use crate::{
     error::VaultProgramError,
-    state::{VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    state::{Vault, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -42,12 +42,12 @@ pub struct CreateVault<'info> {
 
     #[account(
         init,
-        space = 8 + VaultConfig::INIT_SPACE,
+        space = 8 + Vault::INIT_SPACE,
         payer = payer,
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
-    pub vault: Account<'info, VaultConfig>,
+    pub vault: Account<'info, Vault>,
 
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub share_token_program: Interface<'info, TokenInterface>,
@@ -75,7 +75,7 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
         VaultProgramError::InvalidInitialPrice
     );
     ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
-    ctx.accounts.vault.set_inner(VaultConfig {
+    ctx.accounts.vault.set_inner(Vault {
         asset_mint_address: ctx.accounts.asset_mint.key(),
         share_mint_address: ctx.accounts.share_mint.key(),
         vault_token_account: ctx.accounts.reserve.key(),

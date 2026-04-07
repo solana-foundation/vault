@@ -11,6 +11,7 @@ pub enum FeeType {
 }
 
 impl FeeType {
+    /// Ensures percentage fees don't exceed MAX_BPS.
     pub fn validate(self) -> Result<()> {
         match self {
             FeeType::Percentage { bps } => {
@@ -21,6 +22,8 @@ impl FeeType {
         Ok(())
     }
 
+    /// Computes the fee from a known total amount (fee-inclusive).
+    /// Rounds up for percentage fees.
     pub fn get_fee(self, total_amount: u64) -> Result<u64> {
         match self {
             FeeType::Percentage { bps } => {
@@ -37,6 +40,7 @@ impl FeeType {
         }
     }
 
+    /// Back-derives the fee from the gross (fee-inclusive) withdrawal amount so the user receives net after fee.
     pub fn get_withdraw_fee_when_redeeming(&self, gross_assets: u64) -> Result<u64> {
         match self {
             FeeType::Percentage { bps } => {
@@ -58,6 +62,7 @@ impl FeeType {
         }
     }
 
+    /// Computes the deposit fee given the desired net deposit, so gross = net + fee.
     pub fn get_deposit_fee_when_minting(&self, net_assets: u64) -> Result<u64> {
         match self {
             FeeType::Percentage { bps } => {

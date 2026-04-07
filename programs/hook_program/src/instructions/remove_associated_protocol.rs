@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use vault::state::VaultConfig;
+use vault::state::Vault;
 
 use crate::{
     errors::HookProgramError,
@@ -17,7 +17,7 @@ pub struct RemoveAssociatedProtocol<'info> {
     #[account(
         has_one = authority @ HookProgramError::UnauthorizedAuthority,
     )]
-    pub vault: Account<'info, VaultConfig>,
+    pub vault: Account<'info, Vault>,
 
     #[account(
         mut,

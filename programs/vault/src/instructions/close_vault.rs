@@ -5,7 +5,7 @@ use anchor_spl::token_interface::{
 
 use crate::{
     error::VaultProgramError,
-    state::{VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    state::{Vault, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
 };
 
 #[derive(Accounts)]
@@ -36,7 +36,7 @@ pub struct CloseVault<'info> {
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
-    pub vault: Account<'info, VaultConfig>,
+    pub vault: Account<'info, Vault>,
 
     pub token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,

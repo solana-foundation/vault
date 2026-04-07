@@ -3,7 +3,7 @@ use anchor_spl::token_interface::Mint;
 
 use crate::{
     error::VaultProgramError,
-    state::{VaultConfig, VAULT_CONFIG_SEED},
+    state::{Vault, VAULT_CONFIG_SEED},
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -27,7 +27,7 @@ pub struct UpdateVault<'info> {
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
-    pub vault: Account<'info, VaultConfig>,
+    pub vault: Account<'info, Vault>,
 }
 
 pub fn handler<'info>(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {

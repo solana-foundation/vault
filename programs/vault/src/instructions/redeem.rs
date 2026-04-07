@@ -5,7 +5,7 @@ use anchor_spl::token_interface::{
 
 use crate::{
     error::VaultProgramError,
-    state::{Rounding, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    state::{Rounding, Vault, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
 };
 
 #[derive(Accounts)]
@@ -38,7 +38,7 @@ pub struct Redeem<'info> {
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
-    pub vault: Account<'info, VaultConfig>,
+    pub vault: Account<'info, Vault>,
 
     /// Fee recipient token account
     #[account(

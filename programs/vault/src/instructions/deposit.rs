@@ -21,7 +21,7 @@ use crate::{
         create_deposit_hook_ix, get_deposit_hook_extra_account_metas_address,
         DepositHookInstruction,
     },
-    state::{Rounding, VaultConfig, MAX_BPS, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    state::{Rounding, Vault, MAX_BPS, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
 };
 
 #[derive(Accounts)]
@@ -50,7 +50,7 @@ pub struct DepositAndMint<'info> {
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
-    pub vault: Account<'info, VaultConfig>,
+    pub vault: Account<'info, Vault>,
 
     #[account(
         mut,

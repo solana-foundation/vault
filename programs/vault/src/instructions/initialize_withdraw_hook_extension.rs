@@ -4,7 +4,7 @@ use anchor_spl::token_interface::Mint;
 use crate::{
     error::VaultProgramError,
     extensions::{VaultExtension, WithdrawHook},
-    state::{VaultConfig, VAULT_CONFIG_SEED},
+    state::{Vault, VAULT_CONFIG_SEED},
 };
 
 #[derive(Accounts)]
@@ -19,7 +19,7 @@ pub struct InitializeWithdrawHook<'info> {
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
-    pub vault: Account<'info, VaultConfig>,
+    pub vault: Account<'info, Vault>,
 }
 
 pub fn handler<'info>(ctx: Context<InitializeWithdrawHook>, hook_program: Pubkey) -> Result<()> {

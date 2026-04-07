@@ -4,7 +4,7 @@ use anchor_spl::token_interface::Mint;
 use crate::{
     error::VaultProgramError,
     extensions::VaultExtension,
-    state::{FeeType, VaultConfig, VAULT_CONFIG_SEED},
+    state::{FeeType, Vault, VAULT_CONFIG_SEED},
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -24,7 +24,7 @@ pub struct UpdateWithdrawalFees<'info> {
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
-    pub vault: Account<'info, VaultConfig>,
+    pub vault: Account<'info, Vault>,
 }
 
 pub fn handler<'info>(

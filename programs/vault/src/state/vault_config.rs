@@ -9,7 +9,7 @@ use anchor_lang::prelude::*;
 /// logic across configuration types.
 #[account]
 #[derive(InitSpace)]
-pub struct VaultConfig {
+pub struct Vault {
     pub asset_mint_address: Pubkey,
     /// share mint address
     pub share_mint_address: Pubkey,
@@ -28,13 +28,21 @@ pub struct VaultConfig {
     /// pubkey that is required to own the TokenAccount fees are sent to
     pub fee_recipient: Pubkey,
     /// vault extensions
-    #[max_len(10)]
-    pub extensions: Vec<VaultExtension>,
     pub reserve_bump: u8,
     pub bump: u8,
+    #[max_len(10)]
+    pub extensions: Vec<VaultExtension>,
 }
 
-impl VaultConfig {
+impl Vault {
+    /// Converts an asset amount into the equivalent number of share tokens.
+    ///
+    /// When `share_supply` is zero (first deposit), the conversion uses `initial_price`
+    /// as a fixed exchange rate.
+    /// Otherwise `shares = (share_supply + 1) * asset_amount / (reserve_balance + 1)`,
+    /// where the `+1` offsets prevent division-by-zero and mitigate share-inflation attacks.
+    ///
+    /// The `rounding` parameter controls whether the result is rounded up or down.
     pub fn get_shares_from_assets(
         &self,
         reserve_balance: u64,
@@ -73,6 +81,15 @@ impl VaultConfig {
         u64::try_from(result).or(Err(VaultProgramError::ArithmeticError.into()))
     }
 
+    /// Converts a share token amount into the equivalent amount of underlying assets.
+    ///
+    /// When `share_supply` is zero (no shares minted yet), the conversion uses
+    /// `initial_price` as a fixed exchange rate.
+    /// If shares exist but `reserve_balance` is zero (insolvent vault), it returns `0`
+    /// so that downstream slippage checks can correctly reject the redemption.
+    ///
+    /// Otherwise it computes `assets = share_amount * reserve_balance / share_supply`,
+    /// The `rounding` parameter controls whether the result is rounded up or down.
     pub fn get_assets_from_shares(
         &self,
         reserve_balance: u64,
@@ -191,8 +208,8 @@ mod tests {
     use super::*;
     use test_case::test_case;
 
-    fn create_vault_config(initial_price: u64) -> VaultConfig {
-        VaultConfig {
+    fn create_vault_config(initial_price: u64) -> Vault {
+        Vault {
             asset_mint_address: Pubkey::new_unique(),
             share_mint_address: Pubkey::new_unique(),
             vault_token_account: Pubkey::new_unique(),

@@ -1,9 +1,6 @@
 use anchor_lang::{
     prelude::*,
-    solana_program::{
-        instruction::Instruction,
-        program::{get_return_data, invoke_signed},
-    },
+    solana_program::program::{get_return_data, invoke_signed},
 };
 use anchor_spl::token_interface::{
     self, burn, Burn, Mint, TokenAccount, TokenInterface, TransferChecked,
@@ -16,7 +13,7 @@ use crate::{
         create_withdraw_hook_ix, get_withdraw_hook_extra_account_metas_address,
         WithdrawHookInstruction,
     },
-    state::{Rounding, VaultConfig, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    state::{Rounding, Vault, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
 };
 
 #[derive(Accounts)]
@@ -49,7 +46,7 @@ pub struct Withdraw<'info> {
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump
     )]
-    pub vault: Account<'info, VaultConfig>,
+    pub vault: Account<'info, Vault>,
 
     /// Fee recipient token account
     #[account(
