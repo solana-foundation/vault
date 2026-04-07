@@ -2,11 +2,23 @@ use anchor_lang::prelude::*;
 
 use crate::{error::VaultProgramError, instructions::DepositAndMint, state::Rounding};
 
-pub fn handler<'info>(ctx: Context<DepositAndMint>, shares: u64, max_assets: u64) -> Result<()> {
+pub fn handler<'info>(
+    ctx: Context<'_, '_, '_, 'info, DepositAndMint<'info>>,
+    shares: u64,
+    max_assets: u64,
+) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
+    let deposit_hook_program = ctx.accounts.vault.deposit_hook_type();
+    let mut nav = ctx.accounts.reserve.amount;
+    if deposit_hook_program.is_some() {
+        let hook_program_pubkey = ctx.accounts.get_program_hook_pubkey(deposit_hook_program)?;
+        nav = ctx
+            .accounts
+            .get_nav(hook_program_pubkey, ctx.remaining_accounts)?;
+    }
 
     let assets = ctx.accounts.vault.get_assets_from_shares(
-        ctx.accounts.reserve.amount,
+        nav,
         ctx.accounts.share_mint.supply,
         shares,
         Rounding::Up,
@@ -28,6 +40,23 @@ pub fn handler<'info>(ctx: Context<DepositAndMint>, shares: u64, max_assets: u64
         assets <= ctx.accounts.vault.vault_asset_cap,
         VaultProgramError::MaxVaultAssetCapExceeded
     );
+    let deposit_hook_program = ctx.accounts.vault.deposit_hook_type();
+
+    if deposit_hook_program.is_some() {
+        let hook_program_pubkey = ctx.accounts.get_program_hook_pubkey(deposit_hook_program)?;
+
+        let remaining = ctx.remaining_accounts;
+        ctx.accounts.delegate_reserve(
+            ctx.accounts
+                .hook_program
+                .as_ref()
+                .ok_or(VaultProgramError::OptionalAccountIsEmpty)?
+                .clone(),
+            assets,
+        )?;
+        ctx.accounts
+            .execute_deposit_hook(hook_program_pubkey, remaining, assets)?;
+    }
     let fee = ctx.accounts.vault.get_deposit_fee_when_minting(assets)?;
     ctx.accounts
         .transfer_asset_token_fee_to_fee_recipient(fee)?;

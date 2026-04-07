@@ -69,7 +69,11 @@ pub mod vault {
     /// # Arguments
     /// * `shares` - The amount of shares to mint to the user
     /// * `max_assets` - Maximum amount of asset tokens the user is willing to pay (slippage check)
-    pub fn mint(ctx: Context<DepositAndMint>, shares: u64, max_assets: u64) -> Result<()> {
+    pub fn mint<'info>(
+        ctx: Context<'_, '_, '_, 'info, DepositAndMint<'info>>,
+        shares: u64,
+        max_assets: u64,
+    ) -> Result<()> {
         instructions::mint::handler(ctx, shares, max_assets)
     }
 

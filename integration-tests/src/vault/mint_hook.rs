@@ -13,7 +13,7 @@ use solana_sdk::{
     signer::Signer, transaction::Transaction,
 };
 use spl_token::state::Account as TokenAccount;
-use vault_client::{sdk::program_id, DepositBuilder, Vault};
+use vault_client::{sdk::program_id, MintBuilder, Vault};
 
 use crate::vault::helper_functions::{
     create_ata, create_mint, create_vault, get_vault_asset_balance, helper_mint_to,
@@ -21,7 +21,7 @@ use crate::vault::helper_functions::{
 };
 
 #[test]
-fn test_deposit_with_hook() {
+fn test_mint_with_hook() {
     let mut svm = LiteSVM::new();
 
     let vault_program_bytes = include_bytes!("../../../target/deploy/vault.so");
@@ -104,8 +104,6 @@ fn test_deposit_with_hook() {
         &vault_pubkey,
     )
     .expect("init deposit extra meta accounts failed");
-
-    // Assert the extension was added
     let vault_account = svm
         .get_account(&vault_pubkey)
         .expect("vault account should exist");
@@ -248,7 +246,7 @@ fn test_deposit_with_hook() {
     let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
     assert_eq!(vault_asset_balance, 0);
 
-    let deposit_amount = 500_000;
+    let mint_amount = 500_000;
     let (extra_meta_pubkey, _) = Pubkey::find_program_address(
         &[
             b"extra_account_metas",
@@ -259,7 +257,7 @@ fn test_deposit_with_hook() {
     );
 
     let mut ix = vault_client::sdk::IntoSdkInstruction::into_sdk_instruction(
-        DepositBuilder::new()
+        MintBuilder::new()
             .user(user.pubkey())
             .asset_mint(asset_mint.pubkey())
             .share_mint(share_mint.pubkey())
@@ -273,8 +271,8 @@ fn test_deposit_with_hook() {
             .share_token_program(token::ID)
             .hook_program(Some(HOOK_PROGRAM_ID))
             .protocol(Some(dummy_program_id()))
-            .assets(deposit_amount)
-            .min_shares(0)
+            .shares(mint_amount)
+            .max_assets(u64::MAX)
             .instruction(),
     );
     ix.accounts
@@ -307,27 +305,20 @@ fn test_deposit_with_hook() {
     let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
     let result = svm.send_transaction(tx);
 
-    assert!(
-        result.is_ok(),
-        "deposit with hook failed: {:?}",
-        result.err()
-    );
+    assert!(result.is_ok(), "mint with hook failed: {:?}", result.err());
 
     let user_asset_ata_account = svm.get_account(&user_asset_ata).unwrap();
     let user_asset_balance_after = TokenAccount::unpack(user_asset_ata_account.data())
         .unwrap()
         .amount;
-    assert_eq!(
-        user_asset_balance_after,
-        user_asset_amount.checked_sub(deposit_amount).unwrap()
-    );
+    assert!(user_asset_balance_after < user_asset_amount);
 
     let user_share_ata_account = svm.get_account(&user_share_ata).unwrap();
     let user_share_balance_after = TokenAccount::unpack(user_share_ata_account.data())
         .unwrap()
         .amount;
-    assert!(user_share_balance_after > 0);
+    assert_eq!(user_share_balance_after, mint_amount);
 
     let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
-    assert_eq!(vault_asset_balance, deposit_amount);
+    assert!(vault_asset_balance > 0);
 }

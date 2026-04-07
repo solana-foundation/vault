@@ -1,7 +1,7 @@
 use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
-use vault_client::{sdk::program_id, Pubkey, VaultConfig};
+use vault_client::{sdk::program_id, Pubkey, Vault};
 
 use crate::vault::helper_functions::{create_mint, create_vault, update_vault};
 use test_case::test_case;
@@ -78,7 +78,7 @@ fn test_update_vault(
             .expect("Vault account should exist");
         assert!(!vault_account.data.is_empty(), "Vault should have data");
 
-        let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
+        let vault_config = Vault::from_bytes(vault_account.data()).unwrap();
         assert_eq!(vault_config.authority, updated_authority);
         assert_eq!(vault_config.asset_mint_address, asset_mint.pubkey());
         assert_eq!(vault_config.share_mint_address, share_mint.pubkey());

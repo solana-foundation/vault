@@ -1,7 +1,7 @@
 use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
-use vault_client::{sdk::program_id, FeeType, Pubkey, VaultConfig, VaultExtension};
+use vault_client::{sdk::program_id, FeeType, Pubkey, Vault, VaultExtension};
 
 use crate::vault::helper_functions::{
     assert_error_code, create_mint, create_vault, init_deposit_fees, init_vault,
@@ -70,7 +70,7 @@ fn test_initialize_and_update_fees() {
     let vault_account = svm
         .get_account(&vault_pubkey)
         .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
+    let vault_config = Vault::from_bytes(vault_account.data()).unwrap();
 
     assert!(vault_config.extensions.is_empty());
 
@@ -90,7 +90,7 @@ fn test_initialize_and_update_fees() {
     let vault_account = svm
         .get_account(&vault_pubkey)
         .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
+    let vault_config = Vault::from_bytes(vault_account.data()).unwrap();
 
     // deposit fee should be at index 0
     assert_eq!(
@@ -111,7 +111,7 @@ fn test_initialize_and_update_fees() {
     let vault_account = svm
         .get_account(&vault_pubkey)
         .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
+    let vault_config = Vault::from_bytes(vault_account.data()).unwrap();
 
     // withdrawal fee should be at index 1
     assert_eq!(
@@ -135,7 +135,7 @@ fn test_initialize_and_update_fees() {
     let vault_account = svm
         .get_account(&vault_pubkey)
         .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
+    let vault_config = Vault::from_bytes(vault_account.data()).unwrap();
 
     // deposit fee should be at index 0
     assert_eq!(
@@ -156,7 +156,7 @@ fn test_initialize_and_update_fees() {
     let vault_account = svm
         .get_account(&vault_pubkey)
         .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
+    let vault_config = Vault::from_bytes(vault_account.data()).unwrap();
 
     // withdrawal fee should be at index 1
     assert_eq!(

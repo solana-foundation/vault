@@ -16,7 +16,7 @@ use vault_client::{
     sdk::IntoSdkInstruction as _, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
     InitializeDepositFeesBuilder, InitializeDepositHookBuilder, InitializeVaultBuilder,
     InitializeWithdrawalFeesBuilder, MintBuilder, Pubkey, RedeemBuilder, UpdateDepositFeesBuilder,
-    UpdateVaultBuilder, UpdateWithdrawalFeesBuilder, VaultConfig, WithdrawBuilder,
+    UpdateVaultBuilder, UpdateWithdrawalFeesBuilder, Vault, WithdrawBuilder,
 };
 
 use anchor_spl::{
@@ -856,7 +856,7 @@ pub fn get_vault_asset_balance(svm: &LiteSVM, vault_pubkey: &Pubkey) -> u64 {
     let vault = svm
         .get_account(&vault_pubkey)
         .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    let vault_config = Vault::from_bytes(vault.data()).unwrap();
 
     let reserve_acc = svm
         .get_account(&vault_config.vault_token_account)

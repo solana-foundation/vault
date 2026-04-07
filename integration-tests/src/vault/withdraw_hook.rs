@@ -13,7 +13,7 @@ use solana_sdk::{
     signer::Signer, transaction::Transaction,
 };
 use spl_token::state::Account as TokenAccount;
-use vault_client::{sdk::program_id, DepositBuilder, VaultConfig, WithdrawBuilder};
+use vault_client::{sdk::program_id, DepositBuilder, Vault, WithdrawBuilder};
 
 use crate::vault::helper_functions::{
     create_ata, create_mint, create_vault, get_vault_asset_balance, helper_mint_to,
@@ -129,7 +129,7 @@ fn test_withdraw_with_hook() {
     let vault_account = svm
         .get_account(&vault_pubkey)
         .expect("vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault_account.data()).unwrap();
+    let vault_config = Vault::from_bytes(vault_account.data()).unwrap();
 
     // Initialize the vault
     init_vault(&mut svm, &authority, &share_mint.pubkey(), &vault_pubkey)

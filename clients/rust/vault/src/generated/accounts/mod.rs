@@ -4,6 +4,6 @@
 //!
 //! <https://github.com/codama-idl/codama>
 
-pub(crate) mod r#vault_config;
+pub(crate) mod r#vault;
 
-pub use self::r#vault_config::*;
+pub use self::r#vault::*;

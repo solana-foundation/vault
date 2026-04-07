@@ -10,7 +10,7 @@ use solana_pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct VaultConfig {
+pub struct Vault {
     pub discriminator: [u8; 8],
     #[cfg_attr(
         feature = "serde",
@@ -50,14 +50,14 @@ pub struct VaultConfig {
     )]
     pub fee_recipient: Pubkey,
     /// vault extensions
-    pub extensions: Vec<VaultExtension>,
     pub reserve_bump: u8,
     pub bump: u8,
+    pub extensions: Vec<VaultExtension>,
 }
 
-pub const VAULT_CONFIG_DISCRIMINATOR: [u8; 8] = [99, 86, 43, 216, 184, 102, 119, 77];
+pub const VAULT_DISCRIMINATOR: [u8; 8] = [211, 8, 232, 43, 2, 152, 117, 119];
 
-impl VaultConfig {
+impl Vault {
     #[inline(always)]
     pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
         let mut data = data;
@@ -65,7 +65,7 @@ impl VaultConfig {
     }
 }
 
-impl<'a> TryFrom<&solana_account_info::AccountInfo<'a>> for VaultConfig {
+impl<'a> TryFrom<&solana_account_info::AccountInfo<'a>> for Vault {
     type Error = std::io::Error;
 
     fn try_from(account_info: &solana_account_info::AccountInfo<'a>) -> Result<Self, Self::Error> {
@@ -75,30 +75,30 @@ impl<'a> TryFrom<&solana_account_info::AccountInfo<'a>> for VaultConfig {
 }
 
 #[cfg(feature = "fetch")]
-pub fn fetch_vault_config(
+pub fn fetch_vault(
     rpc: &solana_client::rpc_client::RpcClient,
     address: &solana_pubkey::Pubkey,
-) -> Result<crate::shared::DecodedAccount<VaultConfig>, std::io::Error> {
-    let accounts = fetch_all_vault_config(rpc, &[*address])?;
+) -> Result<crate::shared::DecodedAccount<Vault>, std::io::Error> {
+    let accounts = fetch_all_vault(rpc, &[*address])?;
     Ok(accounts[0].clone())
 }
 
 #[cfg(feature = "fetch")]
-pub fn fetch_all_vault_config(
+pub fn fetch_all_vault(
     rpc: &solana_client::rpc_client::RpcClient,
     addresses: &[solana_pubkey::Pubkey],
-) -> Result<Vec<crate::shared::DecodedAccount<VaultConfig>>, std::io::Error> {
+) -> Result<Vec<crate::shared::DecodedAccount<Vault>>, std::io::Error> {
     let accounts = rpc
         .get_multiple_accounts(addresses)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
-    let mut decoded_accounts: Vec<crate::shared::DecodedAccount<VaultConfig>> = Vec::new();
+    let mut decoded_accounts: Vec<crate::shared::DecodedAccount<Vault>> = Vec::new();
     for i in 0..addresses.len() {
         let address = addresses[i];
         let account = accounts[i].as_ref().ok_or(std::io::Error::new(
             std::io::ErrorKind::Other,
             format!("Account not found: {}", address),
         ))?;
-        let data = VaultConfig::from_bytes(&account.data)?;
+        let data = Vault::from_bytes(&account.data)?;
         decoded_accounts.push(crate::shared::DecodedAccount {
             address,
             account: account.clone(),
@@ -109,27 +109,27 @@ pub fn fetch_all_vault_config(
 }
 
 #[cfg(feature = "fetch")]
-pub fn fetch_maybe_vault_config(
+pub fn fetch_maybe_vault(
     rpc: &solana_client::rpc_client::RpcClient,
     address: &solana_pubkey::Pubkey,
-) -> Result<crate::shared::MaybeAccount<VaultConfig>, std::io::Error> {
-    let accounts = fetch_all_maybe_vault_config(rpc, &[*address])?;
+) -> Result<crate::shared::MaybeAccount<Vault>, std::io::Error> {
+    let accounts = fetch_all_maybe_vault(rpc, &[*address])?;
     Ok(accounts[0].clone())
 }
 
 #[cfg(feature = "fetch")]
-pub fn fetch_all_maybe_vault_config(
+pub fn fetch_all_maybe_vault(
     rpc: &solana_client::rpc_client::RpcClient,
     addresses: &[solana_pubkey::Pubkey],
-) -> Result<Vec<crate::shared::MaybeAccount<VaultConfig>>, std::io::Error> {
+) -> Result<Vec<crate::shared::MaybeAccount<Vault>>, std::io::Error> {
     let accounts = rpc
         .get_multiple_accounts(addresses)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
-    let mut decoded_accounts: Vec<crate::shared::MaybeAccount<VaultConfig>> = Vec::new();
+    let mut decoded_accounts: Vec<crate::shared::MaybeAccount<Vault>> = Vec::new();
     for i in 0..addresses.len() {
         let address = addresses[i];
         if let Some(account) = accounts[i].as_ref() {
-            let data = VaultConfig::from_bytes(&account.data)?;
+            let data = Vault::from_bytes(&account.data)?;
             decoded_accounts.push(crate::shared::MaybeAccount::Exists(
                 crate::shared::DecodedAccount {
                     address,
@@ -145,26 +145,26 @@ pub fn fetch_all_maybe_vault_config(
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountDeserialize for VaultConfig {
+impl anchor_lang::AccountDeserialize for Vault {
     fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         Ok(Self::deserialize(buf)?)
     }
 }
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::AccountSerialize for VaultConfig {}
+impl anchor_lang::AccountSerialize for Vault {}
 
 #[cfg(feature = "anchor")]
-impl anchor_lang::Owner for VaultConfig {
+impl anchor_lang::Owner for Vault {
     fn owner() -> Pubkey {
-        crate::VAULT_ID
+        crate::HOOK_PROGRAM_ID
     }
 }
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::IdlBuild for VaultConfig {}
+impl anchor_lang::IdlBuild for Vault {}
 
 #[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::Discriminator for VaultConfig {
+impl anchor_lang::Discriminator for Vault {
     const DISCRIMINATOR: &[u8] = &[0; 8];
 }

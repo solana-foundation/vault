@@ -40,7 +40,8 @@ impl FeeType {
         }
     }
 
-    /// Back-derives the fee from the gross (fee-inclusive) withdrawal amount so the user receives net after fee.
+    /// Back-derives the fee from the gross (fee-inclusive) withdrawal amount so the user receives
+    /// net after fee.
     pub fn get_withdraw_fee_when_redeeming(&self, gross_assets: u64) -> Result<u64> {
         match self {
             FeeType::Percentage { bps } => {

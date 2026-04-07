@@ -11,7 +11,7 @@ use solana_sdk::{
 };
 use spl_token::state::Account as TokenAccount;
 use spl_token_2022::state::Account as TokenAccount2022;
-use vault_client::{sdk::program_id, FeeType, VaultConfig};
+use vault_client::{sdk::program_id, FeeType, Vault};
 
 use crate::vault::helper_functions::{
     assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee,
@@ -118,7 +118,7 @@ fn test_mint_vault() {
         .amount;
 
     let vault = svm.get_account(&vault_pubkey).unwrap();
-    let vault_cfg = VaultConfig::from_bytes(vault.data()).unwrap();
+    let vault_cfg = Vault::from_bytes(vault.data()).unwrap();
 
     let asset_amount: u64 = (mint_amount as u128)
         .checked_mul(vault_cfg.initial_price as u128)
@@ -339,7 +339,7 @@ fn test_mint_vault_with_transfer_fees() {
     let vault = svm
         .get_account(&vault_pubkey)
         .expect("Vault account should exist");
-    let vault_config = VaultConfig::from_bytes(vault.data()).unwrap();
+    let vault_config = Vault::from_bytes(vault.data()).unwrap();
 
     let assets: u64 = (mint_amount as u128)
         .checked_mul(vault_config.initial_price as u128)
@@ -403,7 +403,7 @@ fn test_mint_vault_slippage_protection_fails() {
     let mint_amount = 123_456;
 
     let vault_acc = svm.get_account(&vault_pubkey).unwrap();
-    let vault_cfg = VaultConfig::from_bytes(vault_acc.data()).unwrap();
+    let vault_cfg = Vault::from_bytes(vault_acc.data()).unwrap();
 
     let assets_required: u64 = (mint_amount as u128)
         .checked_mul(vault_cfg.initial_price as u128)

@@ -1,6 +1,9 @@
 use anchor_lang::{
     prelude::*,
-    solana_program::program::{get_return_data, invoke_signed},
+    solana_program::{
+        instruction::Instruction,
+        program::{get_return_data, invoke, invoke_signed},
+    },
 };
 use anchor_spl::{
     token::spl_token,
@@ -18,7 +21,7 @@ use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 use crate::{
     error::VaultProgramError,
     extensions::{
-        create_deposit_hook_ix, get_deposit_hook_extra_account_metas_address,
+        create_deposit_hook_ix, get_deposit_hook_extra_account_metas_address, DepositHook,
         DepositHookInstruction,
     },
     state::{Rounding, Vault, MAX_BPS, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
@@ -177,6 +180,61 @@ impl<'info> DepositAndMint<'info> {
         approve_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
 
+    /// Invokes the hook program's `get_nav` instruction via CPI to retrieve the current
+    /// Net Asset Value of the vault.
+    ///
+    /// The first entry in `remaining_accounts` must be the `associated_protocols_info` PDA,
+    /// followed by each protocol's `AssociatedProtocol` PDA and its token account.
+    pub fn get_nav(
+        &self,
+        hook_program: Pubkey,
+        remaining_accounts: &[AccountInfo<'info>],
+    ) -> Result<u64> {
+        // Anchor discriminator for `get_nav`
+        let discriminator: [u8; 8] = [200, 89, 76, 53, 215, 218, 63, 21];
+
+        let mut account_metas = vec![AccountMeta::new_readonly(self.share_mint.key(), false)];
+        let mut cpi_account_infos = vec![self.share_mint.to_account_info()];
+
+        for account in remaining_accounts.iter() {
+            account_metas.push(AccountMeta {
+                pubkey: account.key(),
+                is_signer: account.is_signer,
+                is_writable: account.is_writable,
+            });
+            cpi_account_infos.push(account.clone());
+        }
+
+        let instruction = Instruction {
+            program_id: hook_program,
+            accounts: account_metas,
+            data: discriminator.to_vec(),
+        };
+
+        invoke(&instruction, &cpi_account_infos)?;
+
+        let (return_program_id, return_data) =
+            get_return_data().ok_or(VaultProgramError::StaleVaultNav)?;
+
+        require_keys_eq!(
+            return_program_id,
+            hook_program,
+            VaultProgramError::InvalidReturnedData
+        );
+        require!(
+            return_data.len() >= 8,
+            VaultProgramError::InvalidReturnedData
+        );
+
+        let nav = u64::from_le_bytes(
+            return_data[0..8]
+                .try_into()
+                .map_err(|_| VaultProgramError::InvalidReturnedData)?,
+        );
+
+        Ok(nav)
+    }
+
     /// Invokes the deposit hook program, allowing it to execute custom logic on deposit.
     ///
     /// The deposit hook is an external program registered on the vault that can
@@ -274,6 +332,24 @@ impl<'info> DepositAndMint<'info> {
 
         Ok(nav)
     }
+
+    pub fn get_program_hook_pubkey(
+        &mut self,
+        deposit_hook_program: Option<DepositHook>,
+    ) -> Result<Pubkey> {
+        let deposit_hook =
+            deposit_hook_program.ok_or(VaultProgramError::HookExtensionNotInitialized)?;
+        let hook_program_pubkey = deposit_hook.hook_program_id;
+        let hook_program_account = self
+            .hook_program
+            .as_ref()
+            .ok_or(VaultProgramError::OptionalAccountIsEmpty)?;
+        require!(
+            hook_program_account.key().eq(&hook_program_pubkey),
+            VaultProgramError::HookExtensionNotInitialized
+        );
+        Ok(hook_program_pubkey)
+    }
 }
 
 pub fn handler<'info>(
@@ -297,22 +373,17 @@ pub fn handler<'info>(
     let deposit_hook_program = ctx.accounts.vault.deposit_hook_type();
     let mut reserve_balance = reserve_amount_before;
     if deposit_hook_program.is_some() {
-        let deposit_hook =
-            deposit_hook_program.ok_or(VaultProgramError::HookExtensionNotInitialized)?;
-        let hook_program_pubkey = deposit_hook.hook_program_id;
-        let hook_program_account = ctx
-            .accounts
-            .hook_program
-            .as_ref()
-            .ok_or(VaultProgramError::OptionalAccountIsEmpty)?;
-        require!(
-            hook_program_account.key().eq(&hook_program_pubkey),
-            VaultProgramError::HookExtensionNotInitialized
-        );
+        let hook_program_pubkey = ctx.accounts.get_program_hook_pubkey(deposit_hook_program)?;
 
         let remaining = ctx.remaining_accounts;
-        ctx.accounts
-            .delegate_reserve(hook_program_account.clone(), remaining_amount)?;
+        ctx.accounts.delegate_reserve(
+            ctx.accounts
+                .hook_program
+                .as_ref()
+                .ok_or(VaultProgramError::OptionalAccountIsEmpty)?
+                .clone(),
+            remaining_amount,
+        )?;
         let nav =
             ctx.accounts
                 .execute_deposit_hook(hook_program_pubkey, remaining, remaining_amount)?;

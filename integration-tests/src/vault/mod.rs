@@ -6,6 +6,7 @@ mod deposit_hook;
 mod fee_extensions;
 mod helper_functions;
 mod mint;
+mod mint_hook;
 mod redeem;
 mod update_vault;
 mod withdraw;
