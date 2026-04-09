@@ -7,8 +7,8 @@ use anchor_spl::token_interface::Mint;
 use crate::{
     errors::HookProgramError,
     state::{
-        get_nav, protocol_withdraw, validate_protocols, VaultAssociatedProtocols,
-        VAULT_ASSOCIATED_PROTOCOLS_SEED,
+        get_shares_from_assets, get_total_assets, protocol_withdraw, validate_protocols,
+        VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED,
     },
 };
 
@@ -73,14 +73,27 @@ pub fn handler<'info>(
     )?;
     ctx.accounts
         .invoke_withdraw(ctx.remaining_accounts, amount)?;
-    let total = get_nav(
+    let total_assets = get_total_assets(
         &ctx.accounts.associated_protocols_info.protocols,
         &ctx.accounts.share_mint.key(),
         ctx.remaining_accounts,
         ctx.program_id,
     )?;
 
-    let data = total.try_to_vec()?;
+    let vault_info = ctx.accounts.signer.to_account_info();
+    let vault_data = vault_info.try_borrow_data()?;
+    let mut buf: &[u8] = &vault_data;
+    let vault_state = vault::state::Vault::try_deserialize(&mut buf)?;
+
+    let shares_to_burn = get_shares_from_assets(
+        vault_state.initial_price,
+        total_assets,
+        ctx.accounts.share_mint.supply,
+        amount,
+        true, // round up for withdrawals
+    )?;
+
+    let data = shares_to_burn.try_to_vec()?;
     set_return_data(&data);
     Ok(())
 }

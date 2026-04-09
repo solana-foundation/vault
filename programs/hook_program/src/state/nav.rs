@@ -21,7 +21,7 @@ pub struct AssociatedProtocol {
     pub bump: u8,
 }
 
-pub fn get_nav<'info>(
+pub fn get_total_assets<'info>(
     protocols: &[Pubkey],
     share_mint: &Pubkey,
     remaining_accounts: &[AccountInfo<'info>],
@@ -63,6 +63,31 @@ pub fn get_nav<'info>(
             .ok_or_else(|| error!(ErrorCode::AccountDidNotDeserialize))?;
     }
     Ok(total)
+}
+
+/// Returns the assets/shares ratio (price per share) scaled by 10^decimals.
+pub fn get_nav<'info>(
+    protocols: &[Pubkey],
+    share_mint: &Pubkey,
+    share_supply: u64,
+    share_decimals: u8,
+    remaining_accounts: &[AccountInfo<'info>],
+    program_id: &Pubkey,
+) -> Result<u64> {
+    let total_assets = get_total_assets(protocols, share_mint, remaining_accounts, program_id)?;
+
+    if share_supply == 0 {
+        return Ok(0);
+    }
+
+    let precision = 10u128.pow(share_decimals as u32);
+    let ratio = u128::from(total_assets)
+        .checked_mul(precision)
+        .ok_or(HookProgramError::ArithmeticError)?
+        .checked_div(u128::from(share_supply))
+        .ok_or(HookProgramError::ArithmeticError)?;
+
+    u64::try_from(ratio).map_err(|_| HookProgramError::ArithmeticError.into())
 }
 
 pub fn get_shares_from_assets(

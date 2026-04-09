@@ -7,7 +7,7 @@ use anchor_spl::token_interface::Mint;
 use crate::{
     errors::HookProgramError,
     state::{
-        get_nav, get_shares_from_assets, protocol_deposit, validate_protocols,
+        get_shares_from_assets, get_total_assets, protocol_deposit, validate_protocols,
         VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED,
     },
 };
@@ -94,7 +94,7 @@ pub fn handler<'info>(
     )?;
     ctx.accounts
         .invoke_deposit(ctx.remaining_accounts, deposit_amount)?;
-    let total_nav = get_nav(
+    let total_nav = get_total_assets(
         &ctx.accounts.associated_protocols_info.protocols,
         &ctx.accounts.share_mint.key(),
         ctx.remaining_accounts,

@@ -17,6 +17,8 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, GetNav<'info>>) -> Result<
     let data = get_nav(
         &ctx.accounts.associated_protocols_info.protocols,
         &ctx.accounts.share_mint.key(),
+        ctx.accounts.share_mint.supply,
+        ctx.accounts.share_mint.decimals,
         ctx.remaining_accounts,
         ctx.program_id,
     )?;
