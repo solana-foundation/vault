@@ -65,6 +65,41 @@ pub fn get_nav<'info>(
     Ok(total)
 }
 
+pub fn get_shares_from_assets(
+    initial_price: u64,
+    reserve_balance: u64,
+    share_supply: u64,
+    asset_amount: u64,
+    round_up: bool,
+) -> Result<u64> {
+    let assets_times_total_supply: u128 = if share_supply == 0 {
+        u128::from(initial_price)
+            .checked_mul(u128::from(asset_amount))
+            .ok_or(HookProgramError::ArithmeticError)?
+    } else {
+        u128::from(
+            share_supply
+                .checked_add(1)
+                .ok_or(HookProgramError::ArithmeticError)?,
+        )
+        .checked_mul(u128::from(asset_amount))
+        .ok_or(HookProgramError::ArithmeticError)?
+    };
+    let divisor = u128::from(
+        reserve_balance
+            .checked_add(1)
+            .ok_or(HookProgramError::ArithmeticError)?,
+    );
+    let result = if round_up {
+        assets_times_total_supply.div_ceil(divisor)
+    } else {
+        assets_times_total_supply
+            .checked_div(divisor)
+            .ok_or(HookProgramError::ArithmeticError)?
+    };
+    u64::try_from(result).or(Err(HookProgramError::ArithmeticError.into()))
+}
+
 pub fn validate_protocols<'info>(protocols: &Vec<Pubkey>, protocol: &Pubkey) -> Result<()> {
     require!(
         protocols.len() >= 2,

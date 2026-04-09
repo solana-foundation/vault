@@ -11,21 +11,20 @@ pub const WITHDRAW_DISCRIMINATOR: [u8; 8] = [183, 18, 70, 156, 148, 109, 161, 34
 /// Accounts.
 #[derive(Debug)]
 pub struct Withdraw {
-    /// `User` that is withdrawing assets from `Vault`
     pub user: solana_pubkey::Pubkey,
-    /// Mint of the underlying asset
+
     pub asset_mint: solana_pubkey::Pubkey,
-    /// Share mint
+
     pub share_mint: solana_pubkey::Pubkey,
-    /// Vault reserve token account holding underlying assets
+
     pub reserve: solana_pubkey::Pubkey,
-    /// Vault configuration account (PDA)
+
     pub vault: solana_pubkey::Pubkey,
-    /// Fee recipient token account
+
     pub fee_recipient: solana_pubkey::Pubkey,
-    /// User's asset token account
+
     pub user_assets_account: solana_pubkey::Pubkey,
-    /// User's share token account
+
     pub user_shares_account: solana_pubkey::Pubkey,
 
     pub extra_metas: Option<solana_pubkey::Pubkey>,
@@ -34,9 +33,9 @@ pub struct Withdraw {
 
     pub hook_program: Option<solana_pubkey::Pubkey>,
 
-    pub share_token_program: solana_pubkey::Pubkey,
-
     pub asset_token_program: solana_pubkey::Pubkey,
+
+    pub share_token_program: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
 }
@@ -107,11 +106,11 @@ impl Withdraw {
             ));
         }
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.share_token_program,
+            self.asset_token_program,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.asset_token_program,
+            self.share_token_program,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -183,8 +182,8 @@ impl WithdrawInstructionArgs {
 ///   8. `[optional]` extra_metas
 ///   9. `[optional]` protocol
 ///   10. `[optional]` hook_program
-///   11. `[]` share_token_program
-///   12. `[]` asset_token_program
+///   11. `[]` asset_token_program
+///   12. `[]` share_token_program
 ///   13. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct WithdrawBuilder {
@@ -199,8 +198,8 @@ pub struct WithdrawBuilder {
     extra_metas: Option<solana_pubkey::Pubkey>,
     protocol: Option<solana_pubkey::Pubkey>,
     hook_program: Option<solana_pubkey::Pubkey>,
-    share_token_program: Option<solana_pubkey::Pubkey>,
     asset_token_program: Option<solana_pubkey::Pubkey>,
+    share_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     assets: Option<u64>,
     max_shares: Option<u64>,
@@ -212,56 +211,48 @@ impl WithdrawBuilder {
         Self::default()
     }
 
-    /// `User` that is withdrawing assets from `Vault`
     #[inline(always)]
     pub fn user(&mut self, user: solana_pubkey::Pubkey) -> &mut Self {
         self.user = Some(user);
         self
     }
 
-    /// Mint of the underlying asset
     #[inline(always)]
     pub fn asset_mint(&mut self, asset_mint: solana_pubkey::Pubkey) -> &mut Self {
         self.asset_mint = Some(asset_mint);
         self
     }
 
-    /// Share mint
     #[inline(always)]
     pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
         self.share_mint = Some(share_mint);
         self
     }
 
-    /// Vault reserve token account holding underlying assets
     #[inline(always)]
     pub fn reserve(&mut self, reserve: solana_pubkey::Pubkey) -> &mut Self {
         self.reserve = Some(reserve);
         self
     }
 
-    /// Vault configuration account (PDA)
     #[inline(always)]
     pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
         self.vault = Some(vault);
         self
     }
 
-    /// Fee recipient token account
     #[inline(always)]
     pub fn fee_recipient(&mut self, fee_recipient: solana_pubkey::Pubkey) -> &mut Self {
         self.fee_recipient = Some(fee_recipient);
         self
     }
 
-    /// User's asset token account
     #[inline(always)]
     pub fn user_assets_account(&mut self, user_assets_account: solana_pubkey::Pubkey) -> &mut Self {
         self.user_assets_account = Some(user_assets_account);
         self
     }
 
-    /// User's share token account
     #[inline(always)]
     pub fn user_shares_account(&mut self, user_shares_account: solana_pubkey::Pubkey) -> &mut Self {
         self.user_shares_account = Some(user_shares_account);
@@ -290,14 +281,14 @@ impl WithdrawBuilder {
     }
 
     #[inline(always)]
-    pub fn share_token_program(&mut self, share_token_program: solana_pubkey::Pubkey) -> &mut Self {
-        self.share_token_program = Some(share_token_program);
+    pub fn asset_token_program(&mut self, asset_token_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.asset_token_program = Some(asset_token_program);
         self
     }
 
     #[inline(always)]
-    pub fn asset_token_program(&mut self, asset_token_program: solana_pubkey::Pubkey) -> &mut Self {
-        self.asset_token_program = Some(asset_token_program);
+    pub fn share_token_program(&mut self, share_token_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.share_token_program = Some(share_token_program);
         self
     }
 
@@ -355,12 +346,12 @@ impl WithdrawBuilder {
             extra_metas: self.extra_metas,
             protocol: self.protocol,
             hook_program: self.hook_program,
-            share_token_program: self
-                .share_token_program
-                .expect("share_token_program is not set"),
             asset_token_program: self
                 .asset_token_program
                 .expect("asset_token_program is not set"),
+            share_token_program: self
+                .share_token_program
+                .expect("share_token_program is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
@@ -376,21 +367,20 @@ impl WithdrawBuilder {
 
 /// `withdraw` CPI accounts.
 pub struct WithdrawCpiAccounts<'a, 'b> {
-    /// `User` that is withdrawing assets from `Vault`
     pub user: &'b solana_account_info::AccountInfo<'a>,
-    /// Mint of the underlying asset
+
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
-    /// Share mint
+
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
-    /// Vault reserve token account holding underlying assets
+
     pub reserve: &'b solana_account_info::AccountInfo<'a>,
-    /// Vault configuration account (PDA)
+
     pub vault: &'b solana_account_info::AccountInfo<'a>,
-    /// Fee recipient token account
+
     pub fee_recipient: &'b solana_account_info::AccountInfo<'a>,
-    /// User's asset token account
+
     pub user_assets_account: &'b solana_account_info::AccountInfo<'a>,
-    /// User's share token account
+
     pub user_shares_account: &'b solana_account_info::AccountInfo<'a>,
 
     pub extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
@@ -399,9 +389,9 @@ pub struct WithdrawCpiAccounts<'a, 'b> {
 
     pub hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
 
-    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
+
+    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
@@ -410,21 +400,21 @@ pub struct WithdrawCpiAccounts<'a, 'b> {
 pub struct WithdrawCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-    /// `User` that is withdrawing assets from `Vault`
+
     pub user: &'b solana_account_info::AccountInfo<'a>,
-    /// Mint of the underlying asset
+
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
-    /// Share mint
+
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
-    /// Vault reserve token account holding underlying assets
+
     pub reserve: &'b solana_account_info::AccountInfo<'a>,
-    /// Vault configuration account (PDA)
+
     pub vault: &'b solana_account_info::AccountInfo<'a>,
-    /// Fee recipient token account
+
     pub fee_recipient: &'b solana_account_info::AccountInfo<'a>,
-    /// User's asset token account
+
     pub user_assets_account: &'b solana_account_info::AccountInfo<'a>,
-    /// User's share token account
+
     pub user_shares_account: &'b solana_account_info::AccountInfo<'a>,
 
     pub extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
@@ -433,9 +423,9 @@ pub struct WithdrawCpi<'a, 'b> {
 
     pub hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
 
-    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
-
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
+
+    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
@@ -461,8 +451,8 @@ impl<'a, 'b> WithdrawCpi<'a, 'b> {
             extra_metas: accounts.extra_metas,
             protocol: accounts.protocol,
             hook_program: accounts.hook_program,
-            share_token_program: accounts.share_token_program,
             asset_token_program: accounts.asset_token_program,
+            share_token_program: accounts.share_token_program,
             system_program: accounts.system_program,
             __args: args,
         }
@@ -555,11 +545,11 @@ impl<'a, 'b> WithdrawCpi<'a, 'b> {
             ));
         }
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.share_token_program.key,
+            *self.asset_token_program.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.asset_token_program.key,
+            *self.share_token_program.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -601,8 +591,8 @@ impl<'a, 'b> WithdrawCpi<'a, 'b> {
         if let Some(hook_program) = self.hook_program {
             account_infos.push(hook_program.clone());
         }
-        account_infos.push(self.share_token_program.clone());
         account_infos.push(self.asset_token_program.clone());
+        account_infos.push(self.share_token_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -631,8 +621,8 @@ impl<'a, 'b> WithdrawCpi<'a, 'b> {
 ///   8. `[optional]` extra_metas
 ///   9. `[optional]` protocol
 ///   10. `[optional]` hook_program
-///   11. `[]` share_token_program
-///   12. `[]` asset_token_program
+///   11. `[]` asset_token_program
+///   12. `[]` share_token_program
 ///   13. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct WithdrawCpiBuilder<'a, 'b> {
@@ -654,8 +644,8 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
             extra_metas: None,
             protocol: None,
             hook_program: None,
-            share_token_program: None,
             asset_token_program: None,
+            share_token_program: None,
             system_program: None,
             assets: None,
             max_shares: None,
@@ -664,14 +654,12 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
         Self { instruction }
     }
 
-    /// `User` that is withdrawing assets from `Vault`
     #[inline(always)]
     pub fn user(&mut self, user: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.user = Some(user);
         self
     }
 
-    /// Mint of the underlying asset
     #[inline(always)]
     pub fn asset_mint(
         &mut self,
@@ -681,7 +669,6 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
         self
     }
 
-    /// Share mint
     #[inline(always)]
     pub fn share_mint(
         &mut self,
@@ -691,21 +678,18 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
         self
     }
 
-    /// Vault reserve token account holding underlying assets
     #[inline(always)]
     pub fn reserve(&mut self, reserve: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.reserve = Some(reserve);
         self
     }
 
-    /// Vault configuration account (PDA)
     #[inline(always)]
     pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.vault = Some(vault);
         self
     }
 
-    /// Fee recipient token account
     #[inline(always)]
     pub fn fee_recipient(
         &mut self,
@@ -715,7 +699,6 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
         self
     }
 
-    /// User's asset token account
     #[inline(always)]
     pub fn user_assets_account(
         &mut self,
@@ -725,7 +708,6 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
         self
     }
 
-    /// User's share token account
     #[inline(always)]
     pub fn user_shares_account(
         &mut self,
@@ -766,20 +748,20 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
-    pub fn share_token_program(
-        &mut self,
-        share_token_program: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.share_token_program = Some(share_token_program);
-        self
-    }
-
-    #[inline(always)]
     pub fn asset_token_program(
         &mut self,
         asset_token_program: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.asset_token_program = Some(asset_token_program);
+        self
+    }
+
+    #[inline(always)]
+    pub fn share_token_program(
+        &mut self,
+        share_token_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.share_token_program = Some(share_token_program);
         self
     }
 
@@ -884,15 +866,15 @@ impl<'a, 'b> WithdrawCpiBuilder<'a, 'b> {
 
             hook_program: self.instruction.hook_program,
 
-            share_token_program: self
-                .instruction
-                .share_token_program
-                .expect("share_token_program is not set"),
-
             asset_token_program: self
                 .instruction
                 .asset_token_program
                 .expect("asset_token_program is not set"),
+
+            share_token_program: self
+                .instruction
+                .share_token_program
+                .expect("share_token_program is not set"),
 
             system_program: self
                 .instruction
@@ -921,8 +903,8 @@ struct WithdrawCpiBuilderInstruction<'a, 'b> {
     extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
     protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
     hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
-    share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
+    share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     assets: Option<u64>,
     max_shares: Option<u64>,

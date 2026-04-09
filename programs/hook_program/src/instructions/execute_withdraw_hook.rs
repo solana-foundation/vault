@@ -79,7 +79,7 @@ pub fn handler<'info>(
         ctx.remaining_accounts,
         ctx.program_id,
     )?;
-    msg!("Nav values is: {:?}", total);
+
     let data = total.try_to_vec()?;
     set_return_data(&data);
     Ok(())

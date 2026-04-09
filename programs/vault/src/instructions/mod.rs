@@ -12,6 +12,7 @@ pub mod redeem;
 pub mod update_deposit_fees;
 pub mod update_vault;
 pub mod update_withdrawal_fees;
+pub mod vault_common;
 pub mod withdraw;
 
 pub use close_vault::*;
@@ -28,4 +29,5 @@ pub use redeem::*;
 pub use update_deposit_fees::*;
 pub use update_vault::*;
 pub use update_withdrawal_fees::*;
+pub use vault_common::*;
 pub use withdraw::*;

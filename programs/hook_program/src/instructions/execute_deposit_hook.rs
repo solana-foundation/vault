@@ -7,8 +7,8 @@ use anchor_spl::token_interface::Mint;
 use crate::{
     errors::HookProgramError,
     state::{
-        get_nav, protocol_deposit, validate_protocols, VaultAssociatedProtocols,
-        VAULT_ASSOCIATED_PROTOCOLS_SEED,
+        get_nav, get_shares_from_assets, protocol_deposit, validate_protocols,
+        VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED,
     },
 };
 
@@ -94,16 +94,31 @@ pub fn handler<'info>(
     )?;
     ctx.accounts
         .invoke_deposit(ctx.remaining_accounts, deposit_amount)?;
-    let mut total = get_nav(
+    let total_nav = get_nav(
         &ctx.accounts.associated_protocols_info.protocols,
         &ctx.accounts.share_mint.key(),
         ctx.remaining_accounts,
         ctx.program_id,
     )?;
-    total = total
+    // Pre-deposit reserve balance (NAV before this deposit was added)
+    let reserve_balance = total_nav
         .checked_sub(deposit_amount)
         .ok_or(HookProgramError::ArithmeticError)?;
-    let data = total.try_to_vec()?;
+
+    // Deserialize the vault (signer is the vault PDA) to read initial_price
+    let vault_info = ctx.accounts.signer.to_account_info();
+    let vault_data = vault_info.try_borrow_data()?;
+    let mut buf: &[u8] = &vault_data;
+    let vault_state = vault::state::Vault::try_deserialize(&mut buf)?;
+
+    let shares = get_shares_from_assets(
+        vault_state.initial_price,
+        reserve_balance,
+        ctx.accounts.share_mint.supply,
+        deposit_amount,
+        false, // round down for deposits
+    )?;
+    let data = shares.try_to_vec()?;
     set_return_data(&data);
     Ok(())
 }

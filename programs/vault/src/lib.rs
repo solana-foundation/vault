@@ -58,7 +58,7 @@ pub mod vault {
     /// * `assets` - The amount of asset tokens to deposit into the vault
     /// * `min_shares` - Minimum number of shares the user must receive (slippage check)
     pub fn deposit<'info>(
-        ctx: Context<'_, '_, '_, 'info, DepositAndMint<'info>>,
+        ctx: Context<'_, '_, '_, 'info, VaultCommon<'info>>,
         assets: u64,
         min_shares: u64,
     ) -> Result<()> {
@@ -70,7 +70,7 @@ pub mod vault {
     /// * `shares` - The amount of shares to mint to the user
     /// * `max_assets` - Maximum amount of asset tokens the user is willing to pay (slippage check)
     pub fn mint<'info>(
-        ctx: Context<'_, '_, '_, 'info, DepositAndMint<'info>>,
+        ctx: Context<'_, '_, '_, 'info, VaultCommon<'info>>,
         shares: u64,
         max_assets: u64,
     ) -> Result<()> {
@@ -87,7 +87,7 @@ pub mod vault {
     /// * `assets` - The amount of asset tokens to withdraw from the vault
     /// * `max_shares` - Maximum number of shares the user is willing to burn (slippage check)
     pub fn withdraw<'info>(
-        ctx: Context<'_, '_, '_, 'info, Withdraw<'info>>,
+        ctx: Context<'_, '_, '_, 'info, VaultCommon<'info>>,
         assets: u64,
         max_shares: u64,
     ) -> Result<()> {
@@ -102,7 +102,11 @@ pub mod vault {
     /// # Arguments
     /// * `shares` - The amount of shares to redeem for asset tokens
     /// * `min_assets` - Minimum amount of asset tokens the user must receive (slippage check)
-    pub fn redeem(ctx: Context<Redeem>, shares: u64, min_assets: u64) -> Result<()> {
+    pub fn redeem<'info>(
+        ctx: Context<'_, '_, '_, 'info, VaultCommon<'info>>,
+        shares: u64,
+        min_assets: u64,
+    ) -> Result<()> {
         instructions::redeem::handler(ctx, shares, min_assets)
     }
 
