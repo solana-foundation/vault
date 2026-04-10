@@ -133,16 +133,16 @@ impl<'info> VaultCommon<'info> {
         let binding = self.asset_mint.to_account_info();
         let mint_data = binding.data.borrow();
         let mint = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_data)?;
-        let transfer_fee_config =
-            mint.get_extension::<spl_token_2022::extension::transfer_fee::TransferFeeConfig>()?;
-        let transfer_fee: u16 = transfer_fee_config
-            .newer_transfer_fee
-            .transfer_fee_basis_points
-            .into();
-        Ok(amount
-            .checked_mul(transfer_fee.into())
-            .ok_or(VaultProgramError::ArithmeticError)?
-            .div_ceil(MAX_BPS.into()))
+        let epoch = Clock::get()?.epoch;
+        let fee = match mint
+            .get_extension::<spl_token_2022::extension::transfer_fee::TransferFeeConfig>()
+        {
+            Ok(cfg) => cfg
+                .calculate_epoch_fee(epoch, amount)
+                .ok_or(VaultProgramError::ArithmeticError)?,
+            Err(_) => 0,
+        };
+        Ok(fee)
     }
 
     /// Grants a delegate account permission to transfer up to `amount` tokens from the reserve,
@@ -266,7 +266,7 @@ impl<'info> VaultCommon<'info> {
         hook_program: Pubkey,
         remaining_accounts: &[AccountInfo<'info>],
         deposit_amount: u64,
-    ) -> Result<u64> {
+    ) -> Result<(u64, u64)> {
         let extra_metas = &self
             .extra_metas
             .clone()
@@ -341,17 +341,23 @@ impl<'info> VaultCommon<'info> {
             VaultProgramError::InvalidReturnedData
         );
         require!(
-            return_data.len() >= 8,
+            return_data.len() >= 16,
             VaultProgramError::InvalidReturnedData
         );
 
-        let nav = u64::from_le_bytes(
+        let shares = u64::from_le_bytes(
             return_data[0..8]
                 .try_into()
                 .map_err(|_| VaultProgramError::InvalidReturnedData)?,
         );
 
-        Ok(nav)
+        let total_nav = u64::from_le_bytes(
+            return_data[8..16]
+                .try_into()
+                .map_err(|_| VaultProgramError::InvalidReturnedData)?,
+        );
+
+        Ok((shares, total_nav))
     }
 
     /// Invokes the withdraw hook program, allowing it to execute custom logic on withdrawal.
@@ -498,11 +504,6 @@ pub fn handler<'info>(
                 .checked_sub(reserve_amount_before)
                 .ok_or(VaultProgramError::ArithmeticError)?;
 
-            require!(
-                updated_reserve_amount <= ctx.accounts.vault.vault_asset_cap,
-                VaultProgramError::MaxVaultAssetCapExceeded
-            );
-
             let shares = if deposit_hook_program.is_some() {
                 let hook_program_pubkey =
                     ctx.accounts.get_program_hook_pubkey(deposit_hook_program)?;
@@ -513,14 +514,28 @@ pub fn handler<'info>(
                         .as_ref()
                         .ok_or(VaultProgramError::OptionalAccountIsEmpty)?
                         .clone(),
-                    remaining_amount,
+                    actual_transferred_amount,
                 )?;
-                ctx.accounts.execute_deposit_hook(
+                let (shares, total_nav) = ctx.accounts.execute_deposit_hook(
                     hook_program_pubkey,
                     remaining,
-                    remaining_amount,
-                )?
+                    actual_transferred_amount,
+                )?;
+
+                // When deposit hook is active, assets are deployed to protocols
+                // so we check total NAV (reserve + protocols) against the cap.
+                require!(
+                    total_nav <= ctx.accounts.vault.vault_asset_cap,
+                    VaultProgramError::MaxVaultAssetCapExceeded
+                );
+
+                shares
             } else {
+                require!(
+                    updated_reserve_amount <= ctx.accounts.vault.vault_asset_cap,
+                    VaultProgramError::MaxVaultAssetCapExceeded
+                );
+
                 ctx.accounts.vault.get_shares_from_assets(
                     reserve_amount_before,
                     ctx.accounts.share_mint.supply,
@@ -548,6 +563,11 @@ pub fn handler<'info>(
         // User specifies exact share amount to mint, pays required assets.
         // threshold_amount = max assets in (slippage).
         SwapKind::Mint => {
+            require!(
+                ctx.accounts.vault.deposit_hook_type().is_none(),
+                VaultProgramError::HookExtensionActive
+            );
+
             let shares = args.amount;
             let max_assets = args.threshold_amount;
 
@@ -573,9 +593,10 @@ pub fn handler<'info>(
                 ctx.accounts.user.to_account_info(),
                 assets_plus_transfer_fee,
             )?;
+            ctx.accounts.reserve.reload()?;
 
             require!(
-                assets <= ctx.accounts.vault.vault_asset_cap,
+                ctx.accounts.reserve.amount <= ctx.accounts.vault.vault_asset_cap,
                 VaultProgramError::MaxVaultAssetCapExceeded
             );
 
@@ -652,6 +673,11 @@ pub fn handler<'info>(
         // User specifies exact share amount to burn, receives assets.
         // threshold_amount = min assets out (slippage).
         SwapKind::Redeem => {
+            require!(
+                ctx.accounts.vault.withdraw_hook_type().is_none(),
+                VaultProgramError::HookExtensionActive
+            );
+
             let shares = args.amount;
             let min_assets = args.threshold_amount;
 

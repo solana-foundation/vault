@@ -73,4 +73,7 @@ pub enum VaultProgramError {
 
     #[msg("The provided extra meta accounts pubkey does not match")]
     InvalidAccountData,
+
+    #[msg("This instruction is not available when a hook extension is active. Use the hook-aware instruction instead.")]
+    HookExtensionActive,
 }

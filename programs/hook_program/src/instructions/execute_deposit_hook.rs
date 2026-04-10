@@ -118,7 +118,8 @@ pub fn handler<'info>(
         deposit_amount,
         false, // round down for deposits
     )?;
-    let data = shares.try_to_vec()?;
+    let mut data = shares.try_to_vec()?;
+    data.extend_from_slice(&total_nav.to_le_bytes());
     set_return_data(&data);
     Ok(())
 }
