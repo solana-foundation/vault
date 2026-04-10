@@ -8,7 +8,7 @@ use crate::{
     errors::HookProgramError,
     state::{
         get_shares_from_assets, get_total_assets, protocol_deposit, validate_protocols,
-        VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED,
+        VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED, VAULT_SEED,
     },
 };
 
@@ -105,8 +105,21 @@ pub fn handler<'info>(
         .checked_sub(deposit_amount)
         .ok_or(HookProgramError::ArithmeticError)?;
 
-    // Deserialize the vault (signer is the vault PDA) to read initial_price
+    // Validate signer is the vault PDA before deserializing its state
     let vault_info = ctx.accounts.signer.to_account_info();
+    let (expected_vault_pda, _) = Pubkey::find_program_address(
+        &[VAULT_SEED, ctx.accounts.share_mint.key().as_ref()],
+        &vault::id(),
+    );
+    require!(
+        vault_info.key() == expected_vault_pda,
+        HookProgramError::InvalidVaultPda
+    );
+    require!(
+        *vault_info.owner == vault::id(),
+        HookProgramError::InvalidVaultPda
+    );
+
     let vault_data = vault_info.try_borrow_data()?;
     let mut buf: &[u8] = &vault_data;
     let vault_state = vault::state::Vault::try_deserialize(&mut buf)?;

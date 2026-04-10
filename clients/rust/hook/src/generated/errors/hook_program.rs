@@ -33,6 +33,9 @@ pub enum HookProgramError {
     /// 6007 - Something happened while performing an arithmetic operation.
     #[error("Something happened while performing an arithmetic operation.")]
     ArithmeticError = 0x1777,
+    /// 6008 - Signer does not match the expected vault PDA
+    #[error("Signer does not match the expected vault PDA")]
+    InvalidVaultPda = 0x1778,
 }
 
 impl From<HookProgramError> for solana_program_error::ProgramError {

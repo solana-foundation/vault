@@ -18,4 +18,6 @@ pub enum HookProgramError {
     InsufficientAssociatedProtocols,
     #[msg("Something happened while performing an arithmetic operation.")]
     ArithmeticError,
+    #[msg("Signer does not match the expected vault PDA")]
+    InvalidVaultPda,
 }
