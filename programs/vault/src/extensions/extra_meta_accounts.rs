@@ -11,6 +11,7 @@ use crate::state::{
 pub enum VaultStandardInstruction {
     DepositHook,
     WithdrawHook,
+    GetNav,
 }
 
 #[derive(SplDiscriminate)]
@@ -21,6 +22,10 @@ pub struct DepositHookInstruction;
 #[discriminator_hash_input("vault-standard:withdraw-hook")]
 pub struct WithdrawHookInstruction;
 
+#[derive(SplDiscriminate)]
+#[discriminator_hash_input("vault-standard:get-nav")]
+pub struct GetNavInstruction;
+
 impl VaultStandardInstruction {
     pub fn unpack(data: &[u8]) -> Result<Self, ProgramError> {
         if data.len() < ArrayDiscriminator::LENGTH {
@@ -30,6 +35,7 @@ impl VaultStandardInstruction {
         match discriminator {
             DepositHookInstruction::SPL_DISCRIMINATOR_SLICE => Ok(Self::DepositHook),
             WithdrawHookInstruction::SPL_DISCRIMINATOR_SLICE => Ok(Self::WithdrawHook),
+            GetNavInstruction::SPL_DISCRIMINATOR_SLICE => Ok(Self::GetNav),
             _ => Err(ProgramError::InvalidInstructionData),
         }
     }
@@ -38,6 +44,7 @@ impl VaultStandardInstruction {
         match self {
             Self::DepositHook => DepositHookInstruction::SPL_DISCRIMINATOR_SLICE.to_vec(),
             Self::WithdrawHook => WithdrawHookInstruction::SPL_DISCRIMINATOR_SLICE.to_vec(),
+            Self::GetNav => GetNavInstruction::SPL_DISCRIMINATOR_SLICE.to_vec(),
         }
     }
 }
@@ -125,6 +132,25 @@ pub fn create_deposit_hook_ix(
         AccountMeta::new_readonly(*extra_meta_accounts, false),
         AccountMeta::new_readonly(*protocol, false),
         AccountMeta::new_readonly(*system_program, false),
+    ];
+
+    Instruction {
+        program_id: *program_id,
+        accounts,
+        data,
+    }
+}
+
+pub fn create_get_nav_ix(
+    program_id: &Pubkey,
+    mint: &Pubkey,
+    associated_protocols_info: &Pubkey,
+) -> Instruction {
+    let data = VaultStandardInstruction::DepositHook.pack();
+
+    let accounts = vec![
+        AccountMeta::new_readonly(*mint, false),
+        AccountMeta::new_readonly(*associated_protocols_info, false),
     ];
 
     Instruction {

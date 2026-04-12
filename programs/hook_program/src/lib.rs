@@ -5,7 +5,7 @@ pub mod state;
 
 declare_id!("4QabXWDFDL3cVzpabsVNCjkjgHvMAfTwPy6kCV9HiB7n");
 
-use crate::state::{DepositHookInstruction, WithdrawHookInstruction};
+use crate::state::{DepositHookInstruction, GetNavInstruction, WithdrawHookInstruction};
 
 use instructions::*;
 use spl_discriminator::SplDiscriminate;
@@ -40,6 +40,7 @@ pub mod hook_program {
     /// Returns the vault's current Net Asset Value (NAV) as transaction return data.
     /// Reads the stored `NavReturnData` PDA and sets it as the return data for the caller.
     /// Requires that `update_nav` was called earlier in the same transaction for the same vault.
+    #[instruction(discriminator = GetNavInstruction::SPL_DISCRIMINATOR_SLICE)]
     pub fn get_nav<'info>(ctx: Context<'_, '_, '_, 'info, GetNav<'info>>) -> Result<()> {
         instructions::get_nav::handler(ctx)
     }

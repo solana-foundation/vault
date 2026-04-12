@@ -19,6 +19,10 @@ pub struct DepositHookInstruction;
 #[discriminator_hash_input("vault-standard:withdraw-hook")]
 pub struct WithdrawHookInstruction;
 
+#[derive(SplDiscriminate)]
+#[discriminator_hash_input("vault-standard:get-nav")]
+pub struct GetNavInstruction;
+
 impl VaultStandardInstruction {
     pub fn unpack(data: &[u8]) -> Result<Self, ProgramError> {
         if data.len() < ArrayDiscriminator::LENGTH {

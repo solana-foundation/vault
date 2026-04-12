@@ -21,7 +21,7 @@ use spl_tlv_account_resolution::state::ExtraAccountMetaList;
 use crate::{
     error::VaultProgramError,
     extensions::{
-        create_deposit_hook_ix, create_withdraw_hook_ix,
+        create_deposit_hook_ix, create_get_nav_ix, create_withdraw_hook_ix,
         get_deposit_hook_extra_account_metas_address,
         get_withdraw_hook_extra_account_metas_address, DepositHook, DepositHookInstruction,
         WithdrawHookInstruction,
@@ -211,26 +211,19 @@ impl<'info> VaultCommon<'info> {
         hook_program: Pubkey,
         remaining_accounts: &[AccountInfo<'info>],
     ) -> Result<u64> {
-        // Anchor discriminator for `get_nav`
-        let discriminator: [u8; 8] = [200, 89, 76, 53, 215, 218, 63, 21];
+        let associated_protocol = &*remaining_accounts
+            .first()
+            .ok_or(VaultProgramError::OptionalAccountIsEmpty)?;
+        let instruction = create_get_nav_ix(
+            &hook_program,
+            &self.share_mint.key(),
+            associated_protocol.key,
+        );
 
-        let mut account_metas = vec![AccountMeta::new_readonly(self.share_mint.key(), false)];
-        let mut cpi_account_infos = vec![self.share_mint.to_account_info()];
-
-        for account in remaining_accounts.iter() {
-            account_metas.push(AccountMeta {
-                pubkey: account.key(),
-                is_signer: account.is_signer,
-                is_writable: account.is_writable,
-            });
-            cpi_account_infos.push(account.clone());
-        }
-
-        let instruction = Instruction {
-            program_id: hook_program,
-            accounts: account_metas,
-            data: discriminator.to_vec(),
-        };
+        let cpi_account_infos = vec![
+            self.share_mint.to_account_info(),
+            associated_protocol.to_account_info(),
+        ];
 
         invoke(&instruction, &cpi_account_infos)?;
 
