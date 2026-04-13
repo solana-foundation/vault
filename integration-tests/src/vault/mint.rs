@@ -23,7 +23,7 @@ fn test_mint_vault() {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes);
+    svm.add_program(program_id(), program_bytes).unwrap();
     let authority = Keypair::new();
     let user = Keypair::new();
     let payer = Keypair::new();
@@ -168,7 +168,7 @@ fn test_mint_vault_with_transfer_fees() {
     create_mint_with_transfer_fee(&mut svm, &mint_authority, &asset_mint, transfer_fee, 1000);
     create_mint(&mut svm, &mint_authority, &share_mint);
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes);
+    svm.add_program(program_id(), program_bytes).unwrap();
     let (_, user, _, mint_authority, fee_recipient, reserve_pubkey, vault_pubkey) = set_up_vault(
         &mut svm,
         mint_authority,
@@ -362,7 +362,7 @@ fn test_mint_vault_slippage_protection_fails() {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes);
+    svm.add_program(program_id(), program_bytes).unwrap();
 
     let mint_authority = Keypair::new();
     let asset_mint = Keypair::new();

@@ -6,7 +6,7 @@
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-pub const GET_NAV_DISCRIMINATOR: [u8; 8] = [200, 89, 76, 53, 215, 218, 63, 21];
+pub const GET_NAV_DISCRIMINATOR: [u8; 8] = [6, 230, 141, 134, 62, 146, 53, 222];
 
 /// Accounts.
 #[derive(Debug)]
@@ -56,7 +56,7 @@ pub struct GetNavInstructionData {
 impl GetNavInstructionData {
     pub fn new() -> Self {
         Self {
-            discriminator: [200, 89, 76, 53, 215, 218, 63, 21],
+            discriminator: [6, 230, 141, 134, 62, 146, 53, 222],
         }
     }
 

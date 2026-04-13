@@ -92,7 +92,7 @@ fn test_redeem_vault(
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes);
+    svm.add_program(program_id(), program_bytes).unwrap();
 
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();
@@ -351,7 +351,7 @@ fn test_redeem_vault(
 fn test_redeem_slippage_protection() {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes);
+    svm.add_program(program_id(), program_bytes).unwrap();
 
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();

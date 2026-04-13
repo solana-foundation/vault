@@ -13,7 +13,7 @@ fn test_initialize_and_update_fees() {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes);
+    svm.add_program(program_id(), program_bytes).unwrap();
     let authority = Keypair::new();
     let payer = Keypair::new();
     let mint_authority = Keypair::new();
@@ -170,7 +170,7 @@ fn test_initialize_fees_after_vault_initialization_fails() {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes);
+    svm.add_program(program_id(), program_bytes).unwrap();
     let authority = Keypair::new();
     let payer = Keypair::new();
     let mint_authority = Keypair::new();
@@ -234,7 +234,7 @@ fn test_initialize_same_fee_fails() {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes);
+    svm.add_program(program_id(), program_bytes).unwrap();
     let authority = Keypair::new();
     let payer = Keypair::new();
     let mint_authority = Keypair::new();
@@ -309,7 +309,7 @@ fn test_update_before_init_fails() {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes);
+    svm.add_program(program_id(), program_bytes).unwrap();
     let authority = Keypair::new();
     let payer = Keypair::new();
     let mint_authority = Keypair::new();

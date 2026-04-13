@@ -25,13 +25,15 @@ fn test_deposit_with_hook() {
     let mut svm = LiteSVM::new();
 
     let vault_program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), vault_program_bytes);
+    svm.add_program(program_id(), vault_program_bytes).unwrap();
 
     let hook_program_bytes = include_bytes!("../../../target/deploy/hook_program.so");
-    svm.add_program(HOOK_PROGRAM_ID, hook_program_bytes);
+    svm.add_program(HOOK_PROGRAM_ID, hook_program_bytes)
+        .unwrap();
 
     let dummy_program_bytes = include_bytes!("../../../target/deploy/dummy_protocol.so");
-    svm.add_program(dummy_program_id(), dummy_program_bytes);
+    svm.add_program(dummy_program_id(), dummy_program_bytes)
+        .unwrap();
 
     let authority = Keypair::new();
     let payer = Keypair::new();

@@ -14,7 +14,7 @@ fn test_create_vault() {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes);
+    svm.add_program(program_id(), program_bytes).unwrap();
     let authority = Keypair::new();
     let payer = Keypair::new();
     let mint_authority = Keypair::new();

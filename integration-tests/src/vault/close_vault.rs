@@ -1,6 +1,6 @@
 use anchor_spl::token;
 use litesvm::LiteSVM;
-use solana_sdk::{msg, signature::Keypair, signer::Signer};
+use solana_sdk::{signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, Pubkey};
 
 use crate::vault::{
@@ -18,7 +18,7 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes);
+    svm.add_program(program_id(), program_bytes).unwrap();
     let authority = Keypair::new();
     let payer = Keypair::new();
     let mint_authority = Keypair::new();
