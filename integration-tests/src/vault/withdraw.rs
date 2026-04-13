@@ -156,8 +156,6 @@ fn test_withdraw_vault(
         hook_client::HOOK_PROGRAM_ID,
         None,
         None,
-        None,
-        None,
     );
     assert!(result.is_ok(), "deposit failed unexpectedly");
 
@@ -383,8 +381,6 @@ fn test_withdraw_slippage_protection() {
         token::ID,
         token::ID,
         hook_client::HOOK_PROGRAM_ID,
-        None,
-        None,
         None,
         None,
     )

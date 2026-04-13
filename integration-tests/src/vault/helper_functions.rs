@@ -156,8 +156,6 @@ pub fn deposit(
     share_token_program: Pubkey,
     hook_program: Pubkey,
     protocol: Option<Pubkey>,
-    nav_return_data: Option<Pubkey>,
-    instructions: Option<Pubkey>,
     extra_metas: Option<Pubkey>,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = DepositBuilder::new()
