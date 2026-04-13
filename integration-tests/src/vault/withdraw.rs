@@ -18,32 +18,51 @@ use test_case::test_case;
 
 #[test_case(
     Some(FeeType::Percentage { bps: 100 }),  // 1% deposit fee
-    Some(FeeType::Percentage { bps: 50 }),
-    token::ID;   // 0.5% withdraw fee
-    "Withdraw successfully (percentage fees) token keg"
-)]
-#[test_case(
-    None,
-    None,
+    Some(FeeType::Percentage { bps: 50 }),   // 0.5% withdraw fee
+    token::ID,
     token::ID;
-    "Withdraw successfully (no fees) token keg"
+    "Withdraw successfully (percentage fees) (SPL Token asset, SPL Token share)"
 )]
 #[test_case(
-    Some(FeeType::Percentage { bps: 100 }),  // 1% deposit fee
+    None,
+    None,
+    token::ID,
+    token::ID;
+    "Withdraw successfully (no fees) (SPL Token asset, SPL Token share)"
+)]
+#[test_case(
+    Some(FeeType::Percentage { bps: 100 }),
     Some(FeeType::Percentage { bps: 50 }),
+    token_2022::ID,
+    token::ID;
+    "Withdraw successfully (percentage fees) (Token 2022 asset, SPL Token share)"
+)]
+#[test_case(
+    Some(FeeType::Percentage { bps: 100 }),
+    Some(FeeType::Percentage { bps: 50 }),
+    token::ID,
     token_2022::ID;
-    "Withdraw successfully (percentage fees) token 2022 and transfer fee"
+    "Withdraw successfully (percentage fees) (SPL Token asset, Token 2022 share)"
+)]
+#[test_case(
+    Some(FeeType::Percentage { bps: 100 }),
+    Some(FeeType::Percentage { bps: 50 }),
+    token_2022::ID,
+    token_2022::ID;
+    "Withdraw successfully (percentage fees) (Token 2022 asset, Token 2022 share)"
 )]
 #[test_case(
     None,
     None,
+    token_2022::ID,
     token_2022::ID;
-    "Withdraw successfully (no fees) token 2022 and transfer fee"
+    "Withdraw successfully (no fees) (Token 2022 asset, Token 2022 share)"
 )]
 fn test_withdraw_vault(
     deposit_fee: Option<FeeType>,
     withdraw_fee: Option<FeeType>,
-    token_program: Pubkey,
+    asset_program: Pubkey,
+    share_program: Pubkey,
 ) {
     let mut svm = LiteSVM::new();
 
@@ -56,29 +75,27 @@ fn test_withdraw_vault(
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
 
-    let mut transfer_fee_bps = 0;
-    let mut transfer_fee_max_fee = 0;
+    let mut asset_transfer_fee_bps: u16 = 0;
+    let mut asset_transfer_fee_max: u64 = 0;
 
-    if token_program == token::ID {
+    if asset_program == token::ID {
         create_mint(&mut svm, &mint_authority, &asset_mint);
-        create_mint(&mut svm, &mint_authority, &share_mint);
     } else {
-        transfer_fee_bps = 10;
-        transfer_fee_max_fee = 1000;
+        asset_transfer_fee_bps = 10;
+        asset_transfer_fee_max = 1000;
         create_mint_with_transfer_fee(
             &mut svm,
             &mint_authority,
             &asset_mint,
-            transfer_fee_bps,
-            transfer_fee_max_fee,
+            asset_transfer_fee_bps,
+            asset_transfer_fee_max,
         );
-        create_mint_with_transfer_fee(
-            &mut svm,
-            &mint_authority,
-            &share_mint,
-            transfer_fee_bps,
-            transfer_fee_max_fee,
-        );
+    }
+
+    if share_program == token::ID {
+        create_mint(&mut svm, &mint_authority, &share_mint);
+    } else {
+        create_mint_with_transfer_fee(&mut svm, &mint_authority, &share_mint, 10, 1000);
     }
 
     let (_, user, _, mint_authority, fee_recipient, reserve_pubkey, vault_pubkey) = set_up_vault(
@@ -86,8 +103,8 @@ fn test_withdraw_vault(
         mint_authority,
         &asset_mint,
         &share_mint,
-        token_program,
-        token_program,
+        asset_program,
+        share_program,
         deposit_fee.clone(),
         withdraw_fee.clone(),
     );
@@ -96,10 +113,10 @@ fn test_withdraw_vault(
         &mut svm,
         &fee_recipient,
         &asset_mint.pubkey(),
-        &token_program,
+        &asset_program,
     );
-    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token_program);
-    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &token_program);
+    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &asset_program);
+    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &share_program);
 
     let user_asset_amount = 100_000_000;
     helper_mint_to(
@@ -108,7 +125,7 @@ fn test_withdraw_vault(
         &user_asset_ata,
         &mint_authority,
         user_asset_amount,
-        &token_program,
+        &asset_program,
     );
 
     // -------------------- balances before deposit --------------------
@@ -151,8 +168,8 @@ fn test_withdraw_vault(
         user_share_ata,
         deposit_amount,
         0, // no slippage protection
-        token_program,
-        token_program,
+        asset_program,
+        share_program,
         hook_client::HOOK_PROGRAM_ID,
         None,
         None,
@@ -164,10 +181,13 @@ fn test_withdraw_vault(
         .checked_sub(deposit_fee_amount)
         .expect("overflow");
 
-    let deposit_fee_received =
-        recv_amount_from_params(deposit_fee_amount, transfer_fee_bps, transfer_fee_max_fee);
+    let deposit_fee_received = recv_amount_from_params(
+        deposit_fee_amount,
+        asset_transfer_fee_bps,
+        asset_transfer_fee_max,
+    );
     let deposit_net_received =
-        recv_amount_from_params(deposit_net, transfer_fee_bps, transfer_fee_max_fee);
+        recv_amount_from_params(deposit_net, asset_transfer_fee_bps, asset_transfer_fee_max);
 
     // After deposit:
     // - fee recipient got deposit_fee_amount
@@ -212,10 +232,13 @@ fn test_withdraw_vault(
         .checked_add(withdraw_fee_amount)
         .expect("overflow");
 
-    let withdraw_fee_received =
-        recv_amount_from_params(withdraw_fee_amount, transfer_fee_bps, transfer_fee_max_fee);
+    let withdraw_fee_received = recv_amount_from_params(
+        withdraw_fee_amount,
+        asset_transfer_fee_bps,
+        asset_transfer_fee_max,
+    );
     let user_assets_received =
-        recv_amount_from_params(assets_out, transfer_fee_bps, transfer_fee_max_fee);
+        recv_amount_from_params(assets_out, asset_transfer_fee_bps, asset_transfer_fee_max);
 
     let result = withdraw(
         &mut svm,
@@ -229,8 +252,8 @@ fn test_withdraw_vault(
         user_share_ata,
         assets_out, // NET to user,
         u64::MAX,   // no slippage protection
-        token_program,
-        token_program,
+        asset_program,
+        share_program,
     );
     assert!(result.is_ok(), "withdraw failed unexpectedly");
 
@@ -293,8 +316,8 @@ fn test_withdraw_vault(
         user_share_ata,
         failing_assets_out,
         u64::MAX, // no slippage protection
-        token_program,
-        token_program,
+        asset_program,
+        share_program,
     );
 
     let Err(error) = result else {
@@ -306,7 +329,7 @@ fn test_withdraw_vault(
         TransactionError::InstructionError(_, InstructionError::Custom(code)) => code,
         other => panic!("unexpected tx error (not Custom): {:?}", other),
     };
-    if token_program == token::ID {
+    if share_program == token::ID {
         assert_eq!(
             error_code,
             spl_token::error::TokenError::InsufficientFunds as u32
