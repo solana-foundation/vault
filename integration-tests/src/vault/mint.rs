@@ -1,58 +1,96 @@
 use anchor_spl::{
-    token,
-    token_2022::{
-        self,
-        spl_token_2022::{self, extension::StateWithExtensions},
-    },
+    token::{self},
+    token_2022,
 };
 use litesvm::LiteSVM;
-use solana_sdk::{
-    account::ReadableAccount, program_pack::Pack, signature::Keypair, signer::Signer,
-};
-use spl_token::state::Account as TokenAccount;
-use spl_token_2022::state::Account as TokenAccount2022;
-use vault_client::{sdk::program_id, FeeType, Vault};
+use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
+use test_case::test_case;
+use vault_client::{sdk::program_id, FeeType, Pubkey, Vault};
 
 use crate::vault::helper_functions::{
-    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee,
-    get_vault_asset_balance, helper_mint_to, mint, recv_amount_from_params, set_up_vault,
+    assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, get_fee,
+    get_mint_supply, get_token_account_amount, get_vault_asset_balance, helper_mint_to, mint,
+    recv_amount_from_params, set_up_vault,
 };
 
-#[test]
-fn test_mint_vault() {
+#[test_case(
+    Some(FeeType::Percentage { bps: 100 }),
+    token::ID,
+    token::ID;
+    "Mint (SPL Token asset, SPL Token share)"
+)]
+#[test_case(
+    Some(FeeType::Percentage { bps: 100 }),
+    token_2022::ID,
+    token::ID;
+    "Mint (Token 2022 asset, SPL Token share)"
+)]
+#[test_case(
+    Some(FeeType::Percentage { bps: 100 }),
+    token::ID,
+    token_2022::ID;
+    "Mint (SPL Token asset, Token 2022 share)"
+)]
+#[test_case(
+    Some(FeeType::Percentage { bps: 100 }),
+    token_2022::ID,
+    token_2022::ID;
+    "Mint (Token 2022 asset, Token 2022 share)"
+)]
+fn test_mint_vault(fee_type: Option<FeeType>, asset_program: Pubkey, share_program: Pubkey) {
     let mut svm = LiteSVM::new();
-
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let authority = Keypair::new();
-    let user = Keypair::new();
-    let payer = Keypair::new();
-    let mint_authority = Keypair::new();
+
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();
-    let fee_recipient = Keypair::new();
-    svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
-    svm.airdrop(&user.pubkey(), 1_000_000_000).unwrap();
-    svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
+    let mint_authority = Keypair::new();
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
-    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
 
-    create_mint(&mut svm, &mint_authority, &asset_mint);
-    create_mint(&mut svm, &mint_authority, &share_mint);
+    let mut asset_transfer_fee_bps: u16 = 0;
+    let mut asset_transfer_fee_max: u64 = 0;
+
+    if asset_program == token::ID {
+        create_mint(&mut svm, &mint_authority, &asset_mint);
+    } else {
+        asset_transfer_fee_bps = 10;
+        asset_transfer_fee_max = 1000;
+        create_mint_with_transfer_fee(
+            &mut svm,
+            &mint_authority,
+            &asset_mint,
+            asset_transfer_fee_bps,
+            asset_transfer_fee_max,
+        );
+    }
+
+    if share_program == token::ID {
+        create_mint(&mut svm, &mint_authority, &share_mint);
+    } else {
+        create_mint_with_transfer_fee(&mut svm, &mint_authority, &share_mint, 10, 1000);
+    }
 
     let (_, user, _, mint_authority, fee_recipient, reserve_pubkey, vault_pubkey) = set_up_vault(
         &mut svm,
         mint_authority,
         &asset_mint,
         &share_mint,
-        token::ID,
-        token::ID,
-        Some(FeeType::Percentage { bps: 100 }),
+        asset_program,
+        share_program,
+        fee_type.clone(),
         None,
     );
-    let fee_recipient_ata = create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
-    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
+
+    let fee_recipient_ata = create_ata(
+        &mut svm,
+        &fee_recipient,
+        &asset_mint.pubkey(),
+        &asset_program,
+    );
+    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &asset_program);
+    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &share_program);
+
     let user_asset_amount = 100_000_000;
     helper_mint_to(
         &mut svm,
@@ -60,36 +98,28 @@ fn test_mint_vault() {
         &user_asset_ata,
         &mint_authority,
         user_asset_amount,
-        &token::ID,
+        &asset_program,
     );
-    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &token::ID);
 
-    let mut fee_recipient_ata_account = svm
-        .get_account(&fee_recipient_ata)
-        .expect("Vault account should exist");
+    // Verify initial state
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&fee_recipient_ata).unwrap()),
+        0
+    );
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap()),
+        0
+    );
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&user_asset_ata).unwrap()),
+        user_asset_amount
+    );
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&user_share_ata).unwrap()),
+        0
+    );
+    assert_eq!(get_vault_asset_balance(&svm, &vault_pubkey), 0);
 
-    let fee_recipient_balance_before = TokenAccount::unpack(fee_recipient_ata_account.data())
-        .unwrap()
-        .amount;
-    assert_eq!(fee_recipient_balance_before, 0);
-
-    let user_asset_ata_account = svm
-        .get_account(&user_asset_ata)
-        .expect("Vault account should exist");
-
-    let user_asset_balance_before = TokenAccount::unpack(user_asset_ata_account.data())
-        .unwrap()
-        .amount;
-    assert_eq!(user_asset_balance_before, user_asset_amount);
-
-    let mut user_share_ata_account = svm
-        .get_account(&user_share_ata)
-        .expect("Vault account should exist");
-
-    let user_share_balance_before = TokenAccount::unpack(user_share_ata_account.data())
-        .unwrap()
-        .amount;
-    assert_eq!(user_share_balance_before, 0);
     let mint_amount = 500_000;
     let result = mint(
         &mut svm,
@@ -103,20 +133,13 @@ fn test_mint_vault() {
         user_share_ata,
         mint_amount,
         u64::MAX, // no slippage protection
-        token::ID,
-        token::ID,
+        asset_program,
+        share_program,
     );
 
-    assert_eq!(result.is_ok(), true, "Unexpected result for test case");
+    assert!(result.is_ok(), "Unexpected result for test case");
 
-    fee_recipient_ata_account = svm
-        .get_account(&fee_recipient_ata)
-        .expect("Vault account should exist");
-
-    let fee_recipient_balance_after = TokenAccount::unpack(fee_recipient_ata_account.data())
-        .unwrap()
-        .amount;
-
+    // Calculate expected values accounting for asset transfer fees
     let vault = svm.get_account(&vault_pubkey).unwrap();
     let vault_cfg = Vault::from_bytes(vault.data()).unwrap();
 
@@ -126,235 +149,68 @@ fn test_mint_vault() {
         .try_into()
         .unwrap();
 
-    let user_asset_balance_after =
-        TokenAccount::unpack(svm.get_account(&user_asset_ata).unwrap().data())
-            .unwrap()
-            .amount;
+    // Mint uses get_deposit_fee_when_minting: gross = net * 10000 / (10000 - bps), fee = gross -
+    // net
+    let vault_fee = match fee_type {
+        Some(FeeType::Percentage { bps }) => {
+            let gross = (asset_amount as u128) * 10_000 / (10_000 - bps as u128);
+            (gross - asset_amount as u128) as u64
+        }
+        Some(FeeType::FixedAmount { amount }) => amount,
+        None => 0,
+    };
 
-    let fee = user_asset_amount
-        .checked_sub(user_asset_balance_after).unwrap() // total the user lost
-        .checked_sub(asset_amount).unwrap(); // minus what went to the vault
-
-    assert_eq!(fee_recipient_balance_after, fee);
-
-    assert_eq!(
-        user_asset_balance_after,
-        user_asset_amount
-            .checked_sub(asset_amount)
-            .expect("overflow")
-            .checked_sub(fee)
-            .expect("overflow")
-    );
-
-    user_share_ata_account = svm
-        .get_account(&user_share_ata)
-        .expect("Vault account should exist");
-
-    let user_share_balance_after = TokenAccount::unpack(user_share_ata_account.data())
-        .unwrap()
-        .amount;
-    assert_eq!(user_share_balance_after, mint_amount);
-}
-
-#[test]
-fn test_mint_vault_with_transfer_fees() {
-    let mut svm = LiteSVM::new();
-    let asset_mint = Keypair::new();
-    let share_mint = Keypair::new();
-    let mint_authority = Keypair::new();
-    let transfer_fee: u16 = 10;
-    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
+    // The program adds transfer fee estimate on top of assets for the reserve transfer
+    let transfer_fee_on_assets = asset_amount
+        .checked_sub(recv_amount_from_params(
+            asset_amount,
+            asset_transfer_fee_bps,
+            asset_transfer_fee_max,
+        ))
         .unwrap();
-    create_mint_with_transfer_fee(&mut svm, &mint_authority, &asset_mint, transfer_fee, 1000);
-    create_mint(&mut svm, &mint_authority, &share_mint);
-    let program_bytes = include_bytes!("../../../target/deploy/vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (_, user, _, mint_authority, fee_recipient, reserve_pubkey, vault_pubkey) = set_up_vault(
-        &mut svm,
-        mint_authority,
-        &asset_mint,
-        &share_mint,
-        token_2022::ID,
-        token::ID,
-        Some(FeeType::Percentage { bps: 100 }),
-        None,
-    );
-    let fee_recipient_ata = create_ata(
-        &mut svm,
-        &fee_recipient,
-        &asset_mint.pubkey(),
-        &token_2022::ID,
-    );
-    let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token_2022::ID);
-    let user_asset_amount = 100_000_000;
+    let gross_to_reserve = asset_amount
+        .checked_add(transfer_fee_on_assets)
+        .expect("overflow");
 
-    helper_mint_to(
-        &mut svm,
-        &asset_mint.pubkey(),
-        &user_asset_ata,
-        &mint_authority,
-        user_asset_amount,
-        &token_2022::ID,
-    );
-    let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &token::ID);
+    // User pays: gross_to_reserve (to reserve) + vault_fee (to fee_recipient)
+    let total_user_paid = gross_to_reserve.checked_add(vault_fee).expect("overflow");
 
-    let mut fee_recipient_ata_account = svm
-        .get_account(&fee_recipient_ata)
-        .expect("Fee recipient ata account should exist");
-
-    let fee_recipient_balance_before =
-        StateWithExtensions::<TokenAccount2022>::unpack(fee_recipient_ata_account.data())
-            .unwrap()
-            .base
-            .amount;
-    assert_eq!(fee_recipient_balance_before, 0);
-
-    let mut reserve_account = svm
-        .get_account(&reserve_pubkey)
-        .expect("Reserve account should exist");
-
-    let reserve_balance_before =
-        StateWithExtensions::<TokenAccount2022>::unpack(reserve_account.data())
-            .unwrap()
-            .base
-            .amount;
-    assert_eq!(reserve_balance_before, 0);
-
-    let mut user_asset_ata_account = svm
-        .get_account(&user_asset_ata)
-        .expect("User asset ata account should exist");
-
-    let user_asset_balance_before =
-        StateWithExtensions::<TokenAccount2022>::unpack(user_asset_ata_account.data())
-            .unwrap()
-            .base
-            .amount;
-    assert_eq!(user_asset_balance_before, user_asset_amount);
-
-    let mut user_share_ata_account = svm
-        .get_account(&user_share_ata)
-        .expect("User share ata account should exist");
-
-    let user_share_balance_before = TokenAccount::unpack(user_share_ata_account.data())
-        .unwrap()
-        .amount;
-    assert_eq!(user_share_balance_before, 0);
-
-    let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
-    assert_eq!(vault_asset_balance, 0);
-    let mint_amount = 500_000;
-    let result = mint(
-        &mut svm,
-        &user,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        reserve_pubkey,
-        vault_pubkey,
-        fee_recipient_ata,
-        user_asset_ata,
-        user_share_ata,
-        mint_amount,
-        u64::MAX, // no slippage protection
-        token_2022::ID,
-        token::ID,
+    // Recipients receive amounts after Token 2022 transfer fee withholding
+    let fee_received =
+        recv_amount_from_params(vault_fee, asset_transfer_fee_bps, asset_transfer_fee_max);
+    let reserve_received = recv_amount_from_params(
+        gross_to_reserve,
+        asset_transfer_fee_bps,
+        asset_transfer_fee_max,
     );
 
-    assert_eq!(result.is_ok(), true, "Unexpected result for test case");
-
-    fee_recipient_ata_account = svm
-        .get_account(&fee_recipient_ata)
-        .expect("Fee recipient ata account should exist");
-
+    // Assert post-mint state
     let fee_recipient_balance_after =
-        StateWithExtensions::<TokenAccount2022>::unpack(fee_recipient_ata_account.data())
-            .unwrap()
-            .base
-            .amount;
-
-    user_asset_ata_account = svm
-        .get_account(&user_asset_ata)
-        .expect("User asset account should exist");
+        get_token_account_amount(&svm.get_account(&fee_recipient_ata).unwrap());
+    assert_eq!(fee_recipient_balance_after, fee_received);
 
     let user_asset_balance_after =
-        StateWithExtensions::<TokenAccount2022>::unpack(user_asset_ata_account.data())
-            .unwrap()
-            .base
-            .amount;
-
-    reserve_account = svm
-        .get_account(&reserve_pubkey)
-        .expect("Reserve account should exist");
-    let reserve_balance_after =
-        StateWithExtensions::<TokenAccount2022>::unpack(reserve_account.data())
-            .unwrap()
-            .base
-            .amount;
-
-    let transfer_fee_withheld = user_asset_amount
-        .checked_sub(user_asset_balance_after)
-        .unwrap()
-        .checked_sub(
-            reserve_balance_after
-                .checked_add(fee_recipient_balance_after)
-                .unwrap(),
-        )
-        .unwrap();
-
+        get_token_account_amount(&svm.get_account(&user_asset_ata).unwrap());
     assert_eq!(
         user_asset_balance_after,
         user_asset_amount
-            .checked_sub(
-                reserve_balance_after
-                    .checked_add(fee_recipient_balance_after)
-                    .unwrap()
-                    .checked_add(transfer_fee_withheld)
-                    .unwrap()
-            )
-            .unwrap()
+            .checked_sub(total_user_paid)
+            .expect("overflow")
     );
 
-    user_share_ata_account = svm
-        .get_account(&user_share_ata)
-        .expect("User share ata account should exist");
-
-    let user_share_balance_after = TokenAccount::unpack(user_share_ata_account.data())
-        .unwrap()
-        .amount;
-
-    let deposit_amount_minus_fee_minus_transfer_fee_deposit_amount = reserve_balance_after;
-
+    let user_share_balance_after =
+        get_token_account_amount(&svm.get_account(&user_share_ata).unwrap());
     assert_eq!(user_share_balance_after, mint_amount);
 
-    assert_eq!(
-        reserve_balance_after,
-        deposit_amount_minus_fee_minus_transfer_fee_deposit_amount
-    );
-    let share_mint_account = svm
-        .get_account(&share_mint.pubkey())
-        .expect("Share mint account should exist");
+    let reserve_balance_after =
+        get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
+    assert_eq!(reserve_balance_after, reserve_received);
 
-    let mint_account = spl_token::state::Mint::unpack(&share_mint_account.data).unwrap();
-    assert_eq!(mint_account.supply, user_share_balance_after);
-
-    let vault = svm
-        .get_account(&vault_pubkey)
-        .expect("Vault account should exist");
-    let vault_config = Vault::from_bytes(vault.data()).unwrap();
-
-    let assets: u64 = (mint_amount as u128)
-        .checked_mul(vault_config.initial_price as u128)
-        .unwrap()
-        .try_into()
-        .unwrap();
-
-    // Token2022 withholds its fee on the gross amount (assets + our estimate),
-    // so the reserve receives slightly less than `assets`
-    let fee_estimate = (assets as u128 * transfer_fee as u128).div_ceil(10_000) as u64;
-    let gross = assets + fee_estimate;
-    let expected_assets = recv_amount_from_params(gross, transfer_fee, 1000);
+    let share_supply = get_mint_supply(&svm.get_account(&share_mint.pubkey()).unwrap());
+    assert_eq!(share_supply, mint_amount);
 
     let vault_asset_balance = get_vault_asset_balance(&svm, &vault_pubkey);
-    assert_eq!(vault_asset_balance, expected_assets);
+    assert_eq!(vault_asset_balance, reserve_received);
 }
 
 #[test]
@@ -414,12 +270,8 @@ fn test_mint_vault_slippage_protection_fails() {
     let max_assets = assets_required - 1;
 
     // Snapshot state for "no side effects" check
-    let user_share_before = TokenAccount::unpack(svm.get_account(&user_share_ata).unwrap().data())
-        .unwrap()
-        .amount;
-    let reserve_before = TokenAccount::unpack(svm.get_account(&reserve_pubkey).unwrap().data())
-        .unwrap()
-        .amount;
+    let user_share_before = get_token_account_amount(&svm.get_account(&user_share_ata).unwrap());
+    let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
     let vault_asset_balance_before = get_vault_asset_balance(&svm, &vault_pubkey);
 
     let result = mint(
@@ -441,12 +293,8 @@ fn test_mint_vault_slippage_protection_fails() {
     assert_error_code(&result.unwrap_err(), 6013, "Slippage exceeded.");
 
     // Ensure state did not change
-    let user_share_after = TokenAccount::unpack(svm.get_account(&user_share_ata).unwrap().data())
-        .unwrap()
-        .amount;
-    let reserve_after = TokenAccount::unpack(svm.get_account(&reserve_pubkey).unwrap().data())
-        .unwrap()
-        .amount;
+    let user_share_after = get_token_account_amount(&svm.get_account(&user_share_ata).unwrap());
+    let reserve_after = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
     let vault_asset_balance_after = get_vault_asset_balance(&svm, &vault_pubkey);
 
     assert_eq!(user_share_after, user_share_before);
