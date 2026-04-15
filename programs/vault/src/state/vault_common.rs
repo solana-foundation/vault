@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy)]
-pub enum SwapKind {
+pub enum VaultAction {
     Deposit,
     Mint,
     Withdraw,
@@ -9,8 +9,8 @@ pub enum SwapKind {
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy)]
-pub struct SwapParams {
-    /// Amount being swapped based on the Swap IX variant:
+pub struct VaultActionParams {
+    /// Amount being swapped based on the Vault action IX variant:
     /// - Deposit: asset amount in
     /// - Mint: share amount out
     /// - Withdraw: asset amount out

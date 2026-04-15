@@ -1,9 +1,6 @@
 use anchor_lang::{
     prelude::*,
-    solana_program::{
-        instruction::Instruction,
-        program::{get_return_data, invoke, invoke_signed},
-    },
+    solana_program::program::{get_return_data, invoke, invoke_signed},
 };
 use anchor_spl::{
     token::spl_token,
@@ -27,7 +24,7 @@ use crate::{
         WithdrawHookInstruction,
     },
     state::{
-        Rounding, SwapKind, SwapParams, Vault, MAX_BPS, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
+        Rounding, Vault, VaultAction, VaultActionParams, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
     },
 };
 
@@ -83,13 +80,13 @@ pub struct VaultCommon<'info> {
     )]
     pub user_shares_account: InterfaceAccount<'info, TokenAccount>,
 
-    pub extra_metas: Option<AccountInfo<'info>>,
-    pub protocol: Option<AccountInfo<'info>>,
-    pub hook_program: Option<AccountInfo<'info>>,
-
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub share_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
+
+    pub extra_metas: Option<AccountInfo<'info>>,
+    pub protocol: Option<AccountInfo<'info>>,
+    pub hook_program: Option<AccountInfo<'info>>,
 }
 
 impl<'info> VaultCommon<'info> {
@@ -197,6 +194,28 @@ impl<'info> VaultCommon<'info> {
         let cpi_ctx = CpiContext::new(self.share_token_program.to_account_info(), cpi_accounts);
 
         burn(cpi_ctx, shares_amount)
+    }
+
+    /// Transfers assets from the user to the reserve and reloads the reserve account.
+    pub fn deposit_to_reserve(&mut self, amount: u64) -> Result<()> {
+        self.transfer_asset_token(
+            self.user_assets_account.to_account_info(),
+            self.reserve.to_account_info(),
+            self.user.to_account_info(),
+            amount,
+        )?;
+        self.reserve.reload()
+    }
+
+    /// Transfers the deposit fee to the fee recipient and mints shares to the user.
+    pub fn collect_fee_and_mint_shares(&mut self, fee: u64, shares: u64) -> Result<()> {
+        self.transfer_asset_token(
+            self.user_assets_account.to_account_info(),
+            self.fee_recipient.to_account_info(),
+            self.user.to_account_info(),
+            fee,
+        )?;
+        self.mint_shares_to_user(shares)
     }
 
     /// Hook Program
@@ -444,6 +463,32 @@ impl<'info> VaultCommon<'info> {
         Ok(nav)
     }
 
+    /// Burns shares, transfers the withdrawal fee from the reserve to the fee
+    /// recipient, and sends the remaining assets from the reserve to the user.
+    pub fn burn_and_distribute(
+        &mut self,
+        shares_to_burn: u64,
+        fee: u64,
+        user_assets_out: u64,
+    ) -> Result<()> {
+        self.burn_shares(shares_to_burn)?;
+
+        if fee > 0 {
+            self.transfer_asset_token(
+                self.reserve.to_account_info(),
+                self.fee_recipient.to_account_info(),
+                self.vault.to_account_info(),
+                fee,
+            )?;
+        }
+        self.transfer_asset_token(
+            self.reserve.to_account_info(),
+            self.user_assets_account.to_account_info(),
+            self.vault.to_account_info(),
+            user_assets_out,
+        )
+    }
+
     pub fn get_program_hook_pubkey(
         &mut self,
         deposit_hook_program: Option<DepositHook>,
@@ -465,15 +510,15 @@ impl<'info> VaultCommon<'info> {
 
 pub fn handler<'info>(
     ctx: Context<'_, '_, '_, 'info, VaultCommon<'info>>,
-    kind: SwapKind,
-    args: SwapParams,
+    kind: VaultAction,
+    args: VaultActionParams,
 ) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
     match kind {
         // User specifies exact asset amount in, receives shares.
         // threshold_amount = min shares out (slippage).
-        SwapKind::Deposit => {
+        VaultAction::Deposit => {
             let assets = args.amount;
             let min_shares = args.threshold_amount;
 
@@ -483,13 +528,7 @@ pub fn handler<'info>(
                 .checked_sub(fee)
                 .ok_or(VaultProgramError::ArithmeticError)?;
 
-            ctx.accounts.transfer_asset_token(
-                ctx.accounts.user_assets_account.to_account_info(),
-                ctx.accounts.reserve.to_account_info(),
-                ctx.accounts.user.to_account_info(),
-                remaining_amount,
-            )?;
-            ctx.accounts.reserve.reload()?;
+            ctx.accounts.deposit_to_reserve(remaining_amount)?;
 
             let deposit_hook_program = ctx.accounts.vault.deposit_hook_type();
             let updated_reserve_amount = ctx.accounts.reserve.amount;
@@ -544,18 +583,12 @@ pub fn handler<'info>(
                 return Err(VaultProgramError::SlippageExceeded.into());
             }
 
-            ctx.accounts.transfer_asset_token(
-                ctx.accounts.user_assets_account.to_account_info(),
-                ctx.accounts.fee_recipient.to_account_info(),
-                ctx.accounts.user.to_account_info(),
-                fee,
-            )?;
-            ctx.accounts.mint_shares_to_user(shares)?;
+            ctx.accounts.collect_fee_and_mint_shares(fee, shares)?;
         }
 
         // User specifies exact share amount to mint, pays required assets.
         // threshold_amount = max assets in (slippage).
-        SwapKind::Mint => {
+        VaultAction::Mint => {
             require!(
                 ctx.accounts.vault.deposit_hook_type().is_none(),
                 VaultProgramError::HookExtensionActive
@@ -580,13 +613,7 @@ pub fn handler<'info>(
                 .checked_add(transfer_fee)
                 .ok_or(VaultProgramError::ArithmeticError)?;
 
-            ctx.accounts.transfer_asset_token(
-                ctx.accounts.user_assets_account.to_account_info(),
-                ctx.accounts.reserve.to_account_info(),
-                ctx.accounts.user.to_account_info(),
-                assets_plus_transfer_fee,
-            )?;
-            ctx.accounts.reserve.reload()?;
+            ctx.accounts.deposit_to_reserve(assets_plus_transfer_fee)?;
 
             require!(
                 ctx.accounts.reserve.amount <= ctx.accounts.vault.vault_asset_cap,
@@ -594,18 +621,12 @@ pub fn handler<'info>(
             );
 
             let fee = ctx.accounts.vault.get_deposit_fee_when_minting(assets)?;
-            ctx.accounts.transfer_asset_token(
-                ctx.accounts.user_assets_account.to_account_info(),
-                ctx.accounts.fee_recipient.to_account_info(),
-                ctx.accounts.user.to_account_info(),
-                fee,
-            )?;
-            ctx.accounts.mint_shares_to_user(shares)?;
+            ctx.accounts.collect_fee_and_mint_shares(fee, shares)?;
         }
 
         // User specifies exact asset amount out, burns required shares.
         // threshold_amount = max shares burned (slippage).
-        SwapKind::Withdraw => {
+        VaultAction::Withdraw => {
             let assets = args.amount;
             let max_shares = args.threshold_amount;
 
@@ -645,27 +666,13 @@ pub fn handler<'info>(
                 return Err(VaultProgramError::SlippageExceeded.into());
             }
 
-            ctx.accounts.burn_shares(shares_to_burn)?;
-
-            if fee > 0 {
-                ctx.accounts.transfer_asset_token(
-                    ctx.accounts.reserve.to_account_info(),
-                    ctx.accounts.fee_recipient.to_account_info(),
-                    ctx.accounts.vault.to_account_info(),
-                    fee,
-                )?;
-            }
-            ctx.accounts.transfer_asset_token(
-                ctx.accounts.reserve.to_account_info(),
-                ctx.accounts.user_assets_account.to_account_info(),
-                ctx.accounts.vault.to_account_info(),
-                assets,
-            )?;
+            ctx.accounts
+                .burn_and_distribute(shares_to_burn, fee, assets)?;
         }
 
         // User specifies exact share amount to burn, receives assets.
         // threshold_amount = min assets out (slippage).
-        SwapKind::Redeem => {
+        VaultAction::Redeem => {
             require!(
                 ctx.accounts.vault.withdraw_hook_type().is_none(),
                 VaultProgramError::HookExtensionActive
@@ -703,22 +710,8 @@ pub fn handler<'info>(
                 return Err(VaultProgramError::SlippageExceeded.into());
             }
 
-            ctx.accounts.burn_shares(shares)?;
-
-            if fee > 0 {
-                ctx.accounts.transfer_asset_token(
-                    ctx.accounts.reserve.to_account_info(),
-                    ctx.accounts.fee_recipient.to_account_info(),
-                    ctx.accounts.vault.to_account_info(),
-                    fee,
-                )?;
-            }
-            ctx.accounts.transfer_asset_token(
-                ctx.accounts.reserve.to_account_info(),
-                ctx.accounts.user_assets_account.to_account_info(),
-                ctx.accounts.vault.to_account_info(),
-                user_assets_out,
-            )?;
+            ctx.accounts
+                .burn_and_distribute(shares, fee, user_assets_out)?;
         }
     }
 

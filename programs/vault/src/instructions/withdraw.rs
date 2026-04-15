@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     instructions::{vault_common, VaultCommon},
-    state::{SwapKind, SwapParams},
+    state::{VaultAction, VaultActionParams},
 };
 
 pub fn handler<'info>(
@@ -12,8 +12,8 @@ pub fn handler<'info>(
 ) -> Result<()> {
     vault_common::handler(
         ctx,
-        SwapKind::Withdraw,
-        SwapParams {
+        VaultAction::Withdraw,
+        VaultActionParams {
             amount: assets,
             threshold_amount: max_shares,
         },

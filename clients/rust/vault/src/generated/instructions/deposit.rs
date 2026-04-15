@@ -27,17 +27,17 @@ pub struct Deposit {
 
     pub user_shares_account: solana_pubkey::Pubkey,
 
-    pub extra_metas: Option<solana_pubkey::Pubkey>,
-
-    pub protocol: Option<solana_pubkey::Pubkey>,
-
-    pub hook_program: Option<solana_pubkey::Pubkey>,
-
     pub asset_token_program: solana_pubkey::Pubkey,
 
     pub share_token_program: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
+
+    pub extra_metas: Option<solana_pubkey::Pubkey>,
+
+    pub protocol: Option<solana_pubkey::Pubkey>,
+
+    pub hook_program: Option<solana_pubkey::Pubkey>,
 }
 
 impl Deposit {
@@ -73,6 +73,18 @@ impl Deposit {
             self.user_shares_account,
             false,
         ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.asset_token_program,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.share_token_program,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.system_program,
+            false,
+        ));
         if let Some(extra_metas) = self.extra_metas {
             accounts.push(solana_instruction::AccountMeta::new_readonly(
                 extra_metas,
@@ -105,18 +117,6 @@ impl Deposit {
                 false,
             ));
         }
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.asset_token_program,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.share_token_program,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.system_program,
-            false,
-        ));
         accounts.extend_from_slice(remaining_accounts);
         let mut data = DepositInstructionData::new().try_to_vec().unwrap();
         let mut args = args.try_to_vec().unwrap();
@@ -179,12 +179,12 @@ impl DepositInstructionArgs {
 ///   5. `[writable]` fee_recipient
 ///   6. `[writable]` user_assets_account
 ///   7. `[writable]` user_shares_account
-///   8. `[optional]` extra_metas
-///   9. `[optional]` protocol
-///   10. `[optional]` hook_program
-///   11. `[]` asset_token_program
-///   12. `[]` share_token_program
-///   13. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   8. `[]` asset_token_program
+///   9. `[]` share_token_program
+///   10. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   11. `[optional]` extra_metas
+///   12. `[optional]` protocol
+///   13. `[optional]` hook_program
 #[derive(Clone, Debug, Default)]
 pub struct DepositBuilder {
     user: Option<solana_pubkey::Pubkey>,
@@ -195,12 +195,12 @@ pub struct DepositBuilder {
     fee_recipient: Option<solana_pubkey::Pubkey>,
     user_assets_account: Option<solana_pubkey::Pubkey>,
     user_shares_account: Option<solana_pubkey::Pubkey>,
-    extra_metas: Option<solana_pubkey::Pubkey>,
-    protocol: Option<solana_pubkey::Pubkey>,
-    hook_program: Option<solana_pubkey::Pubkey>,
     asset_token_program: Option<solana_pubkey::Pubkey>,
     share_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
+    extra_metas: Option<solana_pubkey::Pubkey>,
+    protocol: Option<solana_pubkey::Pubkey>,
+    hook_program: Option<solana_pubkey::Pubkey>,
     assets: Option<u64>,
     min_shares: Option<u64>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
@@ -259,6 +259,25 @@ impl DepositBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn asset_token_program(&mut self, asset_token_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.asset_token_program = Some(asset_token_program);
+        self
+    }
+
+    #[inline(always)]
+    pub fn share_token_program(&mut self, share_token_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.share_token_program = Some(share_token_program);
+        self
+    }
+
+    /// `[optional account, default to '11111111111111111111111111111111']`
+    #[inline(always)]
+    pub fn system_program(&mut self, system_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.system_program = Some(system_program);
+        self
+    }
+
     /// `[optional account]`
     #[inline(always)]
     pub fn extra_metas(&mut self, extra_metas: Option<solana_pubkey::Pubkey>) -> &mut Self {
@@ -277,25 +296,6 @@ impl DepositBuilder {
     #[inline(always)]
     pub fn hook_program(&mut self, hook_program: Option<solana_pubkey::Pubkey>) -> &mut Self {
         self.hook_program = hook_program;
-        self
-    }
-
-    #[inline(always)]
-    pub fn asset_token_program(&mut self, asset_token_program: solana_pubkey::Pubkey) -> &mut Self {
-        self.asset_token_program = Some(asset_token_program);
-        self
-    }
-
-    #[inline(always)]
-    pub fn share_token_program(&mut self, share_token_program: solana_pubkey::Pubkey) -> &mut Self {
-        self.share_token_program = Some(share_token_program);
-        self
-    }
-
-    /// `[optional account, default to '11111111111111111111111111111111']`
-    #[inline(always)]
-    pub fn system_program(&mut self, system_program: solana_pubkey::Pubkey) -> &mut Self {
-        self.system_program = Some(system_program);
         self
     }
 
@@ -343,9 +343,6 @@ impl DepositBuilder {
             user_shares_account: self
                 .user_shares_account
                 .expect("user_shares_account is not set"),
-            extra_metas: self.extra_metas,
-            protocol: self.protocol,
-            hook_program: self.hook_program,
             asset_token_program: self
                 .asset_token_program
                 .expect("asset_token_program is not set"),
@@ -355,6 +352,9 @@ impl DepositBuilder {
             system_program: self
                 .system_program
                 .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
+            extra_metas: self.extra_metas,
+            protocol: self.protocol,
+            hook_program: self.hook_program,
         };
         let args = DepositInstructionArgs {
             assets: self.assets.clone().expect("assets is not set"),
@@ -383,17 +383,17 @@ pub struct DepositCpiAccounts<'a, 'b> {
 
     pub user_shares_account: &'b solana_account_info::AccountInfo<'a>,
 
-    pub extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
-
-    pub protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
-
-    pub hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
-
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
+
+    pub extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
+
+    pub protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
+
+    pub hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
 }
 
 /// `deposit` CPI instruction.
@@ -417,17 +417,17 @@ pub struct DepositCpi<'a, 'b> {
 
     pub user_shares_account: &'b solana_account_info::AccountInfo<'a>,
 
-    pub extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
-
-    pub protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
-
-    pub hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
-
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
+
+    pub extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
+
+    pub protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
+
+    pub hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// The arguments for the instruction.
     pub __args: DepositInstructionArgs,
 }
@@ -448,12 +448,12 @@ impl<'a, 'b> DepositCpi<'a, 'b> {
             fee_recipient: accounts.fee_recipient,
             user_assets_account: accounts.user_assets_account,
             user_shares_account: accounts.user_shares_account,
-            extra_metas: accounts.extra_metas,
-            protocol: accounts.protocol,
-            hook_program: accounts.hook_program,
             asset_token_program: accounts.asset_token_program,
             share_token_program: accounts.share_token_program,
             system_program: accounts.system_program,
+            extra_metas: accounts.extra_metas,
+            protocol: accounts.protocol,
+            hook_program: accounts.hook_program,
             __args: args,
         }
     }
@@ -511,6 +511,18 @@ impl<'a, 'b> DepositCpi<'a, 'b> {
             *self.user_shares_account.key,
             false,
         ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.asset_token_program.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.share_token_program.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.system_program.key,
+            false,
+        ));
         if let Some(extra_metas) = self.extra_metas {
             accounts.push(solana_instruction::AccountMeta::new_readonly(
                 *extra_metas.key,
@@ -544,18 +556,6 @@ impl<'a, 'b> DepositCpi<'a, 'b> {
                 false,
             ));
         }
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.asset_token_program.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.share_token_program.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.system_program.key,
-            false,
-        ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -582,6 +582,9 @@ impl<'a, 'b> DepositCpi<'a, 'b> {
         account_infos.push(self.fee_recipient.clone());
         account_infos.push(self.user_assets_account.clone());
         account_infos.push(self.user_shares_account.clone());
+        account_infos.push(self.asset_token_program.clone());
+        account_infos.push(self.share_token_program.clone());
+        account_infos.push(self.system_program.clone());
         if let Some(extra_metas) = self.extra_metas {
             account_infos.push(extra_metas.clone());
         }
@@ -591,9 +594,6 @@ impl<'a, 'b> DepositCpi<'a, 'b> {
         if let Some(hook_program) = self.hook_program {
             account_infos.push(hook_program.clone());
         }
-        account_infos.push(self.asset_token_program.clone());
-        account_infos.push(self.share_token_program.clone());
-        account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -618,12 +618,12 @@ impl<'a, 'b> DepositCpi<'a, 'b> {
 ///   5. `[writable]` fee_recipient
 ///   6. `[writable]` user_assets_account
 ///   7. `[writable]` user_shares_account
-///   8. `[optional]` extra_metas
-///   9. `[optional]` protocol
-///   10. `[optional]` hook_program
-///   11. `[]` asset_token_program
-///   12. `[]` share_token_program
-///   13. `[]` system_program
+///   8. `[]` asset_token_program
+///   9. `[]` share_token_program
+///   10. `[]` system_program
+///   11. `[optional]` extra_metas
+///   12. `[optional]` protocol
+///   13. `[optional]` hook_program
 #[derive(Clone, Debug)]
 pub struct DepositCpiBuilder<'a, 'b> {
     instruction: Box<DepositCpiBuilderInstruction<'a, 'b>>,
@@ -641,12 +641,12 @@ impl<'a, 'b> DepositCpiBuilder<'a, 'b> {
             fee_recipient: None,
             user_assets_account: None,
             user_shares_account: None,
-            extra_metas: None,
-            protocol: None,
-            hook_program: None,
             asset_token_program: None,
             share_token_program: None,
             system_program: None,
+            extra_metas: None,
+            protocol: None,
+            hook_program: None,
             assets: None,
             min_shares: None,
             __remaining_accounts: Vec::new(),
@@ -717,6 +717,33 @@ impl<'a, 'b> DepositCpiBuilder<'a, 'b> {
         self
     }
 
+    #[inline(always)]
+    pub fn asset_token_program(
+        &mut self,
+        asset_token_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.asset_token_program = Some(asset_token_program);
+        self
+    }
+
+    #[inline(always)]
+    pub fn share_token_program(
+        &mut self,
+        share_token_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.share_token_program = Some(share_token_program);
+        self
+    }
+
+    #[inline(always)]
+    pub fn system_program(
+        &mut self,
+        system_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.system_program = Some(system_program);
+        self
+    }
+
     /// `[optional account]`
     #[inline(always)]
     pub fn extra_metas(
@@ -744,33 +771,6 @@ impl<'a, 'b> DepositCpiBuilder<'a, 'b> {
         hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     ) -> &mut Self {
         self.instruction.hook_program = hook_program;
-        self
-    }
-
-    #[inline(always)]
-    pub fn asset_token_program(
-        &mut self,
-        asset_token_program: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.asset_token_program = Some(asset_token_program);
-        self
-    }
-
-    #[inline(always)]
-    pub fn share_token_program(
-        &mut self,
-        share_token_program: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.share_token_program = Some(share_token_program);
-        self
-    }
-
-    #[inline(always)]
-    pub fn system_program(
-        &mut self,
-        system_program: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.system_program = Some(system_program);
         self
     }
 
@@ -860,12 +860,6 @@ impl<'a, 'b> DepositCpiBuilder<'a, 'b> {
                 .user_shares_account
                 .expect("user_shares_account is not set"),
 
-            extra_metas: self.instruction.extra_metas,
-
-            protocol: self.instruction.protocol,
-
-            hook_program: self.instruction.hook_program,
-
             asset_token_program: self
                 .instruction
                 .asset_token_program
@@ -880,6 +874,12 @@ impl<'a, 'b> DepositCpiBuilder<'a, 'b> {
                 .instruction
                 .system_program
                 .expect("system_program is not set"),
+
+            extra_metas: self.instruction.extra_metas,
+
+            protocol: self.instruction.protocol,
+
+            hook_program: self.instruction.hook_program,
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -900,12 +900,12 @@ struct DepositCpiBuilderInstruction<'a, 'b> {
     fee_recipient: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_assets_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_shares_account: Option<&'b solana_account_info::AccountInfo<'a>>,
-    extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
-    protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
-    hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
+    extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
+    protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
+    hook_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     assets: Option<u64>,
     min_shares: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

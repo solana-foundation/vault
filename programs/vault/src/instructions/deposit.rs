@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::{
     instructions::vault_common,
-    state::{SwapKind, SwapParams},
+    state::{VaultAction, VaultActionParams},
 };
 
 use super::VaultCommon;
@@ -14,8 +14,8 @@ pub fn handler<'info>(
 ) -> Result<()> {
     vault_common::handler(
         ctx,
-        SwapKind::Deposit,
-        SwapParams {
+        VaultAction::Deposit,
+        VaultActionParams {
             amount: assets,
             threshold_amount: min_shares,
         },
