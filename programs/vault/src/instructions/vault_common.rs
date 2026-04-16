@@ -278,7 +278,7 @@ impl<'info> VaultCommon<'info> {
         hook_program: Pubkey,
         remaining_accounts: &[AccountInfo<'info>],
         deposit_amount: u64,
-    ) -> Result<(u64, u64)> {
+    ) -> Result<u64> {
         let extra_metas = &self
             .extra_metas
             .clone()
@@ -353,23 +353,17 @@ impl<'info> VaultCommon<'info> {
             VaultProgramError::InvalidReturnedData
         );
         require!(
-            return_data.len() >= 16,
+            return_data.len() >= 8,
             VaultProgramError::InvalidReturnedData
         );
 
-        let shares = u64::from_le_bytes(
+        let nav = u64::from_le_bytes(
             return_data[0..8]
                 .try_into()
                 .map_err(|_| VaultProgramError::InvalidReturnedData)?,
         );
 
-        let total_nav = u64::from_le_bytes(
-            return_data[8..16]
-                .try_into()
-                .map_err(|_| VaultProgramError::InvalidReturnedData)?,
-        );
-
-        Ok((shares, total_nav))
+        Ok(nav)
     }
 
     /// Invokes the withdraw hook program, allowing it to execute custom logic on withdrawal.
@@ -548,20 +542,52 @@ pub fn handler<'info>(
                         .clone(),
                     actual_transferred_amount,
                 )?;
-                let (shares, total_nav) = ctx.accounts.execute_deposit_hook(
+                let nav = ctx.accounts.execute_deposit_hook(
                     hook_program_pubkey,
                     remaining,
                     actual_transferred_amount,
                 )?;
 
-                // When deposit hook is active, assets are deployed to protocols
-                // so we check total NAV (reserve + protocols) against the cap.
+                // Convert NAV (price per share = assets * 10^decimals / supply)
+                // back to total assets for the cap check.
+                let total_assets = if ctx.accounts.share_mint.supply == 0 {
+                    // First deposit: no shares exist yet so NAV is 0.
+                    // Total assets equals the deposited amount.
+                    actual_transferred_amount
+                } else {
+                    let precision = 10u128.pow(ctx.accounts.share_mint.decimals as u32);
+                    let total = u128::from(nav)
+                        .checked_mul(u128::from(ctx.accounts.share_mint.supply))
+                        .ok_or(VaultProgramError::ArithmeticError)?
+                        .checked_div(precision)
+                        .ok_or(VaultProgramError::ArithmeticError)?;
+                    u64::try_from(total).map_err(|_| VaultProgramError::ArithmeticError)?
+                };
+
                 require!(
-                    total_nav <= ctx.accounts.vault.vault_asset_cap,
+                    total_assets <= ctx.accounts.vault.vault_asset_cap,
                     VaultProgramError::MaxVaultAssetCapExceeded
                 );
 
-                shares
+                // Derive shares from NAV (mirrors the withdraw-hook approach).
+                if ctx.accounts.share_mint.supply == 0 {
+                    // First deposit: use initial_price as the exchange rate.
+                    let shares = u128::from(ctx.accounts.vault.initial_price)
+                        .checked_mul(u128::from(actual_transferred_amount))
+                        .ok_or(VaultProgramError::ArithmeticError)?;
+                    u64::try_from(shares).map_err(|_| VaultProgramError::ArithmeticError)?
+                } else {
+                    require!(nav > 0, VaultProgramError::StaleVaultNav);
+                    let precision = 10u128.pow(ctx.accounts.share_mint.decimals as u32);
+                    u64::try_from(
+                        u128::from(actual_transferred_amount)
+                            .checked_mul(precision)
+                            .ok_or(VaultProgramError::ArithmeticError)?
+                            .checked_div(u128::from(nav))
+                            .ok_or(VaultProgramError::ArithmeticError)?,
+                    )
+                    .map_err(|_| VaultProgramError::ArithmeticError)?
+                }
             } else {
                 require!(
                     updated_reserve_amount <= ctx.accounts.vault.vault_asset_cap,
@@ -648,8 +674,19 @@ pub fn handler<'info>(
                     VaultProgramError::HookExtensionNotInitialized
                 );
                 let remaining = ctx.remaining_accounts;
-                ctx.accounts
-                    .execute_withdraw_hook(hook_program_pubkey, remaining, assets)?
+                let nav =
+                    ctx.accounts
+                        .execute_withdraw_hook(hook_program_pubkey, remaining, assets)?;
+
+                require!(nav > 0, VaultProgramError::StaleVaultNav);
+                let precision = 10u128.pow(ctx.accounts.share_mint.decimals as u32);
+                u64::try_from(
+                    u128::from(amount_with_fee)
+                        .checked_mul(precision)
+                        .ok_or(VaultProgramError::ArithmeticError)?
+                        .div_ceil(u128::from(nav)),
+                )
+                .map_err(|_| VaultProgramError::ArithmeticError)?
             } else {
                 ctx.accounts.vault.get_shares_from_assets(
                     ctx.accounts.reserve.amount,

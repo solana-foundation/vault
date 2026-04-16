@@ -7,8 +7,8 @@ use anchor_spl::token_interface::Mint;
 use crate::{
     errors::HookProgramError,
     state::{
-        get_shares_from_assets, get_total_assets, protocol_withdraw, validate_protocols,
-        VaultAssociatedProtocols, VAULT_ASSOCIATED_PROTOCOLS_SEED, VAULT_SEED,
+        get_total_assets, protocol_withdraw, validate_protocols, VaultAssociatedProtocols,
+        VAULT_ASSOCIATED_PROTOCOLS_SEED,
     },
 };
 
@@ -80,34 +80,20 @@ pub fn handler<'info>(
         ctx.program_id,
     )?;
 
-    // Validate signer is the vault PDA before deserializing its state
-    let vault_info = ctx.accounts.signer.to_account_info();
-    let (expected_vault_pda, _) = Pubkey::find_program_address(
-        &[VAULT_SEED, ctx.accounts.share_mint.key().as_ref()],
-        &vault::id(),
-    );
-    require!(
-        vault_info.key() == expected_vault_pda,
-        HookProgramError::InvalidVaultPda
-    );
-    require!(
-        *vault_info.owner == vault::id(),
-        HookProgramError::InvalidVaultPda
-    );
+    // Compute NAV as price per share: total_assets * 10^decimals / share_supply
+    let nav = if ctx.accounts.share_mint.supply == 0 {
+        0
+    } else {
+        let precision = 10u128.pow(ctx.accounts.share_mint.decimals as u32);
+        let ratio = u128::from(total_assets)
+            .checked_mul(precision)
+            .ok_or(HookProgramError::ArithmeticError)?
+            .checked_div(u128::from(ctx.accounts.share_mint.supply))
+            .ok_or(HookProgramError::ArithmeticError)?;
+        u64::try_from(ratio).map_err(|_| HookProgramError::ArithmeticError)?
+    };
 
-    let vault_data = vault_info.try_borrow_data()?;
-    let mut buf: &[u8] = &vault_data;
-    let vault_state = vault::state::Vault::try_deserialize(&mut buf)?;
-
-    let shares_to_burn = get_shares_from_assets(
-        vault_state.initial_price,
-        total_assets,
-        ctx.accounts.share_mint.supply,
-        amount,
-        true, // round up for withdrawals
-    )?;
-
-    let data = shares_to_burn.try_to_vec()?;
+    let data = nav.try_to_vec()?;
     set_return_data(&data);
     Ok(())
 }
