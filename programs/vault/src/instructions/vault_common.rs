@@ -128,7 +128,10 @@ impl<'info> VaultCommon<'info> {
             return Ok(0);
         }
         let binding = self.asset_mint.to_account_info();
-        let mint_data = binding.data.borrow();
+        let mint_data = binding
+            .data
+            .try_borrow()
+            .map_err(|_| ProgramError::AccountBorrowFailed)?;
         let mint = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_data)?;
         let epoch = Clock::get()?.epoch;
         let fee = match mint
