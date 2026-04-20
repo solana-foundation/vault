@@ -9,8 +9,11 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(__dirname, "..");
 
 // Load the Anchor IDL
-const idlPath = join(projectRoot, "target/idl/vault.json");
-const idl = JSON.parse(readFileSync(idlPath, "utf-8"));
+const idlVaultPath = join(projectRoot, "target/idl/vault.json");
+const vaultIdl = JSON.parse(readFileSync(idlVaultPath, "utf-8"));
+
+const asyncIdlPath = join(projectRoot, "target/idl/async_vault.json");
+const asyncIdl = JSON.parse(readFileSync(asyncIdlPath, "utf-8"));
 
 const hookIdlPath = join(projectRoot, "target/idl/hook_program.json");
 const hookIdl = JSON.parse(readFileSync(hookIdlPath, "utf-8"));
@@ -19,25 +22,35 @@ const dummyIdlPath = join(projectRoot, "target/idl/dummy_protocol.json");
 const dummyIdl = JSON.parse(readFileSync(dummyIdlPath, "utf-8"));
 
 // Create Codama tree from Anchor IDL
-const codama = createFromRoot(rootNodeFromAnchor(idl));
-const hookCodama = createFromRoot(rootNodeFromAnchor(hookIdl));
-const dummyCodama = createFromRoot(rootNodeFromAnchor(dummyIdl));
+const vaultCodamaTree = createFromRoot(rootNodeFromAnchor(vaultIdl));
+const asyncVaultCodamaTree = createFromRoot(rootNodeFromAnchor(asyncIdl));
+const hookCodamaTree = createFromRoot(rootNodeFromAnchor(hookIdl));
+const dummyCodamaTree = createFromRoot(rootNodeFromAnchor(dummyIdl));
 
 // Generate Rust client
-const rustClientPath = join(projectRoot, "clients/rust/vault/src/generated");
+const vaultClientPath = join(projectRoot, "clients/rust/vault/src/generated");
+const asyncVaultClientPath = join(projectRoot, "clients/rust/async_vault/src/generated");
 const hookRustClientPath = join(projectRoot, "clients/rust/hook/src/generated");
 const dummyRustClientPath = join(projectRoot, "clients/rust/dummy/src/generated");
 
 
-codama.accept(
-  renderVisitor(rustClientPath, {
+vaultCodamaTree.accept(
+  renderVisitor(vaultClientPath, {
     crateFolder: join(projectRoot, "clients/rust"),
     formatCode: true,
     toolchain: "+nightly",
   })
 );
 
-hookCodama.accept(
+asyncVaultCodamaTree.accept(
+  renderVisitor(asyncVaultClientPath, {
+    crateFolder: join(projectRoot, "clients/rust"),
+    formatCode: true,
+    toolchain: "+nightly",
+  })
+);
+
+hookCodamaTree.accept(
   renderVisitor(hookRustClientPath, {
     crateFolder: join(projectRoot, "clients/rust"),
     formatCode: true,
@@ -45,7 +58,7 @@ hookCodama.accept(
   })
 );
 
-dummyCodama.accept(
+dummyCodamaTree.accept(
   renderVisitor(dummyRustClientPath, {
     crateFolder: join(projectRoot, "clients/rust"),
     formatCode: true,
@@ -53,6 +66,7 @@ dummyCodama.accept(
   })
 );
 
-console.log("Rust client generated successfully at:", rustClientPath);
+console.log("Vault client generated successfully at:", vaultClientPath);
+console.log("Async Vault client generated successfully at:", asyncVaultClientPath);
 console.log("Hook Rust client generated successfully at:", hookRustClientPath);
 console.log("Dummy Rust client generated successfully at:", dummyRustClientPath);

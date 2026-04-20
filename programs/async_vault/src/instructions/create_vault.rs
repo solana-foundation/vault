@@ -1,0 +1,120 @@
+use anchor_lang::prelude::*;
+use anchor_spl::{
+    token_2022::{set_authority, spl_token_2022::instruction::AuthorityType, SetAuthority},
+    token_interface::{Mint, TokenAccount, TokenInterface},
+};
+
+use crate::{
+    error::AsyncVaultError,
+    state::{Vault, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+};
+
+#[derive(AnchorDeserialize, AnchorSerialize)]
+pub struct AsyncVaultArgs {
+    authority: Pubkey,
+    initial_price: u64,
+    async_inflows: bool,
+    async_outflows: bool,
+}
+
+#[derive(Accounts)]
+pub struct CreateVault<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub mint_authority: Signer<'info>,
+
+    pub asset_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(mut)]
+    pub share_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(
+        init,
+        token::authority = vault,
+        token::mint = asset_mint,
+        token::token_program = asset_token_program,
+        payer = payer,
+        seeds = [RESERVE_CONFIG_SEED, share_mint.key().as_ref()],
+        bump,
+    )]
+    pub reserve: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(
+        init,
+        token::authority = vault,
+        token::mint = asset_mint,
+        token::token_program = asset_token_program,
+        payer = payer,
+        seeds = [PENDING_VAULT_SEED, share_mint.key().as_ref()],
+        bump,
+    )]
+    pub pending_vault: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(
+        init,
+        space = 8 + Vault::INIT_SPACE,
+        payer = payer,
+        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
+        bump
+    )]
+    pub vault: Account<'info, Vault>,
+
+    pub asset_token_program: Interface<'info, TokenInterface>,
+    pub share_token_program: Interface<'info, TokenInterface>,
+    pub system_program: Program<'info, System>,
+}
+
+impl<'info> CreateVault<'info> {
+    pub fn set_new_authority(&mut self, new_authority: Pubkey) -> Result<()> {
+        let cpi_accounts = SetAuthority {
+            current_authority: self.mint_authority.to_account_info(),
+            account_or_mint: self.share_mint.to_account_info(),
+        };
+        let cpi_ctx = CpiContext::new(self.share_token_program.to_account_info(), cpi_accounts);
+        set_authority(cpi_ctx, AuthorityType::MintTokens, Some(new_authority))
+    }
+}
+
+/// Creates a new async vault with the given configuration.
+///
+/// Initializes three PDAs seeded by the share mint:
+/// - **vault**: the config account holding all async-vault state
+/// - **reserve**: token account for confirmed asset deposits
+/// - **pending_vault**: token account for assets awaiting share issuance
+///
+/// Transfers the share mint authority to the vault PDA so only the
+/// program can mint/burn share tokens.
+///
+/// The vault starts `paused = true` and `initialized = false`; call
+/// `initialize_vault` after configuring extensions to activate it.
+pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
+    require!(
+        args.initial_price != 0,
+        AsyncVaultError::InvalidInitialPrice
+    );
+
+    ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
+
+    ctx.accounts.vault.set_inner(Vault {
+        asset_mint_address: ctx.accounts.asset_mint.key(),
+        share_mint_address: ctx.accounts.share_mint.key(),
+        vault_token_account: ctx.accounts.reserve.key(),
+        authority: args.authority,
+        initial_price: args.initial_price,
+        paused: true,
+        initialized: false,
+        pending_vault: ctx.accounts.pending_vault.key(),
+        nav: 0,
+        nav_version: 0,
+        async_inflows: args.async_inflows,
+        async_outflows: args.async_outflows,
+        pending_async_requests: 0,
+        total_asset_balance: 0,
+        reserve_bump: ctx.bumps.reserve,
+        pending_vault_bump: ctx.bumps.pending_vault,
+        bump: ctx.bumps.vault,
+    });
+
+    Ok(())
+}
