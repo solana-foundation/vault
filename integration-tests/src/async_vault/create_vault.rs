@@ -1,6 +1,7 @@
 use anchor_spl::token;
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
+use test_case::test_case;
 
 use crate::async_vault::{
     constants::{PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
@@ -9,9 +10,13 @@ use crate::async_vault::{
     },
 };
 
-#[test]
-fn test_create_vault() {
-    let initial_price = 100_000_000;
+#[test_case(100_000_000, true, true ; "both async inflows and outflows")]
+#[test_case(100_000_000, true, false ; "async inflows only")]
+#[test_case(100_000_000, false, true ; "async outflows only")]
+#[test_case(100_000_000, false, false ; "no async flows")]
+#[test_case(1, true, true ; "minimum price")]
+#[test_case(u64::MAX, true, true ; "maximum price")]
+fn test_create_vault(initial_price: u64, async_inflows: bool, async_outflows: bool) {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
@@ -56,20 +61,19 @@ fn test_create_vault() {
         pending_vault_pubkey,
         vault_pubkey,
         initial_price,
-        true,
-        true,
+        async_inflows,
+        async_outflows,
         token::ID,
         token::ID,
     )
     .expect("async vault creation should succeed");
 
-    // Verify vault account was created
     let vault_account = svm
         .get_account(&vault_pubkey)
         .expect("Vault account should exist");
     assert!(!vault_account.data.is_empty(), "Vault should have data");
 
-    let vault_config = AsyncVaultAccount::from_account_data(vault_account.data());
+    let vault_config = AsyncVaultAccount::from_bytes(vault_account.data()).unwrap();
     assert_eq!(vault_config.authority, authority.pubkey());
     assert_eq!(vault_config.asset_mint_address, asset_mint.pubkey());
     assert_eq!(vault_config.share_mint_address, share_mint.pubkey());
@@ -80,8 +84,8 @@ fn test_create_vault() {
     assert!(!vault_config.initialized);
     assert_eq!(vault_config.nav, 0);
     assert_eq!(vault_config.nav_version, 0);
-    assert!(vault_config.async_inflows);
-    assert!(vault_config.async_outflows);
+    assert_eq!(vault_config.async_inflows, async_inflows);
+    assert_eq!(vault_config.async_outflows, async_outflows);
     assert_eq!(vault_config.pending_async_requests, 0);
     assert_eq!(vault_config.total_asset_balance, 0);
 }

@@ -32,7 +32,8 @@ pub struct Mint {
     pub share_token_program: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
-
+    /// this can be further optimized by moving to remaining_accounts,
+    /// which would allow the saving of some (1 byte per optional acct) instruction data
     pub extra_metas: Option<solana_pubkey::Pubkey>,
 
     pub protocol: Option<solana_pubkey::Pubkey>,
@@ -279,6 +280,8 @@ impl MintBuilder {
     }
 
     /// `[optional account]`
+    /// this can be further optimized by moving to remaining_accounts,
+    /// which would allow the saving of some (1 byte per optional acct) instruction data
     #[inline(always)]
     pub fn extra_metas(&mut self, extra_metas: Option<solana_pubkey::Pubkey>) -> &mut Self {
         self.extra_metas = extra_metas;
@@ -388,7 +391,8 @@ pub struct MintCpiAccounts<'a, 'b> {
     pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
+    /// this can be further optimized by moving to remaining_accounts,
+    /// which would allow the saving of some (1 byte per optional acct) instruction data
     pub extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
 
     pub protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
@@ -422,7 +426,8 @@ pub struct MintCpi<'a, 'b> {
     pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
-
+    /// this can be further optimized by moving to remaining_accounts,
+    /// which would allow the saving of some (1 byte per optional acct) instruction data
     pub extra_metas: Option<&'b solana_account_info::AccountInfo<'a>>,
 
     pub protocol: Option<&'b solana_account_info::AccountInfo<'a>>,
@@ -745,6 +750,8 @@ impl<'a, 'b> MintCpiBuilder<'a, 'b> {
     }
 
     /// `[optional account]`
+    /// this can be further optimized by moving to remaining_accounts,
+    /// which would allow the saving of some (1 byte per optional acct) instruction data
     #[inline(always)]
     pub fn extra_metas(
         &mut self,
