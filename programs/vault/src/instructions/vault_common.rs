@@ -84,6 +84,8 @@ pub struct VaultCommon<'info> {
     pub share_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 
+    /// this can be further optimized by moving to remaining_accounts,
+    /// which would allow the saving of some (1 byte per optional acct) instruction data
     pub extra_metas: Option<AccountInfo<'info>>,
     pub protocol: Option<AccountInfo<'info>>,
     pub hook_program: Option<AccountInfo<'info>>,
