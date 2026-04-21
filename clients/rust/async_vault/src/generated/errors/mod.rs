@@ -3,7 +3,9 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
-pub(crate) mod async_vault;
-
-pub use self::async_vault::AsyncVaultError;
+      pub(crate) mod async_vault;
+  
+      pub use self::async_vault::AsyncVaultError;
+  

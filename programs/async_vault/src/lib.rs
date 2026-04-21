@@ -19,4 +19,11 @@ pub mod async_vault {
     pub fn create_vault(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         instructions::create_vault::handler(ctx, args)
     }
+
+    /// Marks the async vault as initialized, locking further extension
+    /// configuration. Must be called by the vault authority after all
+    /// desired extensions have been set up.
+    pub fn initialize_vault(ctx: Context<InitializeVault>) -> Result<()> {
+        instructions::initialize_vault::handler(ctx)
+    }
 }

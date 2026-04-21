@@ -1921,6 +1921,7 @@ name = "integration-tests"
 version = "0.1.0"
 dependencies = [
  "anchor-spl 0.31.1",
+ "async-vault-client",
  "dummy-client",
  "hook-client",
  "litesvm",

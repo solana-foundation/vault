@@ -3,6 +3,7 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
 use num_derive::FromPrimitive;
 use thiserror::Error;
@@ -81,8 +82,7 @@ pub enum VaultError {
     /// 6023 - The provided extra meta accounts pubkey does not match
     #[error("The provided extra meta accounts pubkey does not match")]
     InvalidAccountData = 0x1787,
-    /// 6024 - This instruction is not available when a hook extension is active. Use the
-    /// hook-aware instruction instead.
+    /// 6024 - This instruction is not available when a hook extension is active. Use the hook-aware instruction instead.
     #[error("This instruction is not available when a hook extension is active. Use the hook-aware instruction instead.")]
     HookExtensionActive = 0x1788,
 }
@@ -92,3 +92,4 @@ impl From<VaultError> for solana_program_error::ProgramError {
         solana_program_error::ProgramError::Custom(e as u32)
     }
 }
+

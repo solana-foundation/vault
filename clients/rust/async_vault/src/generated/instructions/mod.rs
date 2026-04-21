@@ -3,7 +3,11 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
-pub(crate) mod r#create_vault;
+  pub(crate) mod r#create_vault;
+  pub(crate) mod r#initialize_vault;
 
-pub use self::r#create_vault::*;
+  pub use self::r#create_vault::*;
+  pub use self::r#initialize_vault::*;
+

@@ -3,126 +3,110 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
 use solana_pubkey::Pubkey;
+use borsh::BorshSerialize;
+use borsh::BorshDeserialize;
+
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Vault {
-    pub discriminator: [u8; 8],
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub asset_mint_address: Pubkey,
-    /// share mint address
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub share_mint_address: Pubkey,
-    /// token account holding confirmed vault assets
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub vault_token_account: Pubkey,
-    /// authority that can sign permissioned instructions
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub authority: Pubkey,
-    /// initial price of shares in asset units (scaled by asset mint decimals)
-    pub initial_price: u64,
-    /// paused
-    pub paused: bool,
-    /// once a vault is initialized, no extensions can be added
-    pub initialized: bool,
-    /// token account holding assets from deposits awaiting share issuance
-    #[cfg_attr(
-        feature = "serde",
-        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
-    )]
-    pub pending_vault: Pubkey,
-    /// net asset value (assets per share), default 0 until first NAV update
-    pub nav: u128,
-    /// nav version, incremented on each NAV update
-    pub nav_version: u64,
-    /// whether deposits are processed asynchronously
-    pub async_inflows: bool,
-    /// whether withdrawals are processed asynchronously
-    pub async_outflows: bool,
-    /// count of pending async deposit/withdrawal requests
-    pub pending_async_requests: u16,
-    /// virtual vault asset balance, accounts for tokens that may
-    /// have been withdrawn by the vault authority
-    pub total_asset_balance: u64,
-    pub reserve_bump: u8,
-    pub pending_vault_bump: u8,
-    pub bump: u8,
+pub discriminator: [u8; 8],
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub asset_mint_address: Pubkey,
+/// share mint address
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub share_mint_address: Pubkey,
+/// token account holding confirmed vault assets
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub vault_token_account: Pubkey,
+/// authority that can sign permissioned instructions
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub authority: Pubkey,
+/// initial price of shares in asset units (scaled by asset mint decimals)
+pub initial_price: u64,
+/// paused
+pub paused: bool,
+/// once a vault is initialized, no extensions can be added
+pub initialized: bool,
+/// token account holding assets from deposits awaiting share issuance
+#[cfg_attr(feature = "serde", serde(with = "serde_with::As::<serde_with::DisplayFromStr>"))]
+pub pending_vault: Pubkey,
+/// net asset value (assets per share), default 0 until first NAV update
+pub nav: u128,
+/// nav version, incremented on each NAV update
+pub nav_version: u64,
+/// whether deposits are processed asynchronously
+pub async_inflows: bool,
+/// whether withdrawals are processed asynchronously
+pub async_outflows: bool,
+/// count of pending async deposit/withdrawal requests
+pub pending_async_requests: u16,
+/// virtual vault asset balance, accounts for tokens that may
+/// have been withdrawn by the vault authority
+pub total_asset_balance: u64,
+pub reserve_bump: u8,
+pub pending_vault_bump: u8,
+pub bump: u8,
 }
+
 
 pub const VAULT_DISCRIMINATOR: [u8; 8] = [211, 8, 232, 43, 2, 152, 117, 119];
 
 impl Vault {
-    pub const LEN: usize = 217;
-
-    #[inline(always)]
-    pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
-        let mut data = data;
-        Self::deserialize(&mut data)
-    }
+      pub const LEN: usize = 217;
+  
+  
+  
+  #[inline(always)]
+  pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
+    let mut data = data;
+    Self::deserialize(&mut data)
+  }
 }
 
 impl<'a> TryFrom<&solana_account_info::AccountInfo<'a>> for Vault {
-    type Error = std::io::Error;
+  type Error = std::io::Error;
 
-    fn try_from(account_info: &solana_account_info::AccountInfo<'a>) -> Result<Self, Self::Error> {
-        let mut data: &[u8] = &(*account_info.data).borrow();
-        Self::deserialize(&mut data)
-    }
+  fn try_from(account_info: &solana_account_info::AccountInfo<'a>) -> Result<Self, Self::Error> {
+      let mut data: &[u8] = &(*account_info.data).borrow();
+      Self::deserialize(&mut data)
+  }
 }
 
 #[cfg(feature = "fetch")]
 pub fn fetch_vault(
-    rpc: &solana_client::rpc_client::RpcClient,
-    address: &solana_pubkey::Pubkey,
+  rpc: &solana_client::rpc_client::RpcClient,
+  address: &solana_pubkey::Pubkey,
 ) -> Result<crate::shared::DecodedAccount<Vault>, std::io::Error> {
-    let accounts = fetch_all_vault(rpc, &[*address])?;
-    Ok(accounts[0].clone())
+  let accounts = fetch_all_vault(rpc, &[*address])?;
+  Ok(accounts[0].clone())
 }
 
 #[cfg(feature = "fetch")]
 pub fn fetch_all_vault(
-    rpc: &solana_client::rpc_client::RpcClient,
-    addresses: &[solana_pubkey::Pubkey],
+  rpc: &solana_client::rpc_client::RpcClient,
+  addresses: &[solana_pubkey::Pubkey],
 ) -> Result<Vec<crate::shared::DecodedAccount<Vault>>, std::io::Error> {
-    let accounts = rpc
-        .get_multiple_accounts(addresses)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+    let accounts = rpc.get_multiple_accounts(addresses)
+      .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
     let mut decoded_accounts: Vec<crate::shared::DecodedAccount<Vault>> = Vec::new();
     for i in 0..addresses.len() {
-        let address = addresses[i];
-        let account = accounts[i].as_ref().ok_or(std::io::Error::new(
-            std::io::ErrorKind::Other,
-            format!("Account not found: {}", address),
-        ))?;
-        let data = Vault::from_bytes(&account.data)?;
-        decoded_accounts.push(crate::shared::DecodedAccount {
-            address,
-            account: account.clone(),
-            data,
-        });
+      let address = addresses[i];
+      let account = accounts[i].as_ref()
+        .ok_or(std::io::Error::new(std::io::ErrorKind::Other, format!("Account not found: {}", address)))?;
+      let data = Vault::from_bytes(&account.data)?;
+      decoded_accounts.push(crate::shared::DecodedAccount { address, account: account.clone(), data });
     }
     Ok(decoded_accounts)
 }
 
 #[cfg(feature = "fetch")]
 pub fn fetch_maybe_vault(
-    rpc: &solana_client::rpc_client::RpcClient,
-    address: &solana_pubkey::Pubkey,
+  rpc: &solana_client::rpc_client::RpcClient,
+  address: &solana_pubkey::Pubkey,
 ) -> Result<crate::shared::MaybeAccount<Vault>, std::io::Error> {
     let accounts = fetch_all_maybe_vault(rpc, &[*address])?;
     Ok(accounts[0].clone())
@@ -130,52 +114,47 @@ pub fn fetch_maybe_vault(
 
 #[cfg(feature = "fetch")]
 pub fn fetch_all_maybe_vault(
-    rpc: &solana_client::rpc_client::RpcClient,
-    addresses: &[solana_pubkey::Pubkey],
+  rpc: &solana_client::rpc_client::RpcClient,
+  addresses: &[solana_pubkey::Pubkey],
 ) -> Result<Vec<crate::shared::MaybeAccount<Vault>>, std::io::Error> {
-    let accounts = rpc
-        .get_multiple_accounts(addresses)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+    let accounts = rpc.get_multiple_accounts(addresses)
+      .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
     let mut decoded_accounts: Vec<crate::shared::MaybeAccount<Vault>> = Vec::new();
     for i in 0..addresses.len() {
-        let address = addresses[i];
-        if let Some(account) = accounts[i].as_ref() {
-            let data = Vault::from_bytes(&account.data)?;
-            decoded_accounts.push(crate::shared::MaybeAccount::Exists(
-                crate::shared::DecodedAccount {
-                    address,
-                    account: account.clone(),
-                    data,
-                },
-            ));
-        } else {
-            decoded_accounts.push(crate::shared::MaybeAccount::NotFound(address));
-        }
+      let address = addresses[i];
+      if let Some(account) = accounts[i].as_ref() {
+        let data = Vault::from_bytes(&account.data)?;
+        decoded_accounts.push(crate::shared::MaybeAccount::Exists(crate::shared::DecodedAccount { address, account: account.clone(), data }));
+      } else {
+        decoded_accounts.push(crate::shared::MaybeAccount::NotFound(address));
+      }
     }
-    Ok(decoded_accounts)
+  Ok(decoded_accounts)
 }
 
-#[cfg(feature = "anchor")]
-impl anchor_lang::AccountDeserialize for Vault {
-    fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
+  #[cfg(feature = "anchor")]
+  impl anchor_lang::AccountDeserialize for Vault {
+      fn try_deserialize_unchecked(buf: &mut &[u8]) -> anchor_lang::Result<Self> {
         Ok(Self::deserialize(buf)?)
-    }
-}
+      }
+  }
 
-#[cfg(feature = "anchor")]
-impl anchor_lang::AccountSerialize for Vault {}
+  #[cfg(feature = "anchor")]
+  impl anchor_lang::AccountSerialize for Vault {}
 
-#[cfg(feature = "anchor")]
-impl anchor_lang::Owner for Vault {
-    fn owner() -> Pubkey {
+  #[cfg(feature = "anchor")]
+  impl anchor_lang::Owner for Vault {
+      fn owner() -> Pubkey {
         crate::ASYNC_VAULT_ID
-    }
-}
+      }
+  }
 
-#[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::IdlBuild for Vault {}
+  #[cfg(feature = "anchor-idl-build")]
+  impl anchor_lang::IdlBuild for Vault {}
 
-#[cfg(feature = "anchor-idl-build")]
-impl anchor_lang::Discriminator for Vault {
+  
+  #[cfg(feature = "anchor-idl-build")]
+  impl anchor_lang::Discriminator for Vault {
     const DISCRIMINATOR: &[u8] = &[0; 8];
-}
+  }
+

@@ -3,6 +3,7 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
 use num_derive::FromPrimitive;
 use thiserror::Error;
@@ -12,6 +13,12 @@ pub enum AsyncVaultError {
     /// 6000 - Initial price cannot be zero
     #[error("Initial price cannot be zero")]
     InvalidInitialPrice = 0x1770,
+    /// 6001 - Signer is not the vault authority
+    #[error("Signer is not the vault authority")]
+    UnauthorizedSigner = 0x1771,
+    /// 6002 - Vault is already initialized
+    #[error("Vault is already initialized")]
+    VaultAlreadyInitialized = 0x1772,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {
@@ -19,3 +26,4 @@ impl From<AsyncVaultError> for solana_program_error::ProgramError {
         solana_program_error::ProgramError::Custom(e as u32)
     }
 }
+

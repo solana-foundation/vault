@@ -1,4 +1,5 @@
 use anchor_spl::{token::spl_token, token_2022::spl_token_2022};
+use async_vault_client::{sdk::IntoSdkInstruction as _, InitializeVaultBuilder};
 use litesvm::{
     types::{FailedTransactionMetadata, TransactionMetadata},
     LiteSVM,
@@ -123,6 +124,34 @@ pub struct AsyncVaultAccount {
     pub reserve_bump: u8,
     pub pending_vault_bump: u8,
     pub bump: u8,
+}
+
+pub fn initialize_async_vault(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = InitializeVaultBuilder::new()
+        .authority(async_vault_client::Pubkey::new_from_array(
+            authority.pubkey().to_bytes(),
+        ))
+        .share_mint(async_vault_client::Pubkey::new_from_array(
+            share_mint.to_bytes(),
+        ))
+        .vault(async_vault_client::Pubkey::new_from_array(vault.to_bytes()))
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        blockhash,
+    );
+
+    svm.send_transaction(tx)
 }
 
 impl AsyncVaultAccount {
