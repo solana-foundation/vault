@@ -114,6 +114,7 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         reserve_bump: ctx.bumps.reserve,
         pending_vault_bump: ctx.bumps.pending_vault,
         bump: ctx.bumps.vault,
+        extensions: vec![],
     });
 
     Ok(())

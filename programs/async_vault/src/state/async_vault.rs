@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+use crate::extensions::VaultExtension;
+
 #[account]
 #[derive(InitSpace)]
 pub struct Vault {
@@ -34,4 +36,6 @@ pub struct Vault {
     pub reserve_bump: u8,
     pub pending_vault_bump: u8,
     pub bump: u8,
+    #[max_len(5)]
+    pub extensions: Vec<VaultExtension>,
 }

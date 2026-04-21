@@ -4,11 +4,7 @@
 //!
 //! <https://github.com/codama-idl/codama>
 
-pub mod accounts;
-pub mod errors;
-pub mod instructions;
-pub mod programs;
-pub mod shared;
-pub mod types;
+pub(crate) mod r#fee_type;
+pub(crate) mod r#vault_extension;
 
-pub(crate) use programs::*;
+pub use self::{r#fee_type::*, r#vault_extension::*};
