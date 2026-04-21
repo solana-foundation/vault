@@ -90,3 +90,19 @@ pub fn create_async_vault(
 }
 
 pub type AsyncVaultAccount = Vault;
+
+pub fn assert_error_code(
+    tx_result: &FailedTransactionMetadata,
+    expected_code: u32,
+    error_name: &str,
+) {
+    let error_string = format!("{:?}", tx_result);
+    assert!(
+        error_string.contains(&format!("Custom({})", expected_code))
+            || error_string.contains(error_name),
+        "Expected error code {} ({}), got: {:?}",
+        expected_code,
+        error_name,
+        error_string
+    );
+}
