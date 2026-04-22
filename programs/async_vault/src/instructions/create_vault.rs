@@ -96,6 +96,10 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         args.initial_price != 0,
         AsyncVaultError::InvalidInitialPrice
     );
+    require!(
+        ctx.accounts.share_mint.supply == 0,
+        AsyncVaultError::ShareMintSupplyShouldBeZero
+    );
 
     ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
 
@@ -105,7 +109,7 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         vault_token_account: ctx.accounts.reserve.key(),
         authority: args.authority,
         initial_price: args.initial_price,
-        paused: true,
+        paused: false,
         initialized: false,
         pending_vault: ctx.accounts.pending_vault.key(),
         nav: 0,

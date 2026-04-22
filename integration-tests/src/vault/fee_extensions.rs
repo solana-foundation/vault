@@ -3,7 +3,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, FeeType, Pubkey, Vault, VaultExtension};
 
-use crate::vault::helper_functions::{
+use crate::helper_functions::{
     assert_error_code, create_mint, create_vault, init_deposit_fees, init_vault,
     init_withdrawal_fees, update_deposit_fees, update_vault, update_withdrawal_fees,
 };

@@ -3,7 +3,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, Pubkey, Vault};
 
-use crate::vault::helper_functions::{create_mint, create_vault, update_vault};
+use crate::helper_functions::{create_mint, create_vault, update_vault};
 use test_case::test_case;
 
 #[test_case(true, false, 100_000,Keypair::new().pubkey(); "unpause and vault cap")]

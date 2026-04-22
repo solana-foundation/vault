@@ -1,13 +1,14 @@
 use anchor_spl::token;
 use litesvm::LiteSVM;
-use solana_sdk::{signature::Keypair, signer::Signer};
+use solana_sdk::{msg, signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, Pubkey};
 
-use crate::vault::{
-    constants::{RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+use crate::{
     helper_functions::{
         assert_error_code, close_vault, create_ata, create_mint, create_vault, helper_mint_to,
+        init_vault, mint,
     },
+    vault::constants::{RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
 };
 use test_case::test_case;
 
@@ -16,6 +17,7 @@ use test_case::test_case;
 #[test_case(true,false;"Close vault fails. Asset reserve should be empty")]
 fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
     let mut svm = LiteSVM::new();
+    let user = Keypair::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
@@ -27,6 +29,7 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
     let fee_recipient = Keypair::new();
 
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&user.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
@@ -42,17 +45,6 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
         &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
         &vault_client::sdk::program_id(),
     );
-    if !supply_is_zero {
-        let share_account = create_ata(&mut svm, &payer, &share_mint.pubkey(), &token::ID);
-        helper_mint_to(
-            &mut svm,
-            &share_mint.pubkey(),
-            &share_account,
-            &mint_authority,
-            100_000,
-            &token::ID,
-        );
-    }
 
     let _ = create_vault(
         &mut svm,
@@ -63,12 +55,52 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
         share_mint.pubkey(),
         reserve_pubkey,
         vault_pubkey,
-        0,
+        30000000,
         100_000,
         fee_recipient.pubkey(),
         token::ID,
         token::ID,
     );
+
+    let _ = init_vault(&mut svm, &authority, &share_mint.pubkey(), &vault_pubkey);
+
+    if !supply_is_zero {
+        let fee_recipient_ata =
+            create_ata(&mut svm, &fee_recipient, &asset_mint.pubkey(), &token::ID);
+        let user_asset_ata = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
+        let user_share_ata = create_ata(&mut svm, &user, &share_mint.pubkey(), &token::ID);
+        helper_mint_to(
+            &mut svm,
+            &asset_mint.pubkey(),
+            &reserve_pubkey,
+            &mint_authority,
+            100_000_00,
+            &token::ID,
+        );
+        helper_mint_to(
+            &mut svm,
+            &asset_mint.pubkey(),
+            &user_asset_ata,
+            &mint_authority,
+            100_000_00,
+            &token::ID,
+        );
+        let _ = mint(
+            &mut svm,
+            &user,
+            asset_mint.pubkey(),
+            share_mint.pubkey(),
+            reserve_pubkey,
+            vault_pubkey,
+            fee_recipient_ata,
+            user_asset_ata,
+            user_share_ata,
+            100,
+            10000001,
+            token::ID,
+            token::ID,
+        );
+    }
 
     if !reserve_is_empty {
         helper_mint_to(

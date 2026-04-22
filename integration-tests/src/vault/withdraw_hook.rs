@@ -15,7 +15,7 @@ use solana_sdk::{
 use spl_token::state::Account as TokenAccount;
 use vault_client::{sdk::program_id, DepositBuilder, Vault, WithdrawBuilder};
 
-use crate::vault::helper_functions::{
+use crate::helper_functions::{
     create_ata, create_mint, create_vault, get_vault_asset_balance, helper_mint_to,
     init_deposit_extra_meta_accounts, init_deposit_hook, init_vault,
     init_withdraw_extra_meta_accounts, init_withdraw_hook, update_vault,

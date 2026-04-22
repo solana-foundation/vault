@@ -13,10 +13,16 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use vault_client::{
-    sdk::IntoSdkInstruction as _, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
+    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
     InitializeDepositFeesBuilder, InitializeDepositHookBuilder, InitializeVaultBuilder,
     InitializeWithdrawalFeesBuilder, MintBuilder, Pubkey, RedeemBuilder, UpdateDepositFeesBuilder,
     UpdateVaultBuilder, UpdateWithdrawalFeesBuilder, Vault, WithdrawBuilder,
+};
+
+use async_vault_client::{
+    sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
+    InitializeDepositFeeBuilder, InitializeWithdrawalFeeBuilder, UpdateDepositFeeBuilder,
+    UpdateWithdrawalFeeBuilder,
 };
 
 use anchor_spl::{
@@ -24,7 +30,7 @@ use anchor_spl::{
         get_associated_token_address_with_program_id,
         spl_associated_token_account::instruction::create_associated_token_account,
     },
-    token::spl_token,
+    token::{self, spl_token},
     token_2022::{
         self,
         spl_token_2022::{
@@ -37,8 +43,13 @@ use anchor_spl::{
         },
     },
 };
+
 use spl_token::state::Account as TokenAccount;
 use spl_token_2022::state::{Account as TokenAccount2022, Mint as Token2022Mint};
+
+pub const VAULT_CONFIG_SEED: &[u8] = b"vault";
+pub const RESERVE_CONFIG_SEED: &[u8] = b"reserve";
+pub const PENDING_VAULT_SEED: &[u8] = b"pending";
 
 pub fn create_vault(
     svm: &mut LiteSVM,
@@ -860,4 +871,205 @@ pub fn get_vault_asset_balance(svm: &LiteSVM, vault_pubkey: &Pubkey) -> u64 {
         .get_account(&vault_config.vault_token_account)
         .expect("could not fetch vault_token_account");
     get_token_account_amount(&reserve_acc)
+}
+
+pub fn create_async_vault(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    payer: &Keypair,
+    mint_authority: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    reserve: Pubkey,
+    pending_vault: Pubkey,
+    vault: Pubkey,
+    initial_price: u64,
+    async_inflows: bool,
+    async_outflows: bool,
+    asset_token_program: Pubkey,
+    share_token_program: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = CreateAsyncVaultBuilder::new()
+        .payer(payer.pubkey())
+        .mint_authority(mint_authority.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .reserve(reserve)
+        .pending_vault(pending_vault)
+        .vault(vault)
+        .asset_token_program(asset_token_program)
+        .share_token_program(share_token_program)
+        .authority(authority.pubkey())
+        .initial_price(initial_price)
+        .async_inflows(async_inflows)
+        .async_outflows(async_outflows)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&payer.pubkey()),
+        &[payer, mint_authority],
+        blockhash,
+    );
+
+    svm.send_transaction(tx)
+}
+
+pub fn init_deposit_fee(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    deposit_fee: AsyncFeeType,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = InitializeDepositFeeBuilder::new()
+        .payer(authority.pubkey())
+        .authority(authority.pubkey())
+        .share_mint(share_mint)
+        .vault(vault)
+        .deposit_fee(deposit_fee)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
+pub fn init_withdrawal_fee(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    withdrawal_fee: AsyncFeeType,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = InitializeWithdrawalFeeBuilder::new()
+        .payer(authority.pubkey())
+        .authority(authority.pubkey())
+        .share_mint(share_mint)
+        .vault(vault)
+        .withdrawal_fee(withdrawal_fee)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
+pub fn update_deposit_fee(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    new_deposit_fee: AsyncFeeType,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = UpdateDepositFeeBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint)
+        .vault(vault)
+        .new_deposit_fee(new_deposit_fee)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
+pub fn update_withdrawal_fee(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    new_withdrawal_fee: AsyncFeeType,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = UpdateWithdrawalFeeBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint)
+        .vault(vault)
+        .new_withdrawal_fee(new_withdrawal_fee)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
+pub fn setup_async_vault(
+    svm: &mut LiteSVM,
+) -> (Keypair, Keypair, Keypair, Keypair, Pubkey, Pubkey, Pubkey) {
+    let authority = Keypair::new();
+    let payer = Keypair::new();
+    let mint_authority = Keypair::new();
+    let asset_mint = Keypair::new();
+    let share_mint = Keypair::new();
+
+    svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
+        .unwrap();
+
+    create_mint(svm, &mint_authority, &asset_mint);
+    create_mint(svm, &mint_authority, &share_mint);
+
+    let (reserve_pubkey, _) = Pubkey::find_program_address(
+        &[RESERVE_CONFIG_SEED, share_mint.pubkey().as_ref()],
+        &program_id(),
+    );
+    let (pending_vault_pubkey, _) = Pubkey::find_program_address(
+        &[PENDING_VAULT_SEED, share_mint.pubkey().as_ref()],
+        &program_id(),
+    );
+    let (vault_pubkey, _) = Pubkey::find_program_address(
+        &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
+        &program_id(),
+    );
+
+    create_async_vault(
+        svm,
+        &authority,
+        &payer,
+        &mint_authority,
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        pending_vault_pubkey,
+        vault_pubkey,
+        100_000_000,
+        true,
+        true,
+        token::ID,
+        token::ID,
+    )
+    .expect("vault creation should succeed");
+
+    (
+        authority,
+        payer,
+        mint_authority,
+        share_mint,
+        reserve_pubkey,
+        pending_vault_pubkey,
+        vault_pubkey,
+    )
 }

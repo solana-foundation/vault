@@ -24,4 +24,6 @@ pub enum AsyncVaultError {
     ArithmeticError,
     #[msg("Mints should be different.")]
     MintsShouldBeDifferent,
+    #[msg("Share mint supply should be zero.")]
+    ShareMintSupplyShouldBeZero,
 }

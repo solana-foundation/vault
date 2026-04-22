@@ -10,7 +10,7 @@ use spl_token::state::Account as TokenAccount;
 use test_case::test_case;
 use vault_client::{sdk::program_id, FeeType, Pubkey};
 
-use crate::vault::helper_functions::{
+use crate::helper_functions::{
     assert_error_code, create_ata, create_mint, create_mint_with_transfer_fee, deposit, get_fee,
     get_mint_supply, get_token_account_amount, get_vault_asset_balance, helper_mint_to,
     recv_amount_from_params, set_up_vault,

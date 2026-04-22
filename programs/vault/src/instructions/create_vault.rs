@@ -77,6 +77,10 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
         args.initial_price != 0,
         VaultProgramError::InvalidInitialPrice
     );
+    require!(
+        ctx.accounts.share_mint.supply == 0,
+        VaultProgramError::ShareMintSupplyShouldBeZero
+    );
     ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
     ctx.accounts.vault.set_inner(Vault {
         asset_mint_address: ctx.accounts.asset_mint.key(),
@@ -84,7 +88,7 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
         vault_token_account: ctx.accounts.reserve.key(),
         authority: args.authority,
         initial_price: args.initial_price,
-        paused: true,
+        paused: false,
         initialized: false,
         vault_asset_cap: args.vault_asset_cap.unwrap_or(0),
         fee_recipient: args.fee_recipient,

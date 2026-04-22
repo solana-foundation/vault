@@ -42,6 +42,9 @@ pub enum AsyncVaultError {
     /// 6010 - Mints should be different.
     #[error("Mints should be different.")]
     MintsShouldBeDifferent = 0x177A,
+    /// 6011 - Share mint supply should be zero.
+    #[error("Share mint supply should be zero.")]
+    ShareMintSupplyShouldBeZero = 0x177B,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

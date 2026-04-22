@@ -88,6 +88,9 @@ pub enum VaultError {
     /// 6025 - Mints should be different.
     #[error("Mints should be different.")]
     MintsShouldBeDifferent = 0x1789,
+    /// 6026 - Share mint supply should be zero.
+    #[error("Share mint supply should be zero.")]
+    ShareMintSupplyShouldBeZero = 0x178A,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {
