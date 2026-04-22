@@ -20,6 +20,8 @@ pub mod async_vault {
         instructions::create_vault::handler(ctx, args)
     }
 
+    /// Adds a deposit fee TLV extension to the vault. Must be called
+    /// before vault initialization. Requires authority signature.
     pub fn initialize_deposit_fee(
         ctx: Context<InitDepositFee>,
         args: InitDepositFeeArgs,
@@ -27,6 +29,8 @@ pub mod async_vault {
         instructions::initialize_deposit_fee::handler(ctx, args)
     }
 
+    /// Adds a withdrawal fee TLV extension to the vault. Must be called
+    /// before vault initialization. Requires authority signature.
     pub fn initialize_withdrawal_fee(
         ctx: Context<InitWithdrawalFee>,
         args: InitWithdrawalFeeArgs,
@@ -34,6 +38,8 @@ pub mod async_vault {
         instructions::initialize_withdrawal_fee::handler(ctx, args)
     }
 
+    /// Updates an existing deposit fee extension. The fee must have been
+    /// previously initialized. Requires authority signature.
     pub fn update_deposit_fee(
         ctx: Context<UpdateDepositFee>,
         args: UpdateDepositFeeArgs,
@@ -41,6 +47,8 @@ pub mod async_vault {
         instructions::update_deposit_fee::handler(ctx, args)
     }
 
+    /// Updates an existing withdrawal fee extension. The fee must have been
+    /// previously initialized. Requires authority signature.
     pub fn update_withdrawal_fee(
         ctx: Context<UpdateWithdrawalFee>,
         args: UpdateWithdrawalFeeArgs,

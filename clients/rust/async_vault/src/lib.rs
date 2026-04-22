@@ -1,6 +1,6 @@
 mod generated;
 
-pub use generated::{accounts::*, errors::*, instructions::*, programs::*, shared::*};
+pub use generated::{accounts::*, errors::*, instructions::*, programs::*, shared::*, types::*};
 
 pub use solana_pubkey::Pubkey;
 

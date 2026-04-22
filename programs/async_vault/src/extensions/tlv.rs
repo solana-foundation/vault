@@ -98,6 +98,11 @@ pub fn tlv_used_len(tlv_data: &[u8]) -> usize {
     let mut offset = 0;
 
     while offset + TLV_HEADER_SIZE <= tlv_data.len() {
+        let entry_type = u16::from_le_bytes([tlv_data[offset], tlv_data[offset + 1]]);
+        if entry_type == 0 {
+            break;
+        }
+
         let entry_len = match tlv_data[offset + 2..offset + 4].try_into() {
             Ok(bytes) => u16::from_le_bytes(bytes) as usize,
             Err(_) => break,
