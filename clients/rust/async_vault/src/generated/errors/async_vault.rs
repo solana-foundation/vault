@@ -12,6 +12,33 @@ pub enum AsyncVaultError {
     /// 6000 - Initial price cannot be zero
     #[error("Initial price cannot be zero")]
     InvalidInitialPrice = 0x1770,
+    /// 6001 - Unauthorized signer
+    #[error("Unauthorized signer")]
+    UnauthorizedSigner = 0x1771,
+    /// 6002 - Vault is not initialized
+    #[error("Vault is not initialized")]
+    UninitializedVault = 0x1772,
+    /// 6003 - Vault is paused
+    #[error("Vault is paused")]
+    PausedVault = 0x1773,
+    /// 6004 - Vault is already initialized
+    #[error("Vault is already initialized")]
+    VaultAlreadyInitialized = 0x1774,
+    /// 6005 - Extension is already initialized
+    #[error("Extension is already initialized")]
+    ExtensionAlreadyInitialized = 0x1775,
+    /// 6006 - Extension is not initialized
+    #[error("Extension is not initialized")]
+    UninitializedExtension = 0x1776,
+    /// 6007 - Invalid extension data
+    #[error("Invalid extension data")]
+    InvalidExtensionData = 0x1777,
+    /// 6008 - Fee basis points exceed maximum
+    #[error("Fee basis points exceed maximum")]
+    FeeBpsExceeded = 0x1778,
+    /// 6009 - Arithmetic error
+    #[error("Arithmetic error")]
+    ArithmeticError = 0x1779,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {
