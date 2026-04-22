@@ -22,4 +22,6 @@ pub enum AsyncVaultError {
     FeeBpsExceeded,
     #[msg("Arithmetic error")]
     ArithmeticError,
+    #[msg("Mints should be different.")]
+    MintsShouldBeDifferent,
 }

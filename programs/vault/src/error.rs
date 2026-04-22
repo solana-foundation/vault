@@ -76,4 +76,7 @@ pub enum VaultProgramError {
 
     #[msg("This instruction is not available when a hook extension is active. Use the hook-aware instruction instead.")]
     HookExtensionActive,
+
+    #[msg("Mints should be different.")]
+    MintsShouldBeDifferent,
 }

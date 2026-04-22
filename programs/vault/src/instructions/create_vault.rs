@@ -26,7 +26,10 @@ pub struct CreateVault<'info> {
 
     pub asset_mint: InterfaceAccount<'info, Mint>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = share_mint.key() != asset_mint.key() @ VaultProgramError::MintsShouldBeDifferent,
+    )]
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(

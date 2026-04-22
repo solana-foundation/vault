@@ -39,6 +39,9 @@ pub enum AsyncVaultError {
     /// 6009 - Arithmetic error
     #[error("Arithmetic error")]
     ArithmeticError = 0x1779,
+    /// 6010 - Mints should be different.
+    #[error("Mints should be different.")]
+    MintsShouldBeDifferent = 0x177A,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

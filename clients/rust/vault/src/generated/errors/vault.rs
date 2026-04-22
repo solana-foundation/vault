@@ -85,6 +85,9 @@ pub enum VaultError {
     /// hook-aware instruction instead.
     #[error("This instruction is not available when a hook extension is active. Use the hook-aware instruction instead.")]
     HookExtensionActive = 0x1788,
+    /// 6025 - Mints should be different.
+    #[error("Mints should be different.")]
+    MintsShouldBeDifferent = 0x1789,
 }
 
 impl From<VaultError> for solana_program_error::ProgramError {
