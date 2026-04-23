@@ -1,10 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::Mint;
+use vault_common::FeeType;
 
 use crate::{
     error::VaultProgramError,
     extensions::VaultExtension,
-    state::{FeeType, Vault, VAULT_CONFIG_SEED},
+    state::{Vault, VAULT_CONFIG_SEED},
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]

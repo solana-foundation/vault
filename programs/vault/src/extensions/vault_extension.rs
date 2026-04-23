@@ -1,9 +1,7 @@
 use anchor_lang::prelude::*;
+use vault_common::FeeType;
 
-use crate::{
-    extensions::{DepositHook, WithdrawHook},
-    state::FeeType,
-};
+use crate::extensions::{DepositHook, WithdrawHook};
 
 #[derive(AnchorDeserialize, AnchorSerialize, Clone, InitSpace, Copy)]
 pub enum VaultExtension {

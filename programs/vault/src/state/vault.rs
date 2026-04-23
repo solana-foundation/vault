@@ -1,9 +1,10 @@
 use crate::{
     error::VaultProgramError,
     extensions::{DepositHook, VaultExtension, WithdrawHook},
-    state::{FeeType, Rounding},
+    state::Rounding,
 };
 use anchor_lang::prelude::*;
+use vault_common::FeeType;
 
 /// Core state of the Vault account necessary for common
 /// logic across configuration types.

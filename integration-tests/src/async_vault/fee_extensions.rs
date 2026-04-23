@@ -222,7 +222,7 @@ fn test_initialize_deposit_fee_invalid_bps_fails() {
         vault_pubkey,
         deposit_fee,
     );
-    assert_error_code(&result.unwrap_err(), 6008, "FeeBpsExceeded");
+    assert_error_code(&result.unwrap_err(), 6000, "FeeBPSLimitReached");
 }
 
 #[test]
@@ -241,7 +241,7 @@ fn test_initialize_withdrawal_fee_invalid_bps_fails() {
         vault_pubkey,
         withdrawal_fee,
     );
-    assert_error_code(&result.unwrap_err(), 6008, "FeeBpsExceeded");
+    assert_error_code(&result.unwrap_err(), 6000, "FeeBPSLimitReached");
 }
 
 #[test]

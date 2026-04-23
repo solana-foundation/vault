@@ -6,6 +6,9 @@
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
+/// The fee types:
+/// FixedAmount: a fixed fee is applied (ex 0.1 asset)
+/// Percentage: the fee is a % of the transfer amount
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FeeType {

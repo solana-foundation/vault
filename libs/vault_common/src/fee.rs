@@ -1,4 +1,4 @@
-use crate::{error::VaultProgramError, state::MAX_BPS};
+use crate::{constants::MAX_BPS, error::VaultProgramError};
 use anchor_lang::prelude::*;
 
 /// The fee types:

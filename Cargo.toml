@@ -5,6 +5,7 @@ members = [
     "clients/rust/vault",
     "clients/rust/async_vault",
     "integration-tests",
+    "libs/vault_common",
     "programs/*"
 ]
 resolver = "2"
@@ -26,6 +27,7 @@ spl-tlv-account-resolution = "0.10.0"
 solana-account-info = "2.0"
 solana-pubkey = { version = "2.0", features = ["borsh"] }
 spl-token = "8.0.0"
+vault_common = { path = "libs/vault_common" }
 num-derive = "0.4.2"
 num-traits = "0.2.19"
 thiserror = "2.0.12"

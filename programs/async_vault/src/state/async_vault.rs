@@ -1,9 +1,9 @@
 use anchor_lang::prelude::*;
+use vault_common::FeeType;
 
 use crate::{
     error::AsyncVaultError,
     extensions::{self, ExtensionType},
-    state::FeeType,
 };
 
 #[account]
