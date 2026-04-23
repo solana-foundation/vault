@@ -91,6 +91,7 @@ impl<'info> CreateVault<'info> {
 ///
 /// The vault starts `paused = true` and `initialized = false`; call
 /// `initialize_vault` after configuring extensions to activate it.
+/// Freeze authority is not transferred since is up to the implementator to manage it.
 pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
     require!(
         args.initial_price != 0,

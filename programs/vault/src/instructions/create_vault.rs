@@ -72,6 +72,7 @@ impl<'info> CreateVault<'info> {
     }
 }
 
+/// Freeze authority is not transferred since is up to the implementator to manage it.
 pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> {
     require!(
         args.initial_price != 0,
