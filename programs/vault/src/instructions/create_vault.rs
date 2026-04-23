@@ -82,6 +82,7 @@ pub fn handler<'info>(ctx: Context<CreateVault>, args: VaultArgs) -> Result<()> 
         VaultProgramError::ShareMintSupplyShouldBeZero
     );
     ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
+
     ctx.accounts.vault.set_inner(Vault {
         asset_mint_address: ctx.accounts.asset_mint.key(),
         share_mint_address: ctx.accounts.share_mint.key(),
