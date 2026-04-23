@@ -35,8 +35,8 @@ fn test_close_vault(supply_is_zero: bool, reserve_is_empty: bool) {
         .unwrap();
     svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
 
-    create_mint(&mut svm, &mint_authority, &asset_mint);
-    create_mint(&mut svm, &mint_authority, &share_mint);
+    create_mint(&mut svm, &mint_authority, &asset_mint, &token::ID);
+    create_mint(&mut svm, &mint_authority, &share_mint, &token::ID);
     let (reserve_pubkey, _) = Pubkey::find_program_address(
         &[RESERVE_CONFIG_SEED, share_mint.pubkey().as_ref()],
         &vault_client::sdk::program_id(),

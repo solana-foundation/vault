@@ -79,7 +79,7 @@ fn test_withdraw_vault(
     let mut asset_transfer_fee_max: u64 = 0;
 
     if asset_program == token::ID {
-        create_mint(&mut svm, &mint_authority, &asset_mint);
+        create_mint(&mut svm, &mint_authority, &asset_mint, &asset_program);
     } else {
         asset_transfer_fee_bps = 10;
         asset_transfer_fee_max = 1000;
@@ -93,7 +93,7 @@ fn test_withdraw_vault(
     }
 
     if share_program == token::ID {
-        create_mint(&mut svm, &mint_authority, &share_mint);
+        create_mint(&mut svm, &mint_authority, &share_mint, &share_program);
     } else {
         create_mint_with_transfer_fee(&mut svm, &mint_authority, &share_mint, 10, 1000);
     }
@@ -354,8 +354,8 @@ fn test_withdraw_slippage_protection() {
 
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
-    create_mint(&mut svm, &mint_authority, &asset_mint);
-    create_mint(&mut svm, &mint_authority, &share_mint);
+    create_mint(&mut svm, &mint_authority, &asset_mint, &token::ID);
+    create_mint(&mut svm, &mint_authority, &share_mint, &token::ID);
 
     // keep it simple: token-keg, deposit fee 1%, withdraw fee 0.5%
     let deposit_fee = Some(FeeType::Percentage { bps: 100 });

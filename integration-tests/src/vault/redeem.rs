@@ -123,7 +123,7 @@ fn test_redeem_vault(
     let mut asset_transfer_fee_max: u64 = 0;
 
     if asset_program == token::ID {
-        create_mint(&mut svm, &mint_authority, &asset_mint);
+        create_mint(&mut svm, &mint_authority, &asset_mint, &asset_program);
     } else {
         asset_transfer_fee_bps = 10;
         asset_transfer_fee_max = 1000;
@@ -137,7 +137,7 @@ fn test_redeem_vault(
     }
 
     if share_program == token::ID {
-        create_mint(&mut svm, &mint_authority, &share_mint);
+        create_mint(&mut svm, &mint_authority, &share_mint, &share_program);
     } else {
         create_mint_with_transfer_fee(&mut svm, &mint_authority, &share_mint, 10, 1000);
     }
@@ -383,8 +383,8 @@ fn test_redeem_slippage_protection() {
 
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
-    create_mint(&mut svm, &mint_authority, &asset_mint);
-    create_mint(&mut svm, &mint_authority, &share_mint);
+    create_mint(&mut svm, &mint_authority, &asset_mint, &token::ID);
+    create_mint(&mut svm, &mint_authority, &share_mint, &token::ID);
 
     // deposit fee 1%, redeem fee 0.5% (so redeem output is predictable)
     let deposit_fee = Some(FeeType::Percentage { bps: 100 });

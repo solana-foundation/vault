@@ -1,6 +1,6 @@
 use anchor_spl::{
     token::{self, spl_token},
-    token_2022::spl_token_2022,
+    token_2022::{self, spl_token_2022},
 };
 use async_vault_client::{sdk::program_id, Vault};
 use litesvm::LiteSVM;
@@ -15,22 +15,27 @@ use crate::helper_functions::{
     VAULT_CONFIG_SEED,
 };
 
-#[test_case(100_000_000, true, true, true, false ; "both async inflows and outflows")]
-#[test_case(100_000_000, true, false, true, false ; "async inflows only")]
-#[test_case(100_000_000, false, true, true, false ; "async outflows only")]
-#[test_case(100_000_000, false, false, true, false ; "no async flows")]
-#[test_case(1, true, true, true, false ; "minimum price")]
-#[test_case(u64::MAX, true, true, true,  false ; "maximum price")]
-#[test_case(0, true, true, true,  false ; "zero initial price fails")]
-#[test_case(100_000_000, true, true, false, false ; "invalid mint authority fails")]
-#[test_case(100_000_000, true, true, true,  false ; "duplicate vault creation fails")]
-#[test_case(100_000_000, true, true, true,  true ; "same mints fails")]
+#[test_case(100_000_000, true, true, true, false, token::ID,token::ID ; "both async inflows and outflows")]
+#[test_case(100_000_000, true, true, true, false, token_2022::ID,token_2022::ID ; "Token 2022 program for both mints")]
+#[test_case(100_000_000, true, true, true, false, token::ID,token_2022::ID ; "Token program for asset, Token program 2022 for share")]
+#[test_case(100_000_000, true, true, true, false, token::ID,token_2022::ID ; "Token 2022 program for asset, Token program for share")]
+#[test_case(100_000_000, true, false, true, false,token_2022::ID,token_2022::ID ; "async inflows only")]
+#[test_case(100_000_000, false, true, true, false,token_2022::ID,token_2022::ID ; "async outflows only")]
+#[test_case(100_000_000, false, false, true, false,token_2022::ID,token_2022::ID ; "no async flows")]
+#[test_case(1, true, true, true, false,token_2022::ID,token_2022::ID ; "minimum price")]
+#[test_case(u64::MAX, true, true, true,  false,token_2022::ID,token_2022::ID ; "maximum price")]
+#[test_case(0, true, true, true,  false,token_2022::ID,token_2022::ID ; "zero initial price fails")]
+#[test_case(100_000_000, true, true, false, false,token_2022::ID,token_2022::ID ; "invalid mint authority fails")]
+#[test_case(100_000_000, true, true, true,  false,token_2022::ID,token_2022::ID ; "duplicate vault creation fails")]
+#[test_case(100_000_000, true, true, true,  true, token_2022::ID,token_2022::ID; "same mints fails")]
 fn test_create_vault(
     initial_price: u64,
     async_inflows: bool,
     async_outflows: bool,
     use_valid_mint_authority: bool,
     use_same_mints: bool,
+    asset_program: Pubkey,
+    share_program: Pubkey,
 ) {
     let mut svm = LiteSVM::new();
 
@@ -51,9 +56,9 @@ fn test_create_vault(
     svm.airdrop(&fake_mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
 
-    create_mint(&mut svm, &mint_authority, &asset_mint);
+    create_mint(&mut svm, &mint_authority, &asset_mint, &asset_program);
     if !use_same_mints {
-        create_mint(&mut svm, &mint_authority, &share_mint);
+        create_mint(&mut svm, &mint_authority, &share_mint, &share_program);
     }
 
     let effective_share_mint = if use_same_mints {
@@ -94,8 +99,8 @@ fn test_create_vault(
         initial_price,
         async_inflows,
         async_outflows,
-        token::ID,
-        token::ID,
+        asset_program,
+        share_program,
     );
 
     let should_succeed = initial_price != 0 && use_valid_mint_authority && !use_same_mints;
@@ -157,8 +162,8 @@ fn test_create_vault_nonzero_share_mint_supply_fails() {
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
 
-    create_mint(&mut svm, &mint_authority, &asset_mint);
-    create_mint(&mut svm, &mint_authority, &share_mint);
+    create_mint(&mut svm, &mint_authority, &asset_mint, &spl_token::ID);
+    create_mint(&mut svm, &mint_authority, &share_mint, &spl_token::ID);
 
     let rent = svm.minimum_balance_for_rent_exemption(spl_token_2022::state::Account::LEN);
     let create_account_ix = create_account(

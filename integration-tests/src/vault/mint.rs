@@ -52,7 +52,7 @@ fn test_mint_vault(fee_type: Option<FeeType>, asset_program: Pubkey, share_progr
     let mut asset_transfer_fee_max: u64 = 0;
 
     if asset_program == token::ID {
-        create_mint(&mut svm, &mint_authority, &asset_mint);
+        create_mint(&mut svm, &mint_authority, &asset_mint, &token::ID);
     } else {
         asset_transfer_fee_bps = 10;
         asset_transfer_fee_max = 1000;
@@ -66,7 +66,7 @@ fn test_mint_vault(fee_type: Option<FeeType>, asset_program: Pubkey, share_progr
     }
 
     if share_program == token::ID {
-        create_mint(&mut svm, &mint_authority, &share_mint);
+        create_mint(&mut svm, &mint_authority, &share_mint, &token::ID);
     } else {
         create_mint_with_transfer_fee(&mut svm, &mint_authority, &share_mint, 10, 1000);
     }
@@ -226,8 +226,8 @@ fn test_mint_vault_slippage_protection_fails() {
 
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
-    create_mint(&mut svm, &mint_authority, &asset_mint);
-    create_mint(&mut svm, &mint_authority, &share_mint);
+    create_mint(&mut svm, &mint_authority, &asset_mint, &token::ID);
+    create_mint(&mut svm, &mint_authority, &share_mint, &token::ID);
 
     let (_, user, _, mint_authority, fee_recipient, reserve_pubkey, vault_pubkey) = set_up_vault(
         &mut svm,

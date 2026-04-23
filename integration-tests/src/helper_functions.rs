@@ -430,17 +430,17 @@ pub fn init_vault(
     return svm.send_transaction(tx);
 }
 
-pub fn create_mint(svm: &mut LiteSVM, signer: &Keypair, mint: &Keypair) {
+pub fn create_mint(svm: &mut LiteSVM, signer: &Keypair, mint: &Keypair, token_program: &Pubkey) {
     let rent = svm.minimum_balance_for_rent_exemption(Mint::LEN);
     let init_account_ix: solana_sdk::instruction::Instruction = create_account(
         &signer.pubkey(),
         &mint.pubkey(),
         rent,
         Mint::LEN as u64,
-        &spl_token::id(),
+        token_program,
     );
     let init_mint_ix = spl_token_2022::instruction::initialize_mint(
-        &spl_token::ID,
+        token_program,
         &mint.pubkey(),
         &signer.pubkey(),
         None,
@@ -1029,8 +1029,8 @@ pub fn setup_async_vault(
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
 
-    create_mint(svm, &mint_authority, &asset_mint);
-    create_mint(svm, &mint_authority, &share_mint);
+    create_mint(svm, &mint_authority, &asset_mint, &token::ID);
+    create_mint(svm, &mint_authority, &share_mint, &token::ID);
 
     let (reserve_pubkey, _) = Pubkey::find_program_address(
         &[RESERVE_CONFIG_SEED, share_mint.pubkey().as_ref()],
