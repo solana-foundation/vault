@@ -20,6 +20,12 @@ pub mod async_vault {
         instructions::create_vault::handler(ctx, args)
     }
 
+    /// Finalizes vault setup by marking it as initialized. Once initialized,
+    /// no new extensions can be added. Requires authority signature.
+    pub fn initialize_vault(ctx: Context<InitializeVault>) -> Result<()> {
+        instructions::initialize_vault::handler(ctx)
+    }
+
     /// Adds a deposit fee TLV extension to the vault. Must be called
     /// before vault initialization. Requires authority signature.
     pub fn initialize_deposit_fee(
