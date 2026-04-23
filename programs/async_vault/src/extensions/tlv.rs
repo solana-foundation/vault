@@ -143,7 +143,10 @@ mod tests {
     #[test]
     fn get_extension_bytes_not_found() {
         let buf = make_tlv_entry(ExtensionType::DepositFee, &[1, 2, 3]);
-        assert_eq!(get_extension_bytes(&buf, ExtensionType::WithdrawalFee), None);
+        assert_eq!(
+            get_extension_bytes(&buf, ExtensionType::WithdrawalFee),
+            None
+        );
     }
 
     #[test]
@@ -180,7 +183,10 @@ mod tests {
 
     #[test]
     fn get_extension_bytes_header_too_short() {
-        assert_eq!(get_extension_bytes(&[0, 1, 2], ExtensionType::DepositFee), None);
+        assert_eq!(
+            get_extension_bytes(&[0, 1, 2], ExtensionType::DepositFee),
+            None
+        );
     }
 
     // ---- has_extension ----
@@ -213,10 +219,7 @@ mod tests {
         write_extension(&mut buf, 0, ext, value).unwrap();
 
         assert_eq!(u16::from_le_bytes([buf[0], buf[1]]), ext as u16);
-        assert_eq!(
-            u16::from_le_bytes([buf[2], buf[3]]),
-            ext.data_len() as u16
-        );
+        assert_eq!(u16::from_le_bytes([buf[2], buf[3]]), ext.data_len() as u16);
         assert_eq!(&buf[TLV_HEADER_SIZE..TLV_HEADER_SIZE + 3], value);
         assert!(buf[TLV_HEADER_SIZE + 3..].iter().all(|&b| b == 0));
     }
