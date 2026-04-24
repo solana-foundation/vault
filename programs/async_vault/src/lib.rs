@@ -61,4 +61,18 @@ pub mod async_vault {
     ) -> Result<()> {
         instructions::update_withdrawal_fee::handler(ctx, args)
     }
+
+    /// Updates an existing withdrawal fee extension. The fee must have been
+    /// previously initialized. Requires authority signature.
+    pub fn update_vault_nav(ctx: Context<UpdateVaultNav>, updated_nav: u128) -> Result<()> {
+        instructions::update_nav::handler(ctx, updated_nav)
+    }
+
+    /// Creates a deposit request with state pending (Pending vault authority acceptance)
+    pub fn create_deposit_request(
+        ctx: Context<CreateDepositRequest>,
+        args: RequestArgs,
+    ) -> Result<()> {
+        instructions::create_deposit_request::handler(ctx, args)
+    }
 }

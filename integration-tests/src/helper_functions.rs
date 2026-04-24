@@ -22,7 +22,8 @@ use vault_client::{
 use async_vault_client::{
     sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    InitializeWithdrawalFeeBuilder, UpdateDepositFeeBuilder, UpdateWithdrawalFeeBuilder,
+    InitializeWithdrawalFeeBuilder, UpdateDepositFeeBuilder, UpdateVaultNav, UpdateVaultNavBuilder,
+    UpdateWithdrawalFeeBuilder,
 };
 
 use anchor_spl::{
@@ -50,6 +51,7 @@ use spl_token_2022::state::{Account as TokenAccount2022, Mint as Token2022Mint};
 pub const VAULT_CONFIG_SEED: &[u8] = b"vault";
 pub const RESERVE_CONFIG_SEED: &[u8] = b"reserve";
 pub const PENDING_VAULT_SEED: &[u8] = b"pending";
+pub const REQUEST_SEED: &[u8] = b"request";
 
 pub fn create_vault(
     svm: &mut LiteSVM,
@@ -878,6 +880,7 @@ pub fn create_async_vault(
     authority: &Keypair,
     payer: &Keypair,
     mint_authority: &Keypair,
+    fee_recipient: Pubkey,
     asset_mint: Pubkey,
     share_mint: Pubkey,
     reserve: Pubkey,
@@ -892,6 +895,7 @@ pub fn create_async_vault(
     let ix = CreateAsyncVaultBuilder::new()
         .payer(payer.pubkey())
         .mint_authority(mint_authority.pubkey())
+        .fee_recipient(fee_recipient)
         .asset_mint(asset_mint)
         .share_mint(share_mint)
         .reserve(reserve)
@@ -1045,8 +1049,10 @@ pub fn setup_async_vault(
     let mint_authority = Keypair::new();
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();
+    let fee_recipient = Keypair::new();
 
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
@@ -1072,6 +1078,7 @@ pub fn setup_async_vault(
         &authority,
         &payer,
         &mint_authority,
+        fee_recipient.pubkey(),
         asset_mint.pubkey(),
         share_mint.pubkey(),
         reserve_pubkey,
@@ -1094,4 +1101,30 @@ pub fn setup_async_vault(
         pending_vault_pubkey,
         vault_pubkey,
     )
+}
+
+pub fn update_vault_nav(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    updated_nav: u128,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = UpdateVaultNavBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint)
+        .vault(vault)
+        .updated_nav(updated_nav)
+        .instruction()
+        .into_sdk_instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        blockhash,
+    );
+
+    svm.send_transaction(tx)
 }

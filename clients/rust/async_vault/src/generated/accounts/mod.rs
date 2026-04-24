@@ -4,6 +4,7 @@
 //!
 //! <https://github.com/codama-idl/codama>
 
+pub(crate) mod r#request;
 pub(crate) mod r#vault;
 
-pub use self::r#vault::*;
+pub use self::{r#request::*, r#vault::*};

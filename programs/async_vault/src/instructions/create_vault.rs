@@ -12,6 +12,7 @@ use crate::{
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct AsyncVaultArgs {
     authority: Pubkey,
+    fee_recipient: Pubkey,
     initial_price: u64,
     async_inflows: bool,
     async_outflows: bool,
@@ -109,6 +110,7 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         share_mint_address: ctx.accounts.share_mint.key(),
         vault_token_account: ctx.accounts.reserve.key(),
         authority: args.authority,
+        fee_recipient: args.fee_recipient,
         initial_price: args.initial_price,
         paused: false,
         initialized: false,
@@ -118,6 +120,7 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         async_inflows: args.async_inflows,
         async_outflows: args.async_outflows,
         pending_async_requests: 0,
+        request_counter: 0,
         total_asset_balance: 0,
         reserve_bump: ctx.bumps.reserve,
         pending_vault_bump: ctx.bumps.pending_vault,
