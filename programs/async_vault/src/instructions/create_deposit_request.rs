@@ -1,7 +1,6 @@
-use crate::error::AsyncVaultError;
+use crate::{error::AsyncVaultError, extensions::get_deposit_fee};
 use anchor_lang::prelude::*;
 use anchor_spl::{
-    token::spl_token,
     token_2022::spl_token_2022::{
         self,
         extension::{BaseStateWithExtensions, StateWithExtensions},
@@ -10,7 +9,7 @@ use anchor_spl::{
 };
 use vault_common::VaultProgramError;
 
-use crate::state::{Request, RequestState, RequestType, Vault, REQUEST_SEED, VAULT_CONFIG_SEED};
+use crate::state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED};
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
 pub struct RequestArgs {
@@ -30,8 +29,6 @@ pub struct CreateDepositRequest<'info> {
         init,
         space = 8 + Request::INIT_SPACE,
         payer = user,
-        seeds = [REQUEST_SEED, share_mint.key().as_ref(), vault.request_counter.to_be_bytes().as_ref()],
-        bump
     )]
     pub request: Account<'info, Request>,
 
@@ -102,26 +99,20 @@ impl<'info> CreateDepositRequest<'info> {
         }
     }
 
-    pub fn get_transfer_fees(&mut self, amount: u64) -> Result<u64> {
-        if self.asset_mint.to_account_info().owner == &spl_token::id() {
-            return Ok(0);
-        }
+    pub fn assert_no_transfer_fees(&mut self) -> Result<()> {
         let binding = self.asset_mint.to_account_info();
         let mint_data = binding
             .data
             .try_borrow()
             .map_err(|_| ProgramError::AccountBorrowFailed)?;
         let mint = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_data)?;
-        let epoch = Clock::get()?.epoch;
-        let fee = match mint
-            .get_extension::<spl_token_2022::extension::transfer_fee::TransferFeeConfig>()
-        {
-            Ok(cfg) => cfg
-                .calculate_epoch_fee(epoch, amount)
-                .ok_or(VaultProgramError::ArithmeticError)?,
-            Err(_) => 0,
-        };
-        Ok(fee)
+
+        let result =
+            mint.get_extension::<spl_token_2022::extension::transfer_fee::TransferFeeConfig>();
+        if result.is_err() {
+            return Ok(());
+        }
+        return Err(VaultProgramError::TransferFeesAreNotAllowed.into());
     }
 }
 pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<()> {
@@ -133,15 +124,8 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
     require!(ctx.accounts.vault.nav > 0, VaultProgramError::NavIsNotSet);
 
     let vault_info = ctx.accounts.vault.to_account_info();
-    let fee = ctx
-        .accounts
-        .vault
-        .get_deposit_fee(&vault_info.try_borrow_data()?, args.amount)?;
-    let transfer_fee = ctx.accounts.get_transfer_fees(args.amount)?;
-    let transferred_amount = args
-        .amount
-        .checked_add(transfer_fee)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+    let fee = get_deposit_fee(&vault_info.try_borrow_data()?, args.amount)?;
+    ctx.accounts.assert_no_transfer_fees()?;
 
     let net_amount = args
         .amount
@@ -173,23 +157,19 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         ctx.accounts.user_token_account.to_account_info(),
         ctx.accounts.pending_vault.to_account_info(),
         ctx.accounts.user.to_account_info(),
-        transferred_amount,
+        args.amount,
     )?;
 
     // Transfer fee from pending vault to fee recipient
-    ctx.accounts.transfer_asset_token(
-        ctx.accounts.pending_vault.to_account_info(),
-        ctx.accounts.fee_recipient.to_account_info(),
-        ctx.accounts.vault.to_account_info(),
-        fee,
-    )?;
-
-    ctx.accounts.vault.request_counter = ctx
-        .accounts
-        .vault
-        .request_counter
-        .checked_add(1)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+    // If the DepositFee extension is not enabled, the fee defaults to 0
+    if fee > 0 {
+        ctx.accounts.transfer_asset_token(
+            ctx.accounts.pending_vault.to_account_info(),
+            ctx.accounts.fee_recipient.to_account_info(),
+            ctx.accounts.vault.to_account_info(),
+            fee,
+        )?;
+    }
 
     ctx.accounts.vault.pending_async_requests = ctx
         .accounts

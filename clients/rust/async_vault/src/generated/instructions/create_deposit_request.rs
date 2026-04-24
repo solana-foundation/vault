@@ -58,7 +58,7 @@ impl CreateDepositRequest {
             self.share_mint,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(self.request, false));
+        accounts.push(solana_instruction::AccountMeta::new(self.request, true));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new(
             self.user_token_account,
@@ -139,7 +139,7 @@ impl CreateDepositRequestInstructionArgs {
 ///   0. `[writable, signer]` user
 ///   1. `[]` asset_mint
 ///   2. `[]` share_mint
-///   3. `[writable]` request
+///   3. `[writable, signer]` request
 ///   4. `[writable]` vault
 ///   5. `[writable]` user_token_account
 ///   6. `[writable]` pending_vault
@@ -399,7 +399,7 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
         ));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.request.key,
-            false,
+            true,
         ));
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(
@@ -471,7 +471,7 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
 ///   0. `[writable, signer]` user
 ///   1. `[]` asset_mint
 ///   2. `[]` share_mint
-///   3. `[writable]` request
+///   3. `[writable, signer]` request
 ///   4. `[writable]` vault
 ///   5. `[writable]` user_token_account
 ///   6. `[writable]` pending_vault

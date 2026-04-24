@@ -62,7 +62,6 @@ pub struct Vault {
     pub async_outflows: bool,
     /// count of pending async deposit/withdrawal requests
     pub pending_async_requests: u16,
-    pub request_counter: u64,
     /// virtual vault asset balance, accounts for tokens that may
     /// have been withdrawn by the vault authority
     pub total_asset_balance: u64,
@@ -74,7 +73,7 @@ pub struct Vault {
 pub const VAULT_DISCRIMINATOR: [u8; 8] = [211, 8, 232, 43, 2, 152, 117, 119];
 
 impl Vault {
-    pub const LEN: usize = 257;
+    pub const LEN: usize = 249;
 
     #[inline(always)]
     pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {

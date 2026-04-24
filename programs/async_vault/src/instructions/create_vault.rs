@@ -120,7 +120,6 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         async_inflows: args.async_inflows,
         async_outflows: args.async_outflows,
         pending_async_requests: 0,
-        request_counter: 0,
         total_asset_balance: 0,
         reserve_bump: ctx.bumps.reserve,
         pending_vault_bump: ctx.bumps.pending_vault,

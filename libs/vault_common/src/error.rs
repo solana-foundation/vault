@@ -88,4 +88,7 @@ pub enum VaultProgramError {
 
     #[msg("Nav is not set.")]
     NavIsNotSet,
+
+    #[msg("Transfer Fees are not allowed.")]
+    TransferFeesAreNotAllowed,
 }

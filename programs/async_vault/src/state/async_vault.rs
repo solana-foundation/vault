@@ -36,8 +36,6 @@ pub struct Vault {
     pub async_outflows: bool,
     /// count of pending async deposit/withdrawal requests
     pub pending_async_requests: u16,
-    // Keeps track of total requests
-    pub request_counter: u64,
     /// virtual vault asset balance, accounts for tokens that may
     /// have been withdrawn by the vault authority
     pub total_asset_balance: u64,
@@ -47,39 +45,6 @@ pub struct Vault {
 }
 
 impl Vault {
-    pub const TLV_START: usize = 8 + Self::INIT_SPACE;
-
-    pub fn get_deposit_fee(&mut self, account_data: &[u8], amount: u64) -> Result<u64> {
-        match Self::get_fee_extension(account_data, ExtensionType::DepositFee)? {
-            Some(fee) => fee.get_fee(amount),
-            None => Ok(0),
-        }
-    }
-
-    pub fn get_withdrawal_fee(account_data: &[u8], amount: u64) -> Result<u64> {
-        match Self::get_fee_extension(account_data, ExtensionType::WithdrawalFee)? {
-            Some(fee) => fee.get_fee(amount),
-            None => Ok(0),
-        }
-    }
-
-    pub fn calculate_deposit_fee_when_minting(account_data: &[u8], net_assets: u64) -> Result<u64> {
-        match Self::get_fee_extension(account_data, ExtensionType::DepositFee)? {
-            Some(fee) => fee.get_deposit_fee_when_minting(net_assets),
-            None => Ok(0),
-        }
-    }
-
-    pub fn calculate_withdraw_fee_when_redeeming(
-        account_data: &[u8],
-        gross_assets: u64,
-    ) -> Result<u64> {
-        match Self::get_fee_extension(account_data, ExtensionType::WithdrawalFee)? {
-            Some(fee) => fee.get_withdraw_fee_when_redeeming(gross_assets),
-            None => Ok(0),
-        }
-    }
-
     pub fn assert_unpaused_and_initialized(&self) -> Result<()> {
         require!(self.initialized, AsyncVaultError::UninitializedVault);
         require!(!self.paused, AsyncVaultError::PausedVault);
@@ -91,22 +56,9 @@ impl Vault {
         Ok(())
     }
 
-    fn get_fee_extension(account_data: &[u8], ext_type: ExtensionType) -> Result<Option<FeeType>> {
-        if account_data.len() <= Self::TLV_START {
-            return Ok(None);
-        }
-        let tlv_data = &account_data[Self::TLV_START..];
-        match extensions::get_extension_bytes(tlv_data, ext_type) {
-            Some(bytes) => {
-                let mut slice = bytes;
-                let fee = FeeType::deserialize(&mut slice)
-                    .map_err(|_| error!(AsyncVaultError::InvalidExtensionData))?;
-                Ok(Some(fee))
-            }
-            None => Ok(None),
-        }
-    }
-
+    /// Converts an asset amount into shares using the current NAV.
+    ///
+    /// `shares = net_amount * 10^decimals / nav`
     pub fn calculate_shares(&mut self, decimals: u8, net_amount: u64) -> Result<u64> {
         let precision = 10u128
             .checked_pow(decimals as u32)
@@ -117,5 +69,83 @@ impl Vault {
             .checked_div(self.nav)
             .ok_or(VaultProgramError::ArithmeticError)?;
         Ok(u64::try_from(shares).map_err(|_| VaultProgramError::ArithmeticError)?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn vault_with_nav(nav: u128) -> Vault {
+        Vault {
+            asset_mint_address: Pubkey::default(),
+            share_mint_address: Pubkey::default(),
+            vault_token_account: Pubkey::default(),
+            authority: Pubkey::default(),
+            fee_recipient: Pubkey::default(),
+            initial_price: 1_000_000,
+            paused: false,
+            initialized: true,
+            pending_vault: Pubkey::default(),
+            nav,
+            nav_version: 1,
+            async_inflows: true,
+            async_outflows: true,
+            pending_async_requests: 0,
+            total_asset_balance: 0,
+            reserve_bump: 0,
+            pending_vault_bump: 0,
+            bump: 0,
+        }
+    }
+
+    #[test]
+    fn calculate_shares_one_to_one() {
+        let mut vault = vault_with_nav(1_000_000);
+        let shares = vault.calculate_shares(6, 1_000_000).unwrap();
+        assert_eq!(shares, 1_000_000);
+    }
+
+    #[test]
+    fn calculate_shares_nav_above_one() {
+        let mut vault = vault_with_nav(2_000_000);
+        let shares = vault.calculate_shares(6, 2_000_000).unwrap();
+        assert_eq!(shares, 1_000_000);
+    }
+
+    #[test]
+    fn calculate_shares_fractional_result_truncates() {
+        let mut vault = vault_with_nav(3_000_000);
+        let shares = vault.calculate_shares(6, 1_000_000).unwrap();
+        // 1_000_000 * 1e6 / 3_000_000 = 333_333.333… → truncated to 333_333
+        assert_eq!(shares, 333_333);
+    }
+
+    #[test]
+    fn calculate_shares_zero_amount() {
+        let mut vault = vault_with_nav(1_000_000);
+        let shares = vault.calculate_shares(6, 0).unwrap();
+        assert_eq!(shares, 0);
+    }
+
+    #[test]
+    fn calculate_shares_different_decimals() {
+        let mut vault = vault_with_nav(100_000_000);
+        // 8 decimals: 1 token = 100_000_000 units
+        let shares = vault.calculate_shares(8, 100_000_000).unwrap();
+        assert_eq!(shares, 100_000_000);
+    }
+
+    #[test]
+    fn calculate_shares_zero_nav_errors() {
+        let mut vault = vault_with_nav(0);
+        assert!(vault.calculate_shares(6, 1_000_000).is_err());
+    }
+
+    #[test]
+    fn calculate_shares_large_amount_no_overflow() {
+        let mut vault = vault_with_nav(1_000_000);
+        let shares = vault.calculate_shares(6, u64::MAX).unwrap();
+        assert_eq!(shares, u64::MAX);
     }
 }

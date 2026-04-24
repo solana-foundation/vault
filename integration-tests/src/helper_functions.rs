@@ -1128,3 +1128,111 @@ pub fn update_vault_nav(
 
     svm.send_transaction(tx)
 }
+
+pub fn set_up_async_vault(
+    svm: &mut LiteSVM,
+    asset_token_program: Pubkey,
+    share_token_program: Pubkey,
+    user_amount: u64,
+    initial_price: u64,
+) -> (
+    Keypair,
+    Keypair,
+    Keypair,
+    Keypair,
+    Keypair,
+    Keypair,
+    Keypair,
+    Keypair,
+    Pubkey,
+    Pubkey,
+    Pubkey,
+    Pubkey,
+) {
+    let authority = Keypair::new();
+    let payer = Keypair::new();
+    let mint_authority = Keypair::new();
+    let asset_mint = Keypair::new();
+    let share_mint = Keypair::new();
+    let user = Keypair::new();
+    let operator = Keypair::new();
+    let fee_recipient = Keypair::new();
+
+    svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
+        .unwrap();
+    svm.airdrop(&user.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&operator.pubkey(), 1_000_000_000).unwrap();
+
+    create_mint(svm, &mint_authority, &asset_mint, &asset_token_program);
+    create_mint(svm, &mint_authority, &share_mint, &share_token_program);
+
+    let (reserve_pubkey, _) = Pubkey::find_program_address(
+        &[RESERVE_CONFIG_SEED, share_mint.pubkey().as_ref()],
+        &program_id(),
+    );
+    let (pending_vault_pubkey, _) = Pubkey::find_program_address(
+        &[PENDING_VAULT_SEED, share_mint.pubkey().as_ref()],
+        &program_id(),
+    );
+    let (vault_pubkey, _) = Pubkey::find_program_address(
+        &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
+        &program_id(),
+    );
+
+    create_async_vault(
+        svm,
+        &authority,
+        &payer,
+        &mint_authority,
+        fee_recipient.pubkey(),
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        pending_vault_pubkey,
+        vault_pubkey,
+        initial_price,
+        true,
+        true,
+        asset_token_program,
+        share_token_program,
+    )
+    .expect("vault creation should succeed");
+    let _ = initialize_async_vault(svm, &authority, share_mint.pubkey(), vault_pubkey);
+
+    let user_token_account = create_ata(svm, &user, &asset_mint.pubkey(), &asset_token_program);
+    let fee_recipient_ata = create_ata(
+        svm,
+        &fee_recipient,
+        &asset_mint.pubkey(),
+        &asset_token_program,
+    );
+
+    helper_mint_to(
+        svm,
+        &asset_mint.pubkey(),
+        &user_token_account,
+        &mint_authority,
+        user_amount,
+        &asset_token_program,
+    );
+
+    let _ = update_vault_nav(svm, &authority, share_mint.pubkey(), vault_pubkey, 100);
+
+    return (
+        authority,
+        payer,
+        mint_authority,
+        asset_mint,
+        share_mint,
+        user,
+        operator,
+        fee_recipient,
+        reserve_pubkey,
+        vault_pubkey,
+        pending_vault_pubkey,
+        fee_recipient_ata,
+    );
+}
