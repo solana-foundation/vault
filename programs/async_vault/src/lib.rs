@@ -69,8 +69,8 @@ pub mod async_vault {
     }
 
     /// Creates a deposit request with state pending (Pending vault authority acceptance)
-    pub fn create_deposit_request(
-        ctx: Context<CreateDepositRequest>,
+    pub fn create_deposit_request<'info>(
+        ctx: Context<'_, '_, '_, 'info, CreateDepositRequest<'info>>,
         args: RequestArgs,
     ) -> Result<()> {
         instructions::create_deposit_request::handler(ctx, args)

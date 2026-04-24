@@ -55,14 +55,6 @@ pub struct CreateDepositRequest<'info> {
     )]
     pub pending_vault: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(
-        mut,
-        token::authority = vault.fee_recipient,
-        token::mint = asset_mint,
-        token::token_program = asset_token_program,
-    )]
-    pub fee_recipient: InterfaceAccount<'info, TokenAccount>,
-
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
@@ -99,6 +91,43 @@ impl<'info> CreateDepositRequest<'info> {
         }
     }
 
+    pub fn transfer_fee_to_recipient(
+        &self,
+        remaining_accounts: &[AccountInfo<'info>],
+        fee: u64,
+    ) -> Result<()> {
+        require!(
+            !remaining_accounts.is_empty(),
+            AsyncVaultError::MissingFeeRecipient
+        );
+        let fee_recipient_info = &remaining_accounts[0];
+
+        require!(
+            fee_recipient_info.owner == self.asset_token_program.key,
+            AsyncVaultError::InvalidFeeRecipient
+        );
+
+        let fee_recipient_data = fee_recipient_info.try_borrow_data()?;
+        let fee_recipient_state =
+            StateWithExtensions::<spl_token_2022::state::Account>::unpack(&fee_recipient_data)?;
+        require!(
+            fee_recipient_state.base.owner == self.vault.fee_recipient,
+            AsyncVaultError::InvalidFeeRecipient
+        );
+        require!(
+            fee_recipient_state.base.mint == self.asset_mint.key(),
+            AsyncVaultError::InvalidFeeRecipient
+        );
+        drop(fee_recipient_data);
+
+        self.transfer_asset_token(
+            self.pending_vault.to_account_info(),
+            fee_recipient_info.clone(),
+            self.vault.to_account_info(),
+            fee,
+        )
+    }
+
     pub fn assert_no_transfer_fees(&mut self) -> Result<()> {
         let binding = self.asset_mint.to_account_info();
         let mint_data = binding
@@ -115,7 +144,10 @@ impl<'info> CreateDepositRequest<'info> {
         return Err(VaultProgramError::TransferFeesAreNotAllowed.into());
     }
 }
-pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<()> {
+pub fn handler<'info>(
+    ctx: Context<'_, '_, '_, 'info, CreateDepositRequest<'info>>,
+    args: RequestArgs,
+) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
     require!(
         ctx.accounts.vault.async_inflows,
@@ -160,15 +192,9 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         args.amount,
     )?;
 
-    // Transfer fee from pending vault to fee recipient
-    // If the DepositFee extension is not enabled, the fee defaults to 0
     if fee > 0 {
-        ctx.accounts.transfer_asset_token(
-            ctx.accounts.pending_vault.to_account_info(),
-            ctx.accounts.fee_recipient.to_account_info(),
-            ctx.accounts.vault.to_account_info(),
-            fee,
-        )?;
+        ctx.accounts
+            .transfer_fee_to_recipient(ctx.remaining_accounts, fee)?;
     }
 
     ctx.accounts.vault.pending_async_requests = ctx

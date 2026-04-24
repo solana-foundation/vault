@@ -28,4 +28,8 @@ pub enum AsyncVaultError {
     ShareMintSupplyShouldBeZero,
     #[msg("Pending Vault is not valid.")]
     InvalidPendingVault,
+    #[msg("Fee recipient account must be provided as a remaining account when fee > 0.")]
+    MissingFeeRecipient,
+    #[msg("Fee recipient account is invalid.")]
+    InvalidFeeRecipient,
 }

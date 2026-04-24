@@ -126,7 +126,6 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
         .vault(vault_pubkey)
         .user_token_account(user_token_account)
         .pending_vault(pending_vault_pubkey)
-        .fee_recipient(fee_recipient_ata)
         .asset_token_program(spl_token::ID)
         .amount(deposit_amount);
 
@@ -135,8 +134,10 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
     }
 
     let mut ix = builder.instruction().into_sdk_instruction();
-    // The generated client doesn't yet mark request as signer; fix it here
-    // since `init` without seeds requires the account to sign.
+    ix.accounts.push(solana_sdk::instruction::AccountMeta::new(
+        fee_recipient_ata,
+        false,
+    ));
     for meta in &mut ix.accounts {
         if meta.pubkey == request_keypair.pubkey() {
             meta.is_signer = true;
@@ -211,11 +212,14 @@ fn build_deposit_request_ix(
         .vault(vault)
         .user_token_account(user_token_account)
         .pending_vault(pending_vault)
-        .fee_recipient(fee_recipient)
         .asset_token_program(spl_token::ID)
         .amount(amount);
 
     let mut ix = builder.instruction().into_sdk_instruction();
+    ix.accounts.push(solana_sdk::instruction::AccountMeta::new(
+        fee_recipient,
+        false,
+    ));
     for meta in &mut ix.accounts {
         if meta.pubkey == request_keypair.pubkey() {
             meta.is_signer = true;

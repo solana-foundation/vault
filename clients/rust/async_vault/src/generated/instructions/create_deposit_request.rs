@@ -26,8 +26,6 @@ pub struct CreateDepositRequest {
 
     pub pending_vault: solana_pubkey::Pubkey,
 
-    pub fee_recipient: solana_pubkey::Pubkey,
-
     pub asset_token_program: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
@@ -48,7 +46,7 @@ impl CreateDepositRequest {
         args: CreateDepositRequestInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.user, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
@@ -66,10 +64,6 @@ impl CreateDepositRequest {
         ));
         accounts.push(solana_instruction::AccountMeta::new(
             self.pending_vault,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new(
-            self.fee_recipient,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -143,9 +137,8 @@ impl CreateDepositRequestInstructionArgs {
 ///   4. `[writable]` vault
 ///   5. `[writable]` user_token_account
 ///   6. `[writable]` pending_vault
-///   7. `[writable]` fee_recipient
-///   8. `[]` asset_token_program
-///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   7. `[]` asset_token_program
+///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct CreateDepositRequestBuilder {
     user: Option<solana_pubkey::Pubkey>,
@@ -155,7 +148,6 @@ pub struct CreateDepositRequestBuilder {
     vault: Option<solana_pubkey::Pubkey>,
     user_token_account: Option<solana_pubkey::Pubkey>,
     pending_vault: Option<solana_pubkey::Pubkey>,
-    fee_recipient: Option<solana_pubkey::Pubkey>,
     asset_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     amount: Option<u64>,
@@ -207,12 +199,6 @@ impl CreateDepositRequestBuilder {
     #[inline(always)]
     pub fn pending_vault(&mut self, pending_vault: solana_pubkey::Pubkey) -> &mut Self {
         self.pending_vault = Some(pending_vault);
-        self
-    }
-
-    #[inline(always)]
-    pub fn fee_recipient(&mut self, fee_recipient: solana_pubkey::Pubkey) -> &mut Self {
-        self.fee_recipient = Some(fee_recipient);
         self
     }
 
@@ -271,7 +257,6 @@ impl CreateDepositRequestBuilder {
                 .user_token_account
                 .expect("user_token_account is not set"),
             pending_vault: self.pending_vault.expect("pending_vault is not set"),
-            fee_recipient: self.fee_recipient.expect("fee_recipient is not set"),
             asset_token_program: self
                 .asset_token_program
                 .expect("asset_token_program is not set"),
@@ -304,8 +289,6 @@ pub struct CreateDepositRequestCpiAccounts<'a, 'b> {
 
     pub pending_vault: &'b solana_account_info::AccountInfo<'a>,
 
-    pub fee_recipient: &'b solana_account_info::AccountInfo<'a>,
-
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
@@ -330,8 +313,6 @@ pub struct CreateDepositRequestCpi<'a, 'b> {
 
     pub pending_vault: &'b solana_account_info::AccountInfo<'a>,
 
-    pub fee_recipient: &'b solana_account_info::AccountInfo<'a>,
-
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
@@ -354,7 +335,6 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
             vault: accounts.vault,
             user_token_account: accounts.user_token_account,
             pending_vault: accounts.pending_vault,
-            fee_recipient: accounts.fee_recipient,
             asset_token_program: accounts.asset_token_program,
             system_program: accounts.system_program,
             __args: args,
@@ -387,7 +367,7 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.user.key, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
@@ -408,10 +388,6 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
         ));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.pending_vault.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new(
-            *self.fee_recipient.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -440,7 +416,7 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(11 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(10 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.user.clone());
         account_infos.push(self.asset_mint.clone());
@@ -449,7 +425,6 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
         account_infos.push(self.vault.clone());
         account_infos.push(self.user_token_account.clone());
         account_infos.push(self.pending_vault.clone());
-        account_infos.push(self.fee_recipient.clone());
         account_infos.push(self.asset_token_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
@@ -475,9 +450,8 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
 ///   4. `[writable]` vault
 ///   5. `[writable]` user_token_account
 ///   6. `[writable]` pending_vault
-///   7. `[writable]` fee_recipient
-///   8. `[]` asset_token_program
-///   9. `[]` system_program
+///   7. `[]` asset_token_program
+///   8. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct CreateDepositRequestCpiBuilder<'a, 'b> {
     instruction: Box<CreateDepositRequestCpiBuilderInstruction<'a, 'b>>,
@@ -494,7 +468,6 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
             vault: None,
             user_token_account: None,
             pending_vault: None,
-            fee_recipient: None,
             asset_token_program: None,
             system_program: None,
             amount: None,
@@ -555,15 +528,6 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
         pending_vault: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.pending_vault = Some(pending_vault);
-        self
-    }
-
-    #[inline(always)]
-    pub fn fee_recipient(
-        &mut self,
-        fee_recipient: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.fee_recipient = Some(fee_recipient);
         self
     }
 
@@ -663,11 +627,6 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
                 .pending_vault
                 .expect("pending_vault is not set"),
 
-            fee_recipient: self
-                .instruction
-                .fee_recipient
-                .expect("fee_recipient is not set"),
-
             asset_token_program: self
                 .instruction
                 .asset_token_program
@@ -696,7 +655,6 @@ struct CreateDepositRequestCpiBuilderInstruction<'a, 'b> {
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-    fee_recipient: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     amount: Option<u64>,
