@@ -45,6 +45,9 @@ pub enum AsyncVaultError {
     /// 6011 - Share mint supply should be zero.
     #[error("Share mint supply should be zero.")]
     ShareMintSupplyShouldBeZero = 0x177B,
+    /// 6012 - Pending Vault is not valid.
+    #[error("Pending Vault is not valid.")]
+    InvalidPendingVault = 0x177C,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

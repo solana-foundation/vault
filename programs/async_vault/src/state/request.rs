@@ -19,8 +19,6 @@ pub enum RequestType {
 }
 
 /// Request account state for tracking an async deposit/redemption.
-/// Address of the request is unique (generated Keypair), so unlike ERC7540,
-/// requestId is not necessary.
 #[account]
 #[derive(InitSpace)]
 pub struct Request {

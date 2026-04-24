@@ -62,8 +62,8 @@ pub mod async_vault {
         instructions::update_withdrawal_fee::handler(ctx, args)
     }
 
-    /// Updates an existing withdrawal fee extension. The fee must have been
-    /// previously initialized. Requires authority signature.
+    /// Updates the vault nav and increases nav version by 1
+    /// Requires authority signature.
     pub fn update_vault_nav(ctx: Context<UpdateVaultNav>, updated_nav: u128) -> Result<()> {
         instructions::update_nav::handler(ctx, updated_nav)
     }

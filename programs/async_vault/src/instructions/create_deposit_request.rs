@@ -1,3 +1,4 @@
+use crate::error::AsyncVaultError;
 use anchor_lang::prelude::*;
 use anchor_spl::{
     token::spl_token,
@@ -53,6 +54,7 @@ pub struct CreateDepositRequest<'info> {
         token::mint = asset_mint.key(),
         token::authority = vault,
         token::token_program = asset_token_program,
+        constraint = vault.pending_vault.key() == pending_vault.key() @ AsyncVaultError::InvalidPendingVault
     )]
     pub pending_vault: InterfaceAccount<'info, TokenAccount>,
 
@@ -123,7 +125,7 @@ impl<'info> CreateDepositRequest<'info> {
     }
 }
 pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<()> {
-    require!(!ctx.accounts.vault.paused, VaultProgramError::PausedVault);
+    ctx.accounts.vault.assert_unpaused_and_initialized()?;
     require!(
         ctx.accounts.vault.async_inflows,
         VaultProgramError::AsyncInflowsDisabled
@@ -186,6 +188,13 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         .accounts
         .vault
         .request_counter
+        .checked_add(1)
+        .ok_or(VaultProgramError::ArithmeticError)?;
+
+    ctx.accounts.vault.pending_async_requests = ctx
+        .accounts
+        .vault
+        .pending_async_requests
         .checked_add(1)
         .ok_or(VaultProgramError::ArithmeticError)?;
 

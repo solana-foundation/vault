@@ -26,4 +26,6 @@ pub enum AsyncVaultError {
     MintsShouldBeDifferent,
     #[msg("Share mint supply should be zero.")]
     ShareMintSupplyShouldBeZero,
+    #[msg("Pending Vault is not valid.")]
+    InvalidPendingVault,
 }

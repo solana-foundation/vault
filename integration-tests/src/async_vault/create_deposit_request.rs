@@ -12,7 +12,8 @@ use test_case::test_case;
 
 use crate::helper_functions::{
     create_async_vault, create_ata, create_mint, get_token_account_amount, helper_mint_to,
-    update_vault_nav, PENDING_VAULT_SEED, REQUEST_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
+    initialize_async_vault, update_vault_nav, PENDING_VAULT_SEED, REQUEST_SEED,
+    RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
 };
 
 #[test_case(1_000_000, false ; "deposit request succeeds")]
@@ -74,6 +75,8 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
         token::ID,
     )
     .expect("vault creation should succeed");
+
+    let _ = initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey);
 
     let user_token_account = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
     let fee_recipient_ata = create_ata(

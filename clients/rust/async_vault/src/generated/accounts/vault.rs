@@ -62,8 +62,8 @@ pub struct Vault {
     pub async_outflows: bool,
     /// count of pending async deposit/withdrawal requests
     pub pending_async_requests: u16,
-    /// virtual vault asset balance, accounts for tokens that may
     pub request_counter: u64,
+    /// virtual vault asset balance, accounts for tokens that may
     /// have been withdrawn by the vault authority
     pub total_asset_balance: u64,
     pub reserve_bump: u8,
