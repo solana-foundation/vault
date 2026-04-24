@@ -108,7 +108,9 @@ impl Vault {
     }
 
     pub fn calculate_shares(&mut self, decimals: u8, net_amount: u64) -> Result<u64> {
-        let precision = 10u128.pow(decimals as u32);
+        let precision = 10u128
+            .checked_pow(decimals as u32)
+            .ok_or(VaultProgramError::ArithmeticError)?;
         let shares = u128::from(net_amount)
             .checked_mul(precision)
             .ok_or(VaultProgramError::ArithmeticError)?
