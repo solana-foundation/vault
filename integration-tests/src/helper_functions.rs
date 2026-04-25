@@ -20,9 +20,11 @@ use vault_client::{
 };
 
 use async_vault_client::{
-    sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
+    sdk::program_id, AcceptAuthorityInvitation, AcceptAuthorityInvitationBuilder,
+    CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    InitializeWithdrawalFeeBuilder, UpdateDepositFeeBuilder, UpdateWithdrawalFeeBuilder,
+    InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, UpdateDepositFeeBuilder,
+    UpdateWithdrawalFeeBuilder,
 };
 
 use anchor_spl::{
@@ -1094,4 +1096,52 @@ pub fn setup_async_vault(
         pending_vault_pubkey,
         vault_pubkey,
     )
+}
+
+pub fn invite_new_authority(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    new_authority: Pubkey,
+    share_mint: Pubkey,
+    vault: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = InviteNewAuthorityBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint)
+        .vault(vault)
+        .new_authority(new_authority)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
+pub fn accept_authority_invitation(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    new_authority: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = AcceptAuthorityInvitationBuilder::new()
+        .authority(authority.pubkey())
+        .new_authority(new_authority.pubkey())
+        .share_mint(share_mint)
+        .vault(vault)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority, new_authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
 }
