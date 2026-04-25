@@ -37,6 +37,8 @@ pub struct Vault {
     /// virtual vault asset balance, accounts for tokens that may
     /// have been withdrawn by the vault authority
     pub total_asset_balance: u64,
+    /// It acts on behalf of user
+    pub operator: Option<Pubkey>,
     pub reserve_bump: u8,
     pub pending_vault_bump: u8,
     pub bump: u8,

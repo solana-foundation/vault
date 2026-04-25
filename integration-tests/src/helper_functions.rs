@@ -22,7 +22,8 @@ use vault_client::{
 use async_vault_client::{
     sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    InitializeWithdrawalFeeBuilder, UpdateDepositFeeBuilder, UpdateWithdrawalFeeBuilder,
+    InitializeWithdrawalFeeBuilder, SetOperatorBuilder, UpdateDepositFeeBuilder,
+    UpdateWithdrawalFeeBuilder,
 };
 
 use anchor_spl::{
@@ -1094,4 +1095,28 @@ pub fn setup_async_vault(
         pending_vault_pubkey,
         vault_pubkey,
     )
+}
+
+pub fn set_operator(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    operator: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = SetOperatorBuilder::new()
+        .authority(authority.pubkey())
+        .operator(operator.pubkey())
+        .share_mint(share_mint)
+        .vault(vault)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority, operator],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
 }

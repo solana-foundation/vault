@@ -8,10 +8,12 @@ pub(crate) mod r#create_vault;
 pub(crate) mod r#initialize_deposit_fee;
 pub(crate) mod r#initialize_vault;
 pub(crate) mod r#initialize_withdrawal_fee;
+pub(crate) mod r#set_operator;
 pub(crate) mod r#update_deposit_fee;
 pub(crate) mod r#update_withdrawal_fee;
 
 pub use self::{
     r#create_vault::*, r#initialize_deposit_fee::*, r#initialize_vault::*,
-    r#initialize_withdrawal_fee::*, r#update_deposit_fee::*, r#update_withdrawal_fee::*,
+    r#initialize_withdrawal_fee::*, r#set_operator::*, r#update_deposit_fee::*,
+    r#update_withdrawal_fee::*,
 };

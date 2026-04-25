@@ -121,6 +121,7 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         total_asset_balance: 0,
         reserve_bump: ctx.bumps.reserve,
         pending_vault_bump: ctx.bumps.pending_vault,
+        operator: None,
         bump: ctx.bumps.vault,
     });
 

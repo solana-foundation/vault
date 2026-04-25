@@ -61,4 +61,10 @@ pub mod async_vault {
     ) -> Result<()> {
         instructions::update_withdrawal_fee::handler(ctx, args)
     }
+
+    /// It sets an operator for the vault.
+    /// Requires authority signature.
+    pub fn set_operator(ctx: Context<SetOperator>) -> Result<()> {
+        instructions::set_operator::handler(ctx)
+    }
 }
