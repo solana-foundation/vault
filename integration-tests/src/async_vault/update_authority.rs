@@ -78,7 +78,10 @@ fn test_invite_new_authority_overwrites_pending() {
 
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_data = Vault::from_bytes(vault_account.data()).unwrap();
-    assert_eq!(vault_data.pending_authority, Some(second_candidate.pubkey()));
+    assert_eq!(
+        vault_data.pending_authority,
+        Some(second_candidate.pubkey())
+    );
 }
 
 #[test_case(true, true, true ; "succeeds")]
@@ -97,8 +100,7 @@ fn test_accept_authority_invitation(
     let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
 
     let new_authority = Keypair::new();
-    svm.airdrop(&new_authority.pubkey(), 1_000_000_000)
-        .unwrap();
+    svm.airdrop(&new_authority.pubkey(), 1_000_000_000).unwrap();
 
     if invite_first {
         invite_new_authority(
@@ -169,8 +171,7 @@ fn test_full_authority_transfer_old_authority_loses_access() {
     let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
 
     let new_authority = Keypair::new();
-    svm.airdrop(&new_authority.pubkey(), 1_000_000_000)
-        .unwrap();
+    svm.airdrop(&new_authority.pubkey(), 1_000_000_000).unwrap();
 
     invite_new_authority(
         &mut svm,
