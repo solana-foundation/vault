@@ -61,4 +61,10 @@ pub mod async_vault {
     ) -> Result<()> {
         instructions::update_withdrawal_fee::handler(ctx, args)
     }
+
+    /// Updates the async vault configuration. Can modify paused status,
+    /// async inflows, and async outflows. Requires authority signature.
+    pub fn update_vault(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {
+        instructions::update_vault::handler(ctx, args)
+    }
 }

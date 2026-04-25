@@ -22,7 +22,8 @@ use vault_client::{
 use async_vault_client::{
     sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    InitializeWithdrawalFeeBuilder, UpdateDepositFeeBuilder, UpdateWithdrawalFeeBuilder,
+    InitializeWithdrawalFeeBuilder, UpdateDepositFeeBuilder,
+    UpdateVaultBuilder as UpdateAsyncVaultBuilder, UpdateWithdrawalFeeBuilder,
 };
 
 use anchor_spl::{
@@ -929,6 +930,42 @@ pub fn initialize_async_vault(
         .vault(vault)
         .instruction()
         .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
+pub fn update_async_vault(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    paused: Option<bool>,
+    async_inflows: Option<bool>,
+    async_outflows: Option<bool>,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let mut builder = UpdateAsyncVaultBuilder::new();
+    builder
+        .authority(authority.pubkey())
+        .share_mint(share_mint)
+        .vault(vault);
+
+    if let Some(p) = paused {
+        builder.paused(p);
+    }
+    if let Some(inflows) = async_inflows {
+        builder.async_inflows(inflows);
+    }
+    if let Some(outflows) = async_outflows {
+        builder.async_outflows(outflows);
+    }
+
+    let ix = builder.instruction().into_sdk_instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
