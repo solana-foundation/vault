@@ -1,4 +1,7 @@
-use crate::{error::AsyncVaultError, extensions::get_deposit_fee};
+use crate::{
+    error::AsyncVaultError,
+    extensions::{get_deposit_fee, transfer_fee_to_recipient},
+};
 use anchor_lang::prelude::*;
 use anchor_spl::{
     token_2022::spl_token_2022::{
@@ -91,43 +94,6 @@ impl<'info> CreateDepositRequest<'info> {
         }
     }
 
-    pub fn transfer_fee_to_recipient(
-        &self,
-        remaining_accounts: &[AccountInfo<'info>],
-        fee: u64,
-    ) -> Result<()> {
-        require!(
-            !remaining_accounts.is_empty(),
-            AsyncVaultError::MissingFeeRecipient
-        );
-        let fee_recipient_info = &remaining_accounts[0];
-
-        require!(
-            fee_recipient_info.owner == self.asset_token_program.key,
-            AsyncVaultError::InvalidFeeRecipient
-        );
-
-        let fee_recipient_data = fee_recipient_info.try_borrow_data()?;
-        let fee_recipient_state =
-            StateWithExtensions::<spl_token_2022::state::Account>::unpack(&fee_recipient_data)?;
-        require!(
-            fee_recipient_state.base.owner == self.vault.fee_recipient,
-            AsyncVaultError::InvalidFeeRecipient
-        );
-        require!(
-            fee_recipient_state.base.mint == self.asset_mint.key(),
-            AsyncVaultError::InvalidFeeRecipient
-        );
-        drop(fee_recipient_data);
-
-        self.transfer_asset_token(
-            self.pending_vault.to_account_info(),
-            fee_recipient_info.clone(),
-            self.vault.to_account_info(),
-            fee,
-        )
-    }
-
     pub fn assert_no_transfer_fees(&mut self) -> Result<()> {
         let binding = self.asset_mint.to_account_info();
         let mint_data = binding
@@ -154,10 +120,37 @@ pub fn handler<'info>(
         VaultProgramError::AsyncInflowsDisabled
     );
     require!(ctx.accounts.vault.nav > 0, VaultProgramError::NavIsNotSet);
+    ctx.accounts.assert_no_transfer_fees()?;
+
+    ctx.accounts.transfer_asset_token(
+        ctx.accounts.user_token_account.to_account_info(),
+        ctx.accounts.pending_vault.to_account_info(),
+        ctx.accounts.user.to_account_info(),
+        args.amount,
+    )?;
 
     let vault_info = ctx.accounts.vault.to_account_info();
-    let fee = get_deposit_fee(&vault_info.try_borrow_data()?, args.amount)?;
-    ctx.accounts.assert_no_transfer_fees()?;
+    let is_fee_extension_enabled = get_deposit_fee(&vault_info.try_borrow_data()?, args.amount)?;
+    let fee = if let Some(fee) = is_fee_extension_enabled {
+        if fee > 0 {
+            let fee_recipient_info = ctx
+                .remaining_accounts
+                .first()
+                .ok_or(AsyncVaultError::MissingFeeRecipient)?;
+            transfer_fee_to_recipient(
+                fee_recipient_info,
+                ctx.accounts.pending_vault.to_account_info(),
+                &ctx.accounts.vault,
+                &ctx.accounts.asset_mint,
+                &ctx.accounts.asset_token_program,
+                ctx.accounts.share_mint.key(),
+                fee,
+            )?;
+        }
+        fee
+    } else {
+        0
+    };
 
     let net_amount = args
         .amount
@@ -183,19 +176,6 @@ pub fn handler<'info>(
         nav_update_version: ctx.accounts.vault.nav_version,
         operator: args.operator,
     });
-
-    // Transfer assets from user into pending vault
-    ctx.accounts.transfer_asset_token(
-        ctx.accounts.user_token_account.to_account_info(),
-        ctx.accounts.pending_vault.to_account_info(),
-        ctx.accounts.user.to_account_info(),
-        args.amount,
-    )?;
-
-    if fee > 0 {
-        ctx.accounts
-            .transfer_fee_to_recipient(ctx.remaining_accounts, fee)?;
-    }
 
     ctx.accounts.vault.pending_async_requests = ctx
         .accounts
