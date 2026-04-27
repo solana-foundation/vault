@@ -67,4 +67,17 @@ pub mod async_vault {
     pub fn update_vault(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {
         instructions::update_vault::handler(ctx, args)
     }
+    /// Updates the vault nav and increases nav version by 1
+    /// Requires authority signature.
+    pub fn update_vault_nav(ctx: Context<UpdateVaultNav>, updated_nav: u128) -> Result<()> {
+        instructions::update_nav::handler(ctx, updated_nav)
+    }
+
+    /// Creates a deposit request with state pending (Pending vault authority acceptance)
+    pub fn create_deposit_request<'info>(
+        ctx: Context<'_, '_, '_, 'info, CreateDepositRequest<'info>>,
+        args: RequestArgs,
+    ) -> Result<()> {
+        instructions::create_deposit_request::handler(ctx, args)
+    }
 }

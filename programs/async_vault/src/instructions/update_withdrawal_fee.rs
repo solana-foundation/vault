@@ -4,7 +4,7 @@ use vault_common::FeeType;
 
 use crate::{
     error::AsyncVaultError,
-    extensions::{self, ExtensionType},
+    extensions::{self, ExtensionType, TLV_START},
     state::{Vault, VAULT_CONFIG_SEED},
 };
 
@@ -33,7 +33,7 @@ pub fn handler(ctx: Context<UpdateWithdrawalFee>, args: UpdateWithdrawalFeeArgs)
 
     let vault_info = ctx.accounts.vault.to_account_info();
     let mut data = vault_info.data.borrow_mut();
-    let tlv_start = Vault::TLV_START;
+    let tlv_start = TLV_START;
     let tlv_data = &mut data[tlv_start..];
 
     let serialized = args

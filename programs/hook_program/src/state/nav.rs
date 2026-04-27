@@ -80,7 +80,9 @@ pub fn get_nav<'info>(
         return Ok(0);
     }
 
-    let precision = 10u128.pow(share_decimals as u32);
+    let precision = 10u128
+        .checked_pow(share_decimals as u32)
+        .ok_or(HookProgramError::ArithmeticError)?;
     let ratio = u128::from(total_assets)
         .checked_mul(precision)
         .ok_or(HookProgramError::ArithmeticError)?
