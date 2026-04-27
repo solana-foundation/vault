@@ -32,4 +32,6 @@ pub enum AsyncVaultError {
     MissingFeeRecipient,
     #[msg("Fee recipient account is invalid.")]
     InvalidFeeRecipient,
+    #[msg("Request is not pending.")]
+    RequestIsNotPending,
 }
