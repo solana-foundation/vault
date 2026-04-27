@@ -38,13 +38,7 @@ fn test_update_vault_nav(updated_nav: u128) {
     .unwrap();
     let nav_version_before = vault_before.nav_version;
 
-    let result = update_vault_nav(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        updated_nav,
-    );
+    let result = update_vault_nav(&mut svm, &authority, vault_pubkey, updated_nav);
 
     result.expect("update_vault_nav should succeed");
 

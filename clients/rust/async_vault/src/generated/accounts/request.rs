@@ -45,6 +45,7 @@ pub struct Request {
     pub created_at: i64,
     /// nav update version (for permissionless actions)
     pub nav_update_version: u64,
+    pub fee: u64,
     /// Operator allowed to claim on behalf of user (delegated controller)
     pub operator: Option<Pubkey>,
 }

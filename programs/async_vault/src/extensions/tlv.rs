@@ -4,7 +4,7 @@ use crate::error::AsyncVaultError;
 
 use super::{ExtensionType, TLV_HEADER_SIZE};
 
-pub fn get_extension_bytes(tlv_data: &[u8], ext_type: ExtensionType) -> Result<Option<&[u8]>> {
+pub fn get_extension_bytes(tlv_data: &[u8], ext_type: ExtensionType) -> Option<&[u8]> {
     let mut offset = 0;
 
     while offset + TLV_HEADER_SIZE <= tlv_data.len() {
@@ -13,21 +13,21 @@ pub fn get_extension_bytes(tlv_data: &[u8], ext_type: ExtensionType) -> Result<O
 
         let value_end = offset + TLV_HEADER_SIZE + entry_len;
         if value_end > tlv_data.len() {
-            return Err(error!(AsyncVaultError::InvalidExtensionData));
+            return None;
         }
 
         if entry_type == ext_type as u16 {
-            return Ok(Some(&tlv_data[offset + TLV_HEADER_SIZE..value_end]));
+            return Some(&tlv_data[offset + TLV_HEADER_SIZE..value_end]);
         }
 
         offset = value_end;
     }
 
-    Ok(None)
+    None
 }
 
-pub fn has_extension(tlv_data: &[u8], ext_type: ExtensionType) -> Result<bool> {
-    Ok(get_extension_bytes(tlv_data, ext_type)?.is_some())
+pub fn has_extension(tlv_data: &[u8], ext_type: ExtensionType) -> bool {
+    get_extension_bytes(tlv_data, ext_type).is_some()
 }
 
 pub fn write_extension(
@@ -137,17 +137,14 @@ mod tests {
 
     #[test]
     fn get_extension_bytes_empty_buffer() {
-        assert_eq!(
-            get_extension_bytes(&[], ExtensionType::DepositFee).unwrap(),
-            None
-        );
+        assert_eq!(get_extension_bytes(&[], ExtensionType::DepositFee), None);
     }
 
     #[test]
     fn get_extension_bytes_not_found() {
         let buf = make_tlv_entry(ExtensionType::DepositFee, &[1, 2, 3]);
         assert_eq!(
-            get_extension_bytes(&buf, ExtensionType::WithdrawalFee).unwrap(),
+            get_extension_bytes(&buf, ExtensionType::WithdrawalFee),
             None
         );
     }
@@ -156,9 +153,7 @@ mod tests {
     fn get_extension_bytes_found() {
         let value = &[10, 20, 30, 40, 50, 60, 70, 80, 90];
         let buf = make_tlv_entry(ExtensionType::DepositFee, value);
-        let result = get_extension_bytes(&buf, ExtensionType::DepositFee)
-            .unwrap()
-            .unwrap();
+        let result = get_extension_bytes(&buf, ExtensionType::DepositFee).unwrap();
         assert_eq!(result, value);
     }
 
@@ -170,30 +165,19 @@ mod tests {
         buf.extend_from_slice(&make_tlv_entry(ExtensionType::WithdrawalFee, &wd_value));
 
         assert_eq!(
-            get_extension_bytes(&buf, ExtensionType::DepositFee)
-                .unwrap()
-                .unwrap(),
+            get_extension_bytes(&buf, ExtensionType::DepositFee).unwrap(),
             &dep_value
         );
         assert_eq!(
-            get_extension_bytes(&buf, ExtensionType::WithdrawalFee)
-                .unwrap()
-                .unwrap(),
+            get_extension_bytes(&buf, ExtensionType::WithdrawalFee).unwrap(),
             &wd_value
         );
     }
 
     #[test]
-    fn get_extension_bytes_truncated_value() {
-        let mut buf = make_tlv_entry(ExtensionType::DepositFee, &[1, 2, 3]);
-        buf.truncate(TLV_HEADER_SIZE + 2);
-        assert!(get_extension_bytes(&buf, ExtensionType::DepositFee).is_err());
-    }
-
-    #[test]
     fn get_extension_bytes_header_too_short() {
         assert_eq!(
-            get_extension_bytes(&[0, 1, 2], ExtensionType::DepositFee).unwrap(),
+            get_extension_bytes(&[0, 1, 2], ExtensionType::DepositFee),
             None
         );
     }
@@ -203,18 +187,18 @@ mod tests {
     #[test]
     fn has_extension_true() {
         let buf = make_tlv_entry(ExtensionType::WithdrawalFee, &[0; 9]);
-        assert!(has_extension(&buf, ExtensionType::WithdrawalFee).unwrap());
+        assert!(has_extension(&buf, ExtensionType::WithdrawalFee));
     }
 
     #[test]
     fn has_extension_false() {
         let buf = make_tlv_entry(ExtensionType::WithdrawalFee, &[0; 9]);
-        assert!(!has_extension(&buf, ExtensionType::DepositFee).unwrap());
+        assert!(!has_extension(&buf, ExtensionType::DepositFee));
     }
 
     #[test]
     fn has_extension_empty() {
-        assert!(!has_extension(&[], ExtensionType::DepositFee).unwrap());
+        assert!(!has_extension(&[], ExtensionType::DepositFee));
     }
 
     // ---- write_extension ----
@@ -332,8 +316,8 @@ mod tests {
 
         update_extension(&mut buf, ext_b, &[99]).unwrap();
 
-        assert_eq!(get_extension_bytes(&buf, ext_a).unwrap().unwrap(), &[1; 9]);
-        let b_data = get_extension_bytes(&buf, ext_b).unwrap().unwrap();
+        assert_eq!(get_extension_bytes(&buf, ext_a).unwrap(), &[1; 9]);
+        let b_data = get_extension_bytes(&buf, ext_b).unwrap();
         assert_eq!(b_data[0], 99);
         assert!(b_data[1..].iter().all(|&b| b == 0));
     }

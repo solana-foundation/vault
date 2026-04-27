@@ -1,7 +1,4 @@
-use crate::{
-    error::AsyncVaultError,
-    extensions::{get_deposit_fee, transfer_fee_to_recipient},
-};
+use crate::{error::AsyncVaultError, extensions::get_deposit_fee};
 use anchor_lang::prelude::*;
 use anchor_spl::{
     token_2022::spl_token_2022::{
@@ -130,27 +127,7 @@ pub fn handler<'info>(
     )?;
 
     let vault_info = ctx.accounts.vault.to_account_info();
-    let is_fee_extension_enabled = get_deposit_fee(&vault_info.try_borrow_data()?, args.amount)?;
-    let fee = if let Some(fee) = is_fee_extension_enabled {
-        if fee > 0 {
-            let fee_recipient_info = ctx
-                .remaining_accounts
-                .first()
-                .ok_or(AsyncVaultError::MissingFeeRecipient)?;
-            transfer_fee_to_recipient(
-                fee_recipient_info,
-                ctx.accounts.pending_vault.to_account_info(),
-                &ctx.accounts.vault,
-                &ctx.accounts.asset_mint,
-                &ctx.accounts.asset_token_program,
-                ctx.accounts.share_mint.key(),
-                fee,
-            )?;
-        }
-        fee
-    } else {
-        0
-    };
+    let fee = get_deposit_fee(&vault_info.try_borrow_data()?, args.amount)?;
 
     let net_amount = args
         .amount
@@ -168,12 +145,13 @@ pub fn handler<'info>(
         request_type: RequestType::Deposit,
         request_state: RequestState::Pending,
         owner: ctx.accounts.user.key(),
-        amount: args.amount,
+        amount: net_amount,
         price: ctx.accounts.vault.nav,
         remaining_amount: shares,
         asset_mint_address: ctx.accounts.asset_mint.key(),
         created_at: current_timestamp,
         nav_update_version: ctx.accounts.vault.nav_version,
+        fee,
         operator: args.operator,
     });
 
