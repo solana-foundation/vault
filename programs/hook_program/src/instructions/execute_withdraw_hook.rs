@@ -84,7 +84,9 @@ pub fn handler<'info>(
     let nav = if ctx.accounts.share_mint.supply == 0 {
         0
     } else {
-        let precision = 10u128.pow(ctx.accounts.share_mint.decimals as u32);
+        let precision = 10u128
+            .checked_pow(ctx.accounts.share_mint.decimals as u32)
+            .ok_or(HookProgramError::ArithmeticError)?;
         let ratio = u128::from(total_assets)
             .checked_mul(precision)
             .ok_or(HookProgramError::ArithmeticError)?

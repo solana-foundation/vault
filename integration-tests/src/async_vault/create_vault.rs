@@ -48,8 +48,10 @@ fn test_create_vault(
     let fake_mint_authority = Keypair::new();
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();
+    let fee_recipient = Keypair::new();
 
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
@@ -91,6 +93,7 @@ fn test_create_vault(
         &authority,
         &payer,
         effective_mint_authority,
+        fee_recipient.pubkey(),
         asset_mint.pubkey(),
         effective_share_mint,
         reserve_pubkey,
@@ -156,8 +159,10 @@ fn test_create_vault_nonzero_share_mint_supply_fails() {
     let asset_mint = Keypair::new();
     let share_mint = Keypair::new();
     let token_account_kp = Keypair::new();
+    let fee_recipient = Keypair::new();
 
     svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
@@ -217,6 +222,7 @@ fn test_create_vault_nonzero_share_mint_supply_fails() {
         &authority,
         &payer,
         &mint_authority,
+        fee_recipient.pubkey(),
         asset_mint.pubkey(),
         share_mint.pubkey(),
         reserve_pubkey,

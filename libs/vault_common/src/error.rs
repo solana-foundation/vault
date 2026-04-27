@@ -82,4 +82,13 @@ pub enum VaultProgramError {
 
     #[msg("Share mint supply should be zero.")]
     ShareMintSupplyShouldBeZero,
+
+    #[msg("Async inflows are disabled, cannot deposit.")]
+    AsyncInflowsDisabled,
+
+    #[msg("Nav is not set.")]
+    NavIsNotSet,
+
+    #[msg("Transfer Fees are not allowed.")]
+    TransferFeesAreNotAllowed,
 }

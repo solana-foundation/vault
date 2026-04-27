@@ -560,7 +560,9 @@ pub fn handler<'info>(
                     // Total assets equals the deposited amount.
                     actual_transferred_amount
                 } else {
-                    let precision = 10u128.pow(ctx.accounts.share_mint.decimals as u32);
+                    let precision = 10u128
+                        .checked_pow(ctx.accounts.share_mint.decimals as u32)
+                        .ok_or(VaultProgramError::ArithmeticError)?;
                     let total = u128::from(nav)
                         .checked_mul(u128::from(ctx.accounts.share_mint.supply))
                         .ok_or(VaultProgramError::ArithmeticError)?
@@ -583,7 +585,9 @@ pub fn handler<'info>(
                     u64::try_from(shares).map_err(|_| VaultProgramError::ArithmeticError)?
                 } else {
                     require!(nav > 0, VaultProgramError::StaleVaultNav);
-                    let precision = 10u128.pow(ctx.accounts.share_mint.decimals as u32);
+                    let precision = 10u128
+                        .checked_pow(ctx.accounts.share_mint.decimals as u32)
+                        .ok_or(VaultProgramError::ArithmeticError)?;
                     u64::try_from(
                         u128::from(actual_transferred_amount)
                             .checked_mul(precision)
@@ -684,7 +688,9 @@ pub fn handler<'info>(
                         .execute_withdraw_hook(hook_program_pubkey, remaining, assets)?;
 
                 require!(nav > 0, VaultProgramError::StaleVaultNav);
-                let precision = 10u128.pow(ctx.accounts.share_mint.decimals as u32);
+                let precision = 10u128
+                    .checked_pow(ctx.accounts.share_mint.decimals as u32)
+                    .ok_or(VaultProgramError::ArithmeticError)?;
                 u64::try_from(
                     u128::from(amount_with_fee)
                         .checked_mul(precision)

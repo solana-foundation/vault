@@ -5,5 +5,7 @@
 //! <https://github.com/codama-idl/codama>
 
 pub(crate) mod r#fee_type;
+pub(crate) mod r#request_state;
+pub(crate) mod r#request_type;
 
-pub use self::r#fee_type::*;
+pub use self::{r#fee_type::*, r#request_state::*, r#request_type::*};
