@@ -98,6 +98,7 @@ mod tests {
             reserve_bump: 0,
             pending_vault_bump: 0,
             bump: 0,
+            operator: None,
         }
     }
 
