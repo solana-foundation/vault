@@ -46,7 +46,7 @@ pub fn handler(ctx: Context<InitDepositFee>, args: InitDepositFeeArgs) -> Result
     let tlv_data = &mut data[tlv_start..];
 
     require!(
-        !extensions::has_extension(tlv_data, ExtensionType::DepositFee),
+        !extensions::has_extension(tlv_data, ExtensionType::DepositFee)?,
         AsyncVaultError::ExtensionAlreadyInitialized
     );
 

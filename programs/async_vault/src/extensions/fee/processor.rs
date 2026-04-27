@@ -21,7 +21,7 @@ pub fn get_fee_extension(account_data: &[u8], ext_type: ExtensionType) -> Result
         return Ok(None);
     }
     let tlv_data = &account_data[TLV_START..];
-    match extensions::get_extension_bytes(tlv_data, ext_type) {
+    match extensions::get_extension_bytes(tlv_data, ext_type)? {
         Some(bytes) => {
             let mut slice = bytes;
             let fee = FeeType::deserialize(&mut slice)

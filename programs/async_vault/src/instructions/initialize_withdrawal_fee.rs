@@ -46,7 +46,7 @@ pub fn handler(ctx: Context<InitWithdrawalFee>, args: InitWithdrawalFeeArgs) -> 
     let tlv_data = &mut data[tlv_start..];
 
     require!(
-        !extensions::has_extension(tlv_data, ExtensionType::WithdrawalFee),
+        !extensions::has_extension(tlv_data, ExtensionType::WithdrawalFee)?,
         AsyncVaultError::ExtensionAlreadyInitialized
     );
 
