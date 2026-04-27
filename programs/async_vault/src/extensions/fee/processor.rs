@@ -4,9 +4,10 @@ use vault_common::FeeType;
 use crate::{
     error::AsyncVaultError,
     extensions::{self, ExtensionType},
+    state::Vault,
 };
 
-pub const TLV_START: usize = 8 + 241;
+pub const TLV_START: usize = 8 + Vault::INIT_SPACE;
 
 pub fn get_fee_extension(account_data: &[u8], ext_type: ExtensionType) -> Result<Option<FeeType>> {
     if account_data.len() <= TLV_START {
