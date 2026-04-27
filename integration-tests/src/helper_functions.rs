@@ -949,17 +949,14 @@ pub fn update_async_vault(
     authority: &Keypair,
     share_mint: Pubkey,
     vault: Pubkey,
-    paused: Option<bool>,
+    paused: bool,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let mut builder = UpdateVaultAsyncBuilder::new();
     builder
         .authority(authority.pubkey())
         .share_mint(share_mint)
+        .paused(paused)
         .vault(vault);
-
-    if let Some(p) = paused {
-        builder.paused(p);
-    }
 
     let ix = builder.instruction().into_sdk_instruction();
 

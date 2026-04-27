@@ -5,9 +5,9 @@ use test_case::test_case;
 
 use crate::helper_functions::{assert_error_code, setup_async_vault, update_async_vault};
 
-#[test_case(Some(true); "pause vault")]
-#[test_case(Some(false) ; "unpause vault")]
-fn test_update_async_vault(paused: Option<bool>) {
+#[test_case(true; "pause vault")]
+#[test_case(false ; "unpause vault")]
+fn test_update_async_vault(paused: bool) {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
@@ -29,7 +29,7 @@ fn test_update_async_vault(paused: Option<bool>) {
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_after = Vault::from_bytes(vault_account.data()).unwrap();
 
-    assert_eq!(vault_after.paused, paused.unwrap_or(vault_before.paused));
+    assert_eq!(vault_after.paused, paused);
 
     assert_eq!(vault_after.authority, vault_before.authority);
     assert_eq!(
@@ -61,7 +61,7 @@ fn test_update_async_vault_unauthorized_signer_fails() {
         &unauthorized,
         share_mint.pubkey(),
         vault_pubkey,
-        Some(true),
+        true,
     );
 
     assert_error_code(&result.unwrap_err(), 6001, "UnauthorizedSigner");
