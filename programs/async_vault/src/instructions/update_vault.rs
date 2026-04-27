@@ -9,8 +9,6 @@ use crate::{
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct UpdateVaultArgs {
     paused: Option<bool>,
-    async_inflows: Option<bool>,
-    async_outflows: Option<bool>,
 }
 
 #[derive(Accounts)]
@@ -28,12 +26,10 @@ pub struct UpdateVault<'info> {
     pub vault: Account<'info, Vault>,
 }
 
-pub fn handler(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {
+pub fn handler(ctx: Context<UpdateVault>, paused: bool) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
 
-    vault.paused = args.paused.unwrap_or(vault.paused);
-    vault.async_inflows = args.async_inflows.unwrap_or(vault.async_inflows);
-    vault.async_outflows = args.async_outflows.unwrap_or(vault.async_outflows);
+    vault.paused = paused;
 
     Ok(())
 }

@@ -23,7 +23,8 @@ use async_vault_client::{
     sdk::program_id, CreateDepositRequestBuilder, CreateVaultBuilder as CreateAsyncVaultBuilder,
     FeeType as AsyncFeeType, InitializeDepositFeeBuilder,
     InitializeVaultBuilder as InitializeAsyncVaultBuilder, InitializeWithdrawalFeeBuilder,
-    UpdateDepositFeeBuilder, UpdateVaultNav, UpdateVaultNavBuilder, UpdateWithdrawalFeeBuilder,
+    UpdateDepositFeeBuilder, UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder,
+    UpdateWithdrawalFeeBuilder,
 };
 
 use anchor_spl::{
@@ -949,10 +950,8 @@ pub fn update_async_vault(
     share_mint: Pubkey,
     vault: Pubkey,
     paused: Option<bool>,
-    async_inflows: Option<bool>,
-    async_outflows: Option<bool>,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
-    let mut builder = UpdateAsyncVaultBuilder::new();
+    let mut builder = UpdateVaultAsyncBuilder::new();
     builder
         .authority(authority.pubkey())
         .share_mint(share_mint)
@@ -960,12 +959,6 @@ pub fn update_async_vault(
 
     if let Some(p) = paused {
         builder.paused(p);
-    }
-    if let Some(inflows) = async_inflows {
-        builder.async_inflows(inflows);
-    }
-    if let Some(outflows) = async_outflows {
-        builder.async_outflows(outflows);
     }
 
     let ix = builder.instruction().into_sdk_instruction();

@@ -80,9 +80,7 @@ impl Default for UpdateVaultInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UpdateVaultInstructionArgs {
-    pub paused: Option<bool>,
-    pub async_inflows: Option<bool>,
-    pub async_outflows: Option<bool>,
+    pub paused: bool,
 }
 
 impl UpdateVaultInstructionArgs {
@@ -104,8 +102,6 @@ pub struct UpdateVaultBuilder {
     share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     paused: Option<bool>,
-    async_inflows: Option<bool>,
-    async_outflows: Option<bool>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -132,24 +128,9 @@ impl UpdateVaultBuilder {
         self
     }
 
-    /// `[optional argument]`
     #[inline(always)]
     pub fn paused(&mut self, paused: bool) -> &mut Self {
         self.paused = Some(paused);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn async_inflows(&mut self, async_inflows: bool) -> &mut Self {
-        self.async_inflows = Some(async_inflows);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn async_outflows(&mut self, async_outflows: bool) -> &mut Self {
-        self.async_outflows = Some(async_outflows);
         self
     }
 
@@ -178,9 +159,7 @@ impl UpdateVaultBuilder {
             vault: self.vault.expect("vault is not set"),
         };
         let args = UpdateVaultInstructionArgs {
-            paused: self.paused.clone(),
-            async_inflows: self.async_inflows.clone(),
-            async_outflows: self.async_outflows.clone(),
+            paused: self.paused.clone().expect("paused is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -314,8 +293,6 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
             share_mint: None,
             vault: None,
             paused: None,
-            async_inflows: None,
-            async_outflows: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -342,24 +319,9 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
         self
     }
 
-    /// `[optional argument]`
     #[inline(always)]
     pub fn paused(&mut self, paused: bool) -> &mut Self {
         self.instruction.paused = Some(paused);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn async_inflows(&mut self, async_inflows: bool) -> &mut Self {
-        self.instruction.async_inflows = Some(async_inflows);
-        self
-    }
-
-    /// `[optional argument]`
-    #[inline(always)]
-    pub fn async_outflows(&mut self, async_outflows: bool) -> &mut Self {
-        self.instruction.async_outflows = Some(async_outflows);
         self
     }
 
@@ -402,9 +364,7 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
     #[allow(clippy::vec_init_then_push)]
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
         let args = UpdateVaultInstructionArgs {
-            paused: self.instruction.paused.clone(),
-            async_inflows: self.instruction.async_inflows.clone(),
-            async_outflows: self.instruction.async_outflows.clone(),
+            paused: self.instruction.paused.clone().expect("paused is not set"),
         };
         let instruction = UpdateVaultCpi {
             __program: self.instruction.__program,
@@ -430,8 +390,6 @@ struct UpdateVaultCpiBuilderInstruction<'a, 'b> {
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     paused: Option<bool>,
-    async_inflows: Option<bool>,
-    async_outflows: Option<bool>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }
