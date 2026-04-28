@@ -48,6 +48,15 @@ pub enum AsyncVaultError {
     /// 6012 - No pending authority invitation
     #[error("No pending authority invitation")]
     NoPendingAuthority = 0x177C,
+    /// 6013 - Pending Vault is not valid.
+    #[error("Pending Vault is not valid.")]
+    InvalidPendingVault = 0x177D,
+    /// 6014 - Fee recipient account must be provided as a remaining account when fee > 0.
+    #[error("Fee recipient account must be provided as a remaining account when fee > 0.")]
+    MissingFeeRecipient = 0x177E,
+    /// 6015 - Fee recipient account is invalid.
+    #[error("Fee recipient account is invalid.")]
+    InvalidFeeRecipient = 0x177F,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

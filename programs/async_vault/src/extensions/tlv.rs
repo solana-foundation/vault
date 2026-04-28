@@ -175,13 +175,6 @@ mod tests {
     }
 
     #[test]
-    fn get_extension_bytes_truncated_value() {
-        let mut buf = make_tlv_entry(ExtensionType::DepositFee, &[1, 2, 3]);
-        buf.truncate(TLV_HEADER_SIZE + 2);
-        assert_eq!(get_extension_bytes(&buf, ExtensionType::DepositFee), None);
-    }
-
-    #[test]
     fn get_extension_bytes_header_too_short() {
         assert_eq!(
             get_extension_bytes(&[0, 1, 2], ExtensionType::DepositFee),

@@ -4,7 +4,7 @@ use vault_common::FeeType;
 
 use crate::{
     error::AsyncVaultError,
-    extensions::{self, ExtensionType, FEE_TLV_SIZE},
+    extensions::{self, ExtensionType, FEE_TLV_SIZE, TLV_START},
     state::{Vault, VAULT_CONFIG_SEED},
 };
 
@@ -42,7 +42,7 @@ pub fn handler(ctx: Context<InitDepositFee>, args: InitDepositFeeArgs) -> Result
 
     let vault_info = ctx.accounts.vault.to_account_info();
     let mut data = vault_info.data.borrow_mut();
-    let tlv_start = Vault::TLV_START;
+    let tlv_start = TLV_START;
     let tlv_data = &mut data[tlv_start..];
 
     require!(

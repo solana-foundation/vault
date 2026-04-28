@@ -78,4 +78,22 @@ pub mod async_vault {
     pub fn accept_authority_invitation(ctx: Context<AcceptAuthorityInvitation>) -> Result<()> {
         instructions::accept_authority_invitation::handler(ctx)
     }
+    /// Updates the async vault configuration. Can modify paused status,
+    /// async inflows, and async outflows. Requires authority signature.
+    pub fn update_vault(ctx: Context<UpdateVault>, paused: bool) -> Result<()> {
+        instructions::update_vault::handler(ctx, paused)
+    }
+    /// Updates the vault nav and increases nav version by 1
+    /// Requires authority signature.
+    pub fn update_vault_nav(ctx: Context<UpdateVaultNav>, updated_nav: u128) -> Result<()> {
+        instructions::update_nav::handler(ctx, updated_nav)
+    }
+
+    /// Creates a deposit request with state pending (Pending vault authority acceptance)
+    pub fn create_deposit_request<'info>(
+        ctx: Context<'_, '_, '_, 'info, CreateDepositRequest<'info>>,
+        args: RequestArgs,
+    ) -> Result<()> {
+        instructions::create_deposit_request::handler(ctx, args)
+    }
 }
