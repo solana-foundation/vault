@@ -42,6 +42,8 @@ pub struct Vault {
     pub reserve_bump: u8,
     pub pending_vault_bump: u8,
     pub bump: u8,
+    // Used for updating the vault authority (New Authority)
+    pub pending_authority: Option<Pubkey>,
 }
 
 impl Vault {
@@ -96,6 +98,7 @@ mod tests {
             reserve_bump: 0,
             pending_vault_bump: 0,
             bump: 0,
+            pending_authority: None,
         }
     }
 

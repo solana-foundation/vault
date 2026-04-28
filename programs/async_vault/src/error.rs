@@ -26,6 +26,8 @@ pub enum AsyncVaultError {
     MintsShouldBeDifferent,
     #[msg("Share mint supply should be zero.")]
     ShareMintSupplyShouldBeZero,
+    #[msg("No pending authority invitation")]
+    NoPendingAuthority,
     #[msg("Pending Vault is not valid.")]
     InvalidPendingVault,
     #[msg("Fee recipient account must be provided as a remaining account when fee > 0.")]
