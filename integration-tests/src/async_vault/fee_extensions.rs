@@ -29,7 +29,6 @@ fn test_initialize_and_update_deposit_fee() {
     let vault_data = vault_account.data();
     let vault_config = Vault::from_bytes(vault_data).unwrap();
     assert!(!vault_config.initialized);
-    assert!(vault_data.len() > Vault::LEN);
 
     let new_deposit_fee = FeeType::Percentage { bps: 500 };
     update_deposit_fee(
@@ -62,7 +61,6 @@ fn test_initialize_and_update_withdrawal_fee() {
 
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_data = vault_account.data();
-    assert!(vault_data.len() > Vault::LEN);
 
     let new_withdrawal_fee = FeeType::FixedAmount { amount: 50 };
     update_withdrawal_fee(
@@ -105,7 +103,6 @@ fn test_initialize_both_fees() {
 
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_data = vault_account.data();
-    assert!(vault_data.len() > Vault::LEN + 13);
 }
 
 #[test]

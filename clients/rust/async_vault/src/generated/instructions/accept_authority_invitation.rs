@@ -6,41 +6,38 @@
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-pub const UPDATE_VAULT_NAV_DISCRIMINATOR: [u8; 8] = [252, 12, 154, 223, 213, 206, 35, 233];
+pub const ACCEPT_AUTHORITY_INVITATION_DISCRIMINATOR: [u8; 8] =
+    [25, 46, 44, 100, 108, 172, 146, 180];
 
 /// Accounts.
 #[derive(Debug)]
-pub struct UpdateVaultNav {
-    pub authority: solana_pubkey::Pubkey,
+pub struct AcceptAuthorityInvitation {
+    pub new_authority: solana_pubkey::Pubkey,
 
     pub vault: solana_pubkey::Pubkey,
 }
 
-impl UpdateVaultNav {
-    pub fn instruction(
-        &self,
-        args: UpdateVaultNavInstructionArgs,
-    ) -> solana_instruction::Instruction {
-        self.instruction_with_remaining_accounts(args, &[])
+impl AcceptAuthorityInvitation {
+    pub fn instruction(&self) -> solana_instruction::Instruction {
+        self.instruction_with_remaining_accounts(&[])
     }
 
     #[allow(clippy::arithmetic_side_effects)]
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: UpdateVaultNavInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
         let mut accounts = Vec::with_capacity(2 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.authority,
+            self.new_authority,
             true,
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = UpdateVaultNavInstructionData::new().try_to_vec().unwrap();
-        let mut args = args.try_to_vec().unwrap();
-        data.append(&mut args);
+        let data = AcceptAuthorityInvitationInstructionData::new()
+            .try_to_vec()
+            .unwrap();
 
         solana_instruction::Instruction {
             program_id: crate::ASYNC_VAULT_ID,
@@ -52,14 +49,14 @@ impl UpdateVaultNav {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct UpdateVaultNavInstructionData {
+pub struct AcceptAuthorityInvitationInstructionData {
     discriminator: [u8; 8],
 }
 
-impl UpdateVaultNavInstructionData {
+impl AcceptAuthorityInvitationInstructionData {
     pub fn new() -> Self {
         Self {
-            discriminator: [252, 12, 154, 223, 213, 206, 35, 233],
+            discriminator: [25, 46, 44, 100, 108, 172, 146, 180],
         }
     }
 
@@ -68,58 +65,39 @@ impl UpdateVaultNavInstructionData {
     }
 }
 
-impl Default for UpdateVaultNavInstructionData {
+impl Default for AcceptAuthorityInvitationInstructionData {
     fn default() -> Self {
         Self::new()
     }
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct UpdateVaultNavInstructionArgs {
-    pub updated_nav: u128,
-}
-
-impl UpdateVaultNavInstructionArgs {
-    pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error> {
-        borsh::to_vec(self)
-    }
-}
-
-/// Instruction builder for `UpdateVaultNav`.
+/// Instruction builder for `AcceptAuthorityInvitation`.
 ///
 /// ### Accounts:
 ///
-///   0. `[signer]` authority
+///   0. `[signer]` new_authority
 ///   1. `[writable]` vault
 #[derive(Clone, Debug, Default)]
-pub struct UpdateVaultNavBuilder {
-    authority: Option<solana_pubkey::Pubkey>,
+pub struct AcceptAuthorityInvitationBuilder {
+    new_authority: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
-    updated_nav: Option<u128>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
-impl UpdateVaultNavBuilder {
+impl AcceptAuthorityInvitationBuilder {
     pub fn new() -> Self {
         Self::default()
     }
 
     #[inline(always)]
-    pub fn authority(&mut self, authority: solana_pubkey::Pubkey) -> &mut Self {
-        self.authority = Some(authority);
+    pub fn new_authority(&mut self, new_authority: solana_pubkey::Pubkey) -> &mut Self {
+        self.new_authority = Some(new_authority);
         self
     }
 
     #[inline(always)]
     pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
         self.vault = Some(vault);
-        self
-    }
-
-    #[inline(always)]
-    pub fn updated_nav(&mut self, updated_nav: u128) -> &mut Self {
-        self.updated_nav = Some(updated_nav);
         self
     }
 
@@ -142,48 +120,41 @@ impl UpdateVaultNavBuilder {
 
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
-        let accounts = UpdateVaultNav {
-            authority: self.authority.expect("authority is not set"),
+        let accounts = AcceptAuthorityInvitation {
+            new_authority: self.new_authority.expect("new_authority is not set"),
             vault: self.vault.expect("vault is not set"),
         };
-        let args = UpdateVaultNavInstructionArgs {
-            updated_nav: self.updated_nav.clone().expect("updated_nav is not set"),
-        };
 
-        accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
+        accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
     }
 }
 
-/// `update_vault_nav` CPI accounts.
-pub struct UpdateVaultNavCpiAccounts<'a, 'b> {
-    pub authority: &'b solana_account_info::AccountInfo<'a>,
+/// `accept_authority_invitation` CPI accounts.
+pub struct AcceptAuthorityInvitationCpiAccounts<'a, 'b> {
+    pub new_authority: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 }
 
-/// `update_vault_nav` CPI instruction.
-pub struct UpdateVaultNavCpi<'a, 'b> {
+/// `accept_authority_invitation` CPI instruction.
+pub struct AcceptAuthorityInvitationCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
-    pub authority: &'b solana_account_info::AccountInfo<'a>,
+    pub new_authority: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
-    /// The arguments for the instruction.
-    pub __args: UpdateVaultNavInstructionArgs,
 }
 
-impl<'a, 'b> UpdateVaultNavCpi<'a, 'b> {
+impl<'a, 'b> AcceptAuthorityInvitationCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_account_info::AccountInfo<'a>,
-        accounts: UpdateVaultNavCpiAccounts<'a, 'b>,
-        args: UpdateVaultNavInstructionArgs,
+        accounts: AcceptAuthorityInvitationCpiAccounts<'a, 'b>,
     ) -> Self {
         Self {
             __program: program,
-            authority: accounts.authority,
+            new_authority: accounts.new_authority,
             vault: accounts.vault,
-            __args: args,
         }
     }
 
@@ -215,7 +186,7 @@ impl<'a, 'b> UpdateVaultNavCpi<'a, 'b> {
     ) -> solana_program_error::ProgramResult {
         let mut accounts = Vec::with_capacity(2 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.authority.key,
+            *self.new_authority.key,
             true,
         ));
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
@@ -226,9 +197,9 @@ impl<'a, 'b> UpdateVaultNavCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = UpdateVaultNavInstructionData::new().try_to_vec().unwrap();
-        let mut args = self.__args.try_to_vec().unwrap();
-        data.append(&mut args);
+        let data = AcceptAuthorityInvitationInstructionData::new()
+            .try_to_vec()
+            .unwrap();
 
         let instruction = solana_instruction::Instruction {
             program_id: crate::ASYNC_VAULT_ID,
@@ -237,7 +208,7 @@ impl<'a, 'b> UpdateVaultNavCpi<'a, 'b> {
         };
         let mut account_infos = Vec::with_capacity(3 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.authority.clone());
+        account_infos.push(self.new_authority.clone());
         account_infos.push(self.vault.clone());
         remaining_accounts
             .iter()
@@ -251,44 +222,40 @@ impl<'a, 'b> UpdateVaultNavCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `UpdateVaultNav` via CPI.
+/// Instruction builder for `AcceptAuthorityInvitation` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[signer]` authority
+///   0. `[signer]` new_authority
 ///   1. `[writable]` vault
 #[derive(Clone, Debug)]
-pub struct UpdateVaultNavCpiBuilder<'a, 'b> {
-    instruction: Box<UpdateVaultNavCpiBuilderInstruction<'a, 'b>>,
+pub struct AcceptAuthorityInvitationCpiBuilder<'a, 'b> {
+    instruction: Box<AcceptAuthorityInvitationCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> UpdateVaultNavCpiBuilder<'a, 'b> {
+impl<'a, 'b> AcceptAuthorityInvitationCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(UpdateVaultNavCpiBuilderInstruction {
+        let instruction = Box::new(AcceptAuthorityInvitationCpiBuilderInstruction {
             __program: program,
-            authority: None,
+            new_authority: None,
             vault: None,
-            updated_nav: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
     }
 
     #[inline(always)]
-    pub fn authority(&mut self, authority: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.authority = Some(authority);
+    pub fn new_authority(
+        &mut self,
+        new_authority: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.new_authority = Some(new_authority);
         self
     }
 
     #[inline(always)]
     pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.vault = Some(vault);
-        self
-    }
-
-    #[inline(always)]
-    pub fn updated_nav(&mut self, updated_nav: u128) -> &mut Self {
-        self.instruction.updated_nav = Some(updated_nav);
         self
     }
 
@@ -330,20 +297,15 @@ impl<'a, 'b> UpdateVaultNavCpiBuilder<'a, 'b> {
     #[allow(clippy::clone_on_copy)]
     #[allow(clippy::vec_init_then_push)]
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
-        let args = UpdateVaultNavInstructionArgs {
-            updated_nav: self
-                .instruction
-                .updated_nav
-                .clone()
-                .expect("updated_nav is not set"),
-        };
-        let instruction = UpdateVaultNavCpi {
+        let instruction = AcceptAuthorityInvitationCpi {
             __program: self.instruction.__program,
 
-            authority: self.instruction.authority.expect("authority is not set"),
+            new_authority: self
+                .instruction
+                .new_authority
+                .expect("new_authority is not set"),
 
             vault: self.instruction.vault.expect("vault is not set"),
-            __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -353,11 +315,10 @@ impl<'a, 'b> UpdateVaultNavCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct UpdateVaultNavCpiBuilderInstruction<'a, 'b> {
+struct AcceptAuthorityInvitationCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
-    authority: Option<&'b solana_account_info::AccountInfo<'a>>,
+    new_authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-    updated_nav: Option<u128>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

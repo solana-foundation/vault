@@ -91,43 +91,6 @@ impl<'info> CreateDepositRequest<'info> {
         }
     }
 
-    pub fn transfer_fee_to_recipient(
-        &self,
-        remaining_accounts: &[AccountInfo<'info>],
-        fee: u64,
-    ) -> Result<()> {
-        require!(
-            !remaining_accounts.is_empty(),
-            AsyncVaultError::MissingFeeRecipient
-        );
-        let fee_recipient_info = &remaining_accounts[0];
-
-        require!(
-            fee_recipient_info.owner == self.asset_token_program.key,
-            AsyncVaultError::InvalidFeeRecipient
-        );
-
-        let fee_recipient_data = fee_recipient_info.try_borrow_data()?;
-        let fee_recipient_state =
-            StateWithExtensions::<spl_token_2022::state::Account>::unpack(&fee_recipient_data)?;
-        require!(
-            fee_recipient_state.base.owner == self.vault.fee_recipient,
-            AsyncVaultError::InvalidFeeRecipient
-        );
-        require!(
-            fee_recipient_state.base.mint == self.asset_mint.key(),
-            AsyncVaultError::InvalidFeeRecipient
-        );
-        drop(fee_recipient_data);
-
-        self.transfer_asset_token(
-            self.pending_vault.to_account_info(),
-            fee_recipient_info.clone(),
-            self.vault.to_account_info(),
-            fee,
-        )
-    }
-
     pub fn assert_no_transfer_fees(&mut self) -> Result<()> {
         let binding = self.asset_mint.to_account_info();
         let mint_data = binding
@@ -154,10 +117,17 @@ pub fn handler<'info>(
         VaultProgramError::AsyncInflowsDisabled
     );
     require!(ctx.accounts.vault.nav > 0, VaultProgramError::NavIsNotSet);
+    ctx.accounts.assert_no_transfer_fees()?;
+
+    ctx.accounts.transfer_asset_token(
+        ctx.accounts.user_token_account.to_account_info(),
+        ctx.accounts.pending_vault.to_account_info(),
+        ctx.accounts.user.to_account_info(),
+        args.amount,
+    )?;
 
     let vault_info = ctx.accounts.vault.to_account_info();
     let fee = get_deposit_fee(&vault_info.try_borrow_data()?, args.amount)?;
-    ctx.accounts.assert_no_transfer_fees()?;
 
     let net_amount = args
         .amount
@@ -175,27 +145,15 @@ pub fn handler<'info>(
         request_type: RequestType::Deposit,
         request_state: RequestState::Pending,
         owner: ctx.accounts.user.key(),
-        amount: args.amount,
+        amount: net_amount,
         price: ctx.accounts.vault.nav,
         remaining_amount: shares,
         asset_mint_address: ctx.accounts.asset_mint.key(),
         created_at: current_timestamp,
         nav_update_version: ctx.accounts.vault.nav_version,
+        fee,
         operator: args.operator,
     });
-
-    // Transfer assets from user into pending vault
-    ctx.accounts.transfer_asset_token(
-        ctx.accounts.user_token_account.to_account_info(),
-        ctx.accounts.pending_vault.to_account_info(),
-        ctx.accounts.user.to_account_info(),
-        args.amount,
-    )?;
-
-    if fee > 0 {
-        ctx.accounts
-            .transfer_fee_to_recipient(ctx.remaining_accounts, fee)?;
-    }
 
     ctx.accounts.vault.pending_async_requests = ctx
         .accounts

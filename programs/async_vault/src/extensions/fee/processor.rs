@@ -7,9 +7,9 @@ use crate::{
     state::Vault,
 };
 
-pub const TLV_START: usize = 8 + 241;
+pub const TLV_START: usize = 8 + Vault::INIT_SPACE;
 
-fn get_fee_extension(account_data: &[u8], ext_type: ExtensionType) -> Result<Option<FeeType>> {
+pub fn get_fee_extension(account_data: &[u8], ext_type: ExtensionType) -> Result<Option<FeeType>> {
     if account_data.len() <= TLV_START {
         return Ok(None);
     }
@@ -27,7 +27,7 @@ fn get_fee_extension(account_data: &[u8], ext_type: ExtensionType) -> Result<Opt
 
 pub fn get_deposit_fee(account_data: &[u8], amount: u64) -> Result<u64> {
     match get_fee_extension(account_data, ExtensionType::DepositFee)? {
-        Some(fee) => fee.get_fee(amount),
+        Some(fee) => Ok(fee.get_fee(amount)?),
         None => Ok(0),
     }
 }

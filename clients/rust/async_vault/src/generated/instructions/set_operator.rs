@@ -6,41 +6,40 @@
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-pub const UPDATE_VAULT_NAV_DISCRIMINATOR: [u8; 8] = [252, 12, 154, 223, 213, 206, 35, 233];
+pub const SET_OPERATOR_DISCRIMINATOR: [u8; 8] = [238, 153, 101, 169, 243, 131, 36, 1];
 
 /// Accounts.
 #[derive(Debug)]
-pub struct UpdateVaultNav {
-    pub authority: solana_pubkey::Pubkey,
+pub struct SetOperator {
+    pub user: solana_pubkey::Pubkey,
 
-    pub vault: solana_pubkey::Pubkey,
+    pub operator: solana_pubkey::Pubkey,
+
+    pub request: solana_pubkey::Pubkey,
 }
 
-impl UpdateVaultNav {
-    pub fn instruction(
-        &self,
-        args: UpdateVaultNavInstructionArgs,
-    ) -> solana_instruction::Instruction {
-        self.instruction_with_remaining_accounts(args, &[])
+impl SetOperator {
+    pub fn instruction(&self) -> solana_instruction::Instruction {
+        self.instruction_with_remaining_accounts(&[])
     }
 
     #[allow(clippy::arithmetic_side_effects)]
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: UpdateVaultNavInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(2 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.authority,
+            self.user, true,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.operator,
             true,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
+        accounts.push(solana_instruction::AccountMeta::new(self.request, false));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = UpdateVaultNavInstructionData::new().try_to_vec().unwrap();
-        let mut args = args.try_to_vec().unwrap();
-        data.append(&mut args);
+        let data = SetOperatorInstructionData::new().try_to_vec().unwrap();
 
         solana_instruction::Instruction {
             program_id: crate::ASYNC_VAULT_ID,
@@ -52,14 +51,14 @@ impl UpdateVaultNav {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct UpdateVaultNavInstructionData {
+pub struct SetOperatorInstructionData {
     discriminator: [u8; 8],
 }
 
-impl UpdateVaultNavInstructionData {
+impl SetOperatorInstructionData {
     pub fn new() -> Self {
         Self {
-            discriminator: [252, 12, 154, 223, 213, 206, 35, 233],
+            discriminator: [238, 153, 101, 169, 243, 131, 36, 1],
         }
     }
 
@@ -68,58 +67,47 @@ impl UpdateVaultNavInstructionData {
     }
 }
 
-impl Default for UpdateVaultNavInstructionData {
+impl Default for SetOperatorInstructionData {
     fn default() -> Self {
         Self::new()
     }
 }
 
-#[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct UpdateVaultNavInstructionArgs {
-    pub updated_nav: u128,
-}
-
-impl UpdateVaultNavInstructionArgs {
-    pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error> {
-        borsh::to_vec(self)
-    }
-}
-
-/// Instruction builder for `UpdateVaultNav`.
+/// Instruction builder for `SetOperator`.
 ///
 /// ### Accounts:
 ///
-///   0. `[signer]` authority
-///   1. `[writable]` vault
+///   0. `[signer]` user
+///   1. `[signer]` operator
+///   2. `[writable]` request
 #[derive(Clone, Debug, Default)]
-pub struct UpdateVaultNavBuilder {
-    authority: Option<solana_pubkey::Pubkey>,
-    vault: Option<solana_pubkey::Pubkey>,
-    updated_nav: Option<u128>,
+pub struct SetOperatorBuilder {
+    user: Option<solana_pubkey::Pubkey>,
+    operator: Option<solana_pubkey::Pubkey>,
+    request: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
-impl UpdateVaultNavBuilder {
+impl SetOperatorBuilder {
     pub fn new() -> Self {
         Self::default()
     }
 
     #[inline(always)]
-    pub fn authority(&mut self, authority: solana_pubkey::Pubkey) -> &mut Self {
-        self.authority = Some(authority);
+    pub fn user(&mut self, user: solana_pubkey::Pubkey) -> &mut Self {
+        self.user = Some(user);
         self
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-        self.vault = Some(vault);
+    pub fn operator(&mut self, operator: solana_pubkey::Pubkey) -> &mut Self {
+        self.operator = Some(operator);
         self
     }
 
     #[inline(always)]
-    pub fn updated_nav(&mut self, updated_nav: u128) -> &mut Self {
-        self.updated_nav = Some(updated_nav);
+    pub fn request(&mut self, request: solana_pubkey::Pubkey) -> &mut Self {
+        self.request = Some(request);
         self
     }
 
@@ -142,48 +130,47 @@ impl UpdateVaultNavBuilder {
 
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
-        let accounts = UpdateVaultNav {
-            authority: self.authority.expect("authority is not set"),
-            vault: self.vault.expect("vault is not set"),
-        };
-        let args = UpdateVaultNavInstructionArgs {
-            updated_nav: self.updated_nav.clone().expect("updated_nav is not set"),
+        let accounts = SetOperator {
+            user: self.user.expect("user is not set"),
+            operator: self.operator.expect("operator is not set"),
+            request: self.request.expect("request is not set"),
         };
 
-        accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
+        accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
     }
 }
 
-/// `update_vault_nav` CPI accounts.
-pub struct UpdateVaultNavCpiAccounts<'a, 'b> {
-    pub authority: &'b solana_account_info::AccountInfo<'a>,
+/// `set_operator` CPI accounts.
+pub struct SetOperatorCpiAccounts<'a, 'b> {
+    pub user: &'b solana_account_info::AccountInfo<'a>,
 
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
+    pub operator: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
 }
 
-/// `update_vault_nav` CPI instruction.
-pub struct UpdateVaultNavCpi<'a, 'b> {
+/// `set_operator` CPI instruction.
+pub struct SetOperatorCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
-    pub authority: &'b solana_account_info::AccountInfo<'a>,
+    pub user: &'b solana_account_info::AccountInfo<'a>,
 
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
-    /// The arguments for the instruction.
-    pub __args: UpdateVaultNavInstructionArgs,
+    pub operator: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
 }
 
-impl<'a, 'b> UpdateVaultNavCpi<'a, 'b> {
+impl<'a, 'b> SetOperatorCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_account_info::AccountInfo<'a>,
-        accounts: UpdateVaultNavCpiAccounts<'a, 'b>,
-        args: UpdateVaultNavInstructionArgs,
+        accounts: SetOperatorCpiAccounts<'a, 'b>,
     ) -> Self {
         Self {
             __program: program,
-            authority: accounts.authority,
-            vault: accounts.vault,
-            __args: args,
+            user: accounts.user,
+            operator: accounts.operator,
+            request: accounts.request,
         }
     }
 
@@ -213,12 +200,19 @@ impl<'a, 'b> UpdateVaultNavCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(2 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.authority.key,
+            *self.user.key,
             true,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.operator.key,
+            true,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.request.key,
+            false,
+        ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -226,19 +220,18 @@ impl<'a, 'b> UpdateVaultNavCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = UpdateVaultNavInstructionData::new().try_to_vec().unwrap();
-        let mut args = self.__args.try_to_vec().unwrap();
-        data.append(&mut args);
+        let data = SetOperatorInstructionData::new().try_to_vec().unwrap();
 
         let instruction = solana_instruction::Instruction {
             program_id: crate::ASYNC_VAULT_ID,
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(3 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.authority.clone());
-        account_infos.push(self.vault.clone());
+        account_infos.push(self.user.clone());
+        account_infos.push(self.operator.clone());
+        account_infos.push(self.request.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -251,44 +244,45 @@ impl<'a, 'b> UpdateVaultNavCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `UpdateVaultNav` via CPI.
+/// Instruction builder for `SetOperator` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[signer]` authority
-///   1. `[writable]` vault
+///   0. `[signer]` user
+///   1. `[signer]` operator
+///   2. `[writable]` request
 #[derive(Clone, Debug)]
-pub struct UpdateVaultNavCpiBuilder<'a, 'b> {
-    instruction: Box<UpdateVaultNavCpiBuilderInstruction<'a, 'b>>,
+pub struct SetOperatorCpiBuilder<'a, 'b> {
+    instruction: Box<SetOperatorCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> UpdateVaultNavCpiBuilder<'a, 'b> {
+impl<'a, 'b> SetOperatorCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(UpdateVaultNavCpiBuilderInstruction {
+        let instruction = Box::new(SetOperatorCpiBuilderInstruction {
             __program: program,
-            authority: None,
-            vault: None,
-            updated_nav: None,
+            user: None,
+            operator: None,
+            request: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
     }
 
     #[inline(always)]
-    pub fn authority(&mut self, authority: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.authority = Some(authority);
+    pub fn user(&mut self, user: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.user = Some(user);
         self
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.vault = Some(vault);
+    pub fn operator(&mut self, operator: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.operator = Some(operator);
         self
     }
 
     #[inline(always)]
-    pub fn updated_nav(&mut self, updated_nav: u128) -> &mut Self {
-        self.instruction.updated_nav = Some(updated_nav);
+    pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.request = Some(request);
         self
     }
 
@@ -330,20 +324,14 @@ impl<'a, 'b> UpdateVaultNavCpiBuilder<'a, 'b> {
     #[allow(clippy::clone_on_copy)]
     #[allow(clippy::vec_init_then_push)]
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
-        let args = UpdateVaultNavInstructionArgs {
-            updated_nav: self
-                .instruction
-                .updated_nav
-                .clone()
-                .expect("updated_nav is not set"),
-        };
-        let instruction = UpdateVaultNavCpi {
+        let instruction = SetOperatorCpi {
             __program: self.instruction.__program,
 
-            authority: self.instruction.authority.expect("authority is not set"),
+            user: self.instruction.user.expect("user is not set"),
 
-            vault: self.instruction.vault.expect("vault is not set"),
-            __args: args,
+            operator: self.instruction.operator.expect("operator is not set"),
+
+            request: self.instruction.request.expect("request is not set"),
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -353,11 +341,11 @@ impl<'a, 'b> UpdateVaultNavCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct UpdateVaultNavCpiBuilderInstruction<'a, 'b> {
+struct SetOperatorCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
-    authority: Option<&'b solana_account_info::AccountInfo<'a>>,
-    vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-    updated_nav: Option<u128>,
+    user: Option<&'b solana_account_info::AccountInfo<'a>>,
+    operator: Option<&'b solana_account_info::AccountInfo<'a>>,
+    request: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

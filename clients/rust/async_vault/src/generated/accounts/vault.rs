@@ -68,13 +68,12 @@ pub struct Vault {
     pub reserve_bump: u8,
     pub pending_vault_bump: u8,
     pub bump: u8,
+    pub pending_authority: Option<Pubkey>,
 }
 
 pub const VAULT_DISCRIMINATOR: [u8; 8] = [211, 8, 232, 43, 2, 152, 117, 119];
 
 impl Vault {
-    pub const LEN: usize = 249;
-
     #[inline(always)]
     pub fn from_bytes(data: &[u8]) -> Result<Self, std::io::Error> {
         let mut data = data;

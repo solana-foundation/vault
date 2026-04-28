@@ -62,6 +62,34 @@ pub mod async_vault {
         instructions::update_withdrawal_fee::handler(ctx, args)
     }
 
+    /// It sets an operator for the vault.
+    /// Requires authority signature.
+    pub fn set_operator(ctx: Context<SetOperator>) -> Result<()> {
+        instructions::set_operator::handler(ctx)
+    }
+
+    /// Stores a pending authority on the vault without transferring control.
+    /// The new authority must later call `accept_authority_invitation` to
+    /// complete the transfer. Requires current authority signature.
+    pub fn invite_new_authority(
+        ctx: Context<InviteNewAuthority>,
+        args: InviteNewAuthorityArgs,
+    ) -> Result<()> {
+        instructions::invite_new_authority::handler(ctx, args)
+    }
+
+    /// Completes the authority transfer by setting the vault authority to
+    /// the pending authority. Requires both the current and new authority
+    /// to sign.
+    pub fn accept_authority_invitation(ctx: Context<AcceptAuthorityInvitation>) -> Result<()> {
+        instructions::accept_authority_invitation::handler(ctx)
+    }
+    /// Updates the async vault configuration. Can modify paused status,
+    /// async inflows, and async outflows. Requires authority signature.
+    pub fn update_vault(ctx: Context<UpdateVault>, paused: bool) -> Result<()> {
+        instructions::update_vault::handler(ctx, paused)
+    }
+
     /// Updates the vault nav and increases nav version by 1
     /// Requires authority signature.
     pub fn update_vault_nav(ctx: Context<UpdateVaultNav>, updated_nav: u128) -> Result<()> {

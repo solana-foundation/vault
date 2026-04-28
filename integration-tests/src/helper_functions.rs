@@ -20,9 +20,11 @@ use vault_client::{
 };
 
 use async_vault_client::{
-    sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
+    sdk::program_id, AcceptAuthorityInvitationBuilder, CreateDepositRequestBuilder,
+    CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    InitializeWithdrawalFeeBuilder, UpdateDepositFeeBuilder, UpdateVaultNav, UpdateVaultNavBuilder,
+    InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, SetOperatorBuilder,
+    UpdateDepositFeeBuilder, UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder,
     UpdateWithdrawalFeeBuilder,
 };
 
@@ -943,6 +945,31 @@ pub fn initialize_async_vault(
     svm.send_transaction(tx)
 }
 
+pub fn update_async_vault(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    paused: bool,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let mut builder = UpdateVaultAsyncBuilder::new();
+    builder
+        .authority(authority.pubkey())
+        .share_mint(share_mint)
+        .paused(paused)
+        .vault(vault);
+
+    let ix = builder.instruction().into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
 pub fn init_deposit_fee(
     svm: &mut LiteSVM,
     authority: &Keypair,
@@ -1103,27 +1130,66 @@ pub fn setup_async_vault(
     )
 }
 
-pub fn update_vault_nav(
+pub fn set_operator(
     svm: &mut LiteSVM,
-    authority: &Keypair,
-    share_mint: Pubkey,
-    vault: Pubkey,
-    updated_nav: u128,
+    user: &Keypair,
+    operator: &Keypair,
+    request: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
-    let ix = UpdateVaultNavBuilder::new()
-        .authority(authority.pubkey())
-        .share_mint(share_mint)
-        .vault(vault)
-        .updated_nav(updated_nav)
+    let ix = SetOperatorBuilder::new()
+        .user(user.pubkey())
+        .operator(operator.pubkey())
+        .request(request)
         .instruction()
         .into_sdk_instruction();
 
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&user.pubkey()),
+        &[user, operator],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
+pub fn invite_new_authority(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    new_authority: Pubkey,
+    vault: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = InviteNewAuthorityBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault)
+        .new_authority(new_authority)
+        .instruction()
+        .into_sdk_instruction();
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&authority.pubkey()),
         &[authority],
-        blockhash,
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
+pub fn accept_authority_invitation(
+    svm: &mut LiteSVM,
+    new_authority: &Keypair,
+    vault: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = AcceptAuthorityInvitationBuilder::new()
+        .new_authority(new_authority.pubkey())
+        .vault(vault)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&new_authority.pubkey()),
+        &[new_authority],
+        svm.latest_blockhash(),
     );
 
     svm.send_transaction(tx)
@@ -1219,7 +1285,7 @@ pub fn set_up_async_vault(
         &asset_token_program,
     );
 
-    let _ = update_vault_nav(svm, &authority, share_mint.pubkey(), vault_pubkey, 100);
+    let _ = update_vault_nav(svm, &authority, vault_pubkey, 100);
 
     return (
         authority,
@@ -1235,4 +1301,36 @@ pub fn set_up_async_vault(
         pending_vault_pubkey,
         fee_recipient_ata,
     );
+}
+
+pub fn create_deposit_request_ix(
+    user: &Keypair,
+    request_keypair: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    user_token_account: Pubkey,
+    pending_vault: Pubkey,
+    amount: u64,
+) -> solana_sdk::instruction::Instruction {
+    let mut builder = CreateDepositRequestBuilder::new();
+    builder
+        .user(user.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .request(request_keypair.pubkey())
+        .vault(vault)
+        .user_token_account(user_token_account)
+        .pending_vault(pending_vault)
+        .asset_token_program(spl_token::ID)
+        .amount(amount);
+
+    let mut ix = builder.instruction().into_sdk_instruction();
+
+    for meta in &mut ix.accounts {
+        if meta.pubkey == request_keypair.pubkey() {
+            meta.is_signer = true;
+        }
+    }
+    ix
 }
