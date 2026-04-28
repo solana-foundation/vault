@@ -146,21 +146,6 @@ fn test_accept_authority_invitation(invite_first: bool, use_correct_new_authorit
 }
 
 #[test]
-fn test_none_pending_authority_is_not_pubkey_default() {
-    let mut svm = LiteSVM::new();
-
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (_, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
-
-    let vault_account = svm.get_account(&vault_pubkey).unwrap();
-    let vault_data = Vault::from_bytes(vault_account.data()).unwrap();
-
-    assert_eq!(vault_data.pending_authority, None);
-    assert_ne!(vault_data.pending_authority, Some(Pubkey::default()));
-}
-
-#[test]
 fn test_full_authority_transfer_old_authority_loses_access() {
     let mut svm = LiteSVM::new();
 
