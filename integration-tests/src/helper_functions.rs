@@ -1334,3 +1334,25 @@ pub fn create_deposit_request_ix(
     }
     ix
 }
+
+pub fn update_vault_nav(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    vault: Pubkey,
+    updated_nav: u128,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = UpdateVaultNavBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault)
+        .updated_nav(updated_nav)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}

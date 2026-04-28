@@ -36,4 +36,8 @@ pub enum AsyncVaultError {
     InvalidFeeRecipient,
     #[msg("Request is not pending.")]
     RequestIsNotPending,
+    #[msg("Invalid request type for this instruction.")]
+    InvalidRequestType,
+    #[msg("A required optional account was not provided.")]
+    MissingRequiredAccount,
 }

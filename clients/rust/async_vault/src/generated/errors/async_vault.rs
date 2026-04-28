@@ -60,6 +60,12 @@ pub enum AsyncVaultError {
     /// 6016 - Request is not pending.
     #[error("Request is not pending.")]
     RequestIsNotPending = 0x1780,
+    /// 6017 - Invalid request type for this instruction.
+    #[error("Invalid request type for this instruction.")]
+    InvalidRequestType = 0x1781,
+    /// 6018 - A required optional account was not provided.
+    #[error("A required optional account was not provided.")]
+    MissingRequiredAccount = 0x1782,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {
