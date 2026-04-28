@@ -1,23 +1,17 @@
 use anchor_lang::prelude::*;
 
-use crate::{
-    error::AsyncVaultError,
-    state::{Request, Vault},
-};
+use crate::{error::AsyncVaultError, state::Request};
 
 #[derive(Accounts)]
 pub struct SetOperator<'info> {
-    pub authority: Signer<'info>,
+    pub user: Signer<'info>,
 
     pub operator: Signer<'info>,
 
     #[account(
         mut,
-        constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
+        constraint = user.key() == request.owner @ AsyncVaultError::UnauthorizedSigner
     )]
-    pub vault: Account<'info, Vault>,
-
-    #[account(mut)]
     pub request: Account<'info, Request>,
 }
 

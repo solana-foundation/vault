@@ -53,14 +53,8 @@ fn test_set_operator_succeeds() {
     svm.send_transaction(tx)
         .expect("create deposit request should succeed");
 
-    set_operator(
-        &mut svm,
-        &authority,
-        &operator,
-        vault_pubkey,
-        request_keypair.pubkey(),
-    )
-    .expect("set operator should succeed");
+    set_operator(&mut svm, &user, &operator, request_keypair.pubkey())
+        .expect("set operator should succeed");
 
     let request_account = svm
         .get_account(&request_keypair.pubkey())

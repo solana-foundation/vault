@@ -11,11 +11,9 @@ pub const SET_OPERATOR_DISCRIMINATOR: [u8; 8] = [238, 153, 101, 169, 243, 131, 3
 /// Accounts.
 #[derive(Debug)]
 pub struct SetOperator {
-    pub authority: solana_pubkey::Pubkey,
+    pub user: solana_pubkey::Pubkey,
 
     pub operator: solana_pubkey::Pubkey,
-
-    pub vault: solana_pubkey::Pubkey,
 
     pub request: solana_pubkey::Pubkey,
 }
@@ -31,16 +29,14 @@ impl SetOperator {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.authority,
-            true,
+            self.user, true,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.operator,
             true,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new(self.request, false));
         accounts.extend_from_slice(remaining_accounts);
         let data = SetOperatorInstructionData::new().try_to_vec().unwrap();
@@ -81,15 +77,13 @@ impl Default for SetOperatorInstructionData {
 ///
 /// ### Accounts:
 ///
-///   0. `[signer]` authority
+///   0. `[signer]` user
 ///   1. `[signer]` operator
-///   2. `[writable]` vault
-///   3. `[writable]` request
+///   2. `[writable]` request
 #[derive(Clone, Debug, Default)]
 pub struct SetOperatorBuilder {
-    authority: Option<solana_pubkey::Pubkey>,
+    user: Option<solana_pubkey::Pubkey>,
     operator: Option<solana_pubkey::Pubkey>,
-    vault: Option<solana_pubkey::Pubkey>,
     request: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
@@ -100,20 +94,14 @@ impl SetOperatorBuilder {
     }
 
     #[inline(always)]
-    pub fn authority(&mut self, authority: solana_pubkey::Pubkey) -> &mut Self {
-        self.authority = Some(authority);
+    pub fn user(&mut self, user: solana_pubkey::Pubkey) -> &mut Self {
+        self.user = Some(user);
         self
     }
 
     #[inline(always)]
     pub fn operator(&mut self, operator: solana_pubkey::Pubkey) -> &mut Self {
         self.operator = Some(operator);
-        self
-    }
-
-    #[inline(always)]
-    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-        self.vault = Some(vault);
         self
     }
 
@@ -143,9 +131,8 @@ impl SetOperatorBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let accounts = SetOperator {
-            authority: self.authority.expect("authority is not set"),
+            user: self.user.expect("user is not set"),
             operator: self.operator.expect("operator is not set"),
-            vault: self.vault.expect("vault is not set"),
             request: self.request.expect("request is not set"),
         };
 
@@ -155,11 +142,9 @@ impl SetOperatorBuilder {
 
 /// `set_operator` CPI accounts.
 pub struct SetOperatorCpiAccounts<'a, 'b> {
-    pub authority: &'b solana_account_info::AccountInfo<'a>,
+    pub user: &'b solana_account_info::AccountInfo<'a>,
 
     pub operator: &'b solana_account_info::AccountInfo<'a>,
-
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub request: &'b solana_account_info::AccountInfo<'a>,
 }
@@ -169,11 +154,9 @@ pub struct SetOperatorCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
-    pub authority: &'b solana_account_info::AccountInfo<'a>,
+    pub user: &'b solana_account_info::AccountInfo<'a>,
 
     pub operator: &'b solana_account_info::AccountInfo<'a>,
-
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub request: &'b solana_account_info::AccountInfo<'a>,
 }
@@ -185,9 +168,8 @@ impl<'a, 'b> SetOperatorCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            authority: accounts.authority,
+            user: accounts.user,
             operator: accounts.operator,
-            vault: accounts.vault,
             request: accounts.request,
         }
     }
@@ -218,16 +200,15 @@ impl<'a, 'b> SetOperatorCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.authority.key,
+            *self.user.key,
             true,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.operator.key,
             true,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.request.key,
             false,
@@ -246,11 +227,10 @@ impl<'a, 'b> SetOperatorCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.authority.clone());
+        account_infos.push(self.user.clone());
         account_infos.push(self.operator.clone());
-        account_infos.push(self.vault.clone());
         account_infos.push(self.request.clone());
         remaining_accounts
             .iter()
@@ -268,10 +248,9 @@ impl<'a, 'b> SetOperatorCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[signer]` authority
+///   0. `[signer]` user
 ///   1. `[signer]` operator
-///   2. `[writable]` vault
-///   3. `[writable]` request
+///   2. `[writable]` request
 #[derive(Clone, Debug)]
 pub struct SetOperatorCpiBuilder<'a, 'b> {
     instruction: Box<SetOperatorCpiBuilderInstruction<'a, 'b>>,
@@ -281,9 +260,8 @@ impl<'a, 'b> SetOperatorCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(SetOperatorCpiBuilderInstruction {
             __program: program,
-            authority: None,
+            user: None,
             operator: None,
-            vault: None,
             request: None,
             __remaining_accounts: Vec::new(),
         });
@@ -291,20 +269,14 @@ impl<'a, 'b> SetOperatorCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
-    pub fn authority(&mut self, authority: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.authority = Some(authority);
+    pub fn user(&mut self, user: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.user = Some(user);
         self
     }
 
     #[inline(always)]
     pub fn operator(&mut self, operator: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.operator = Some(operator);
-        self
-    }
-
-    #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.vault = Some(vault);
         self
     }
 
@@ -355,11 +327,9 @@ impl<'a, 'b> SetOperatorCpiBuilder<'a, 'b> {
         let instruction = SetOperatorCpi {
             __program: self.instruction.__program,
 
-            authority: self.instruction.authority.expect("authority is not set"),
+            user: self.instruction.user.expect("user is not set"),
 
             operator: self.instruction.operator.expect("operator is not set"),
-
-            vault: self.instruction.vault.expect("vault is not set"),
 
             request: self.instruction.request.expect("request is not set"),
         };
@@ -373,9 +343,8 @@ impl<'a, 'b> SetOperatorCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct SetOperatorCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
-    authority: Option<&'b solana_account_info::AccountInfo<'a>>,
+    user: Option<&'b solana_account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_account_info::AccountInfo<'a>>,
-    vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     request: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,

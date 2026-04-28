@@ -1131,23 +1131,21 @@ pub fn setup_async_vault(
 
 pub fn set_operator(
     svm: &mut LiteSVM,
-    authority: &Keypair,
+    user: &Keypair,
     operator: &Keypair,
-    vault: Pubkey,
     request: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = SetOperatorBuilder::new()
-        .authority(authority.pubkey())
+        .user(user.pubkey())
         .operator(operator.pubkey())
-        .vault(vault)
         .request(request)
         .instruction()
         .into_sdk_instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
-        Some(&authority.pubkey()),
-        &[authority, operator],
+        Some(&user.pubkey()),
+        &[user, operator],
         svm.latest_blockhash(),
     );
     svm.send_transaction(tx)
