@@ -1,6 +1,6 @@
 use async_vault_client::{sdk::program_id, Vault};
 use litesvm::LiteSVM;
-use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
+use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
 use crate::helper_functions::{
@@ -84,15 +84,10 @@ fn test_invite_new_authority_overwrites_pending() {
     );
 }
 
-#[test_case(true, true, true ; "succeeds")]
-#[test_case(false, true, true ; "no pending authority fails")]
-#[test_case(true, false, true ; "unauthorized current authority fails")]
-#[test_case(true, true, false ; "wrong new authority fails")]
-fn test_accept_authority_invitation(
-    invite_first: bool,
-    use_valid_authority: bool,
-    use_correct_new_authority: bool,
-) {
+#[test_case(true, true ; "succeeds")]
+#[test_case(false, true ; "no pending authority fails")]
+#[test_case(true, false ; "wrong new authority fails")]
+fn test_accept_authority_invitation(invite_first: bool, use_correct_new_authority: bool) {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
@@ -114,18 +109,9 @@ fn test_accept_authority_invitation(
         svm.expire_blockhash();
     }
 
-    let unauthorized = Keypair::new();
-    svm.airdrop(&unauthorized.pubkey(), 1_000_000_000).unwrap();
-
     let wrong_new_authority = Keypair::new();
     svm.airdrop(&wrong_new_authority.pubkey(), 1_000_000_000)
         .unwrap();
-
-    let effective_authority = if use_valid_authority {
-        &authority
-    } else {
-        &unauthorized
-    };
 
     let effective_new_authority = if use_correct_new_authority {
         &new_authority
@@ -135,13 +121,12 @@ fn test_accept_authority_invitation(
 
     let result = accept_authority_invitation(
         &mut svm,
-        effective_authority,
         effective_new_authority,
         share_mint.pubkey(),
         vault_pubkey,
     );
 
-    let should_succeed = invite_first && use_valid_authority && use_correct_new_authority;
+    let should_succeed = invite_first && use_correct_new_authority;
 
     if should_succeed {
         result.expect("accept authority invitation should succeed");
@@ -154,12 +139,25 @@ fn test_accept_authority_invitation(
         let err = result.unwrap_err();
         if !invite_first {
             assert_error_code(&err, 6012, "NoPendingAuthority");
-        } else if !use_valid_authority {
-            assert_error_code(&err, 6001, "UnauthorizedSigner");
         } else {
             assert_error_code(&err, 6001, "UnauthorizedSigner");
         }
     }
+}
+
+#[test]
+fn test_none_pending_authority_is_not_pubkey_default() {
+    let mut svm = LiteSVM::new();
+
+    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
+    svm.add_program(program_id(), program_bytes).unwrap();
+    let (_, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+
+    let vault_account = svm.get_account(&vault_pubkey).unwrap();
+    let vault_data = Vault::from_bytes(vault_account.data()).unwrap();
+
+    assert_eq!(vault_data.pending_authority, None);
+    assert_ne!(vault_data.pending_authority, Some(Pubkey::default()));
 }
 
 #[test]
@@ -184,14 +182,8 @@ fn test_full_authority_transfer_old_authority_loses_access() {
 
     svm.expire_blockhash();
 
-    accept_authority_invitation(
-        &mut svm,
-        &authority,
-        &new_authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-    )
-    .expect("accept should succeed");
+    accept_authority_invitation(&mut svm, &new_authority, share_mint.pubkey(), vault_pubkey)
+        .expect("accept should succeed");
 
     svm.expire_blockhash();
 

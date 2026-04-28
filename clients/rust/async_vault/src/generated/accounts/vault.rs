@@ -65,10 +65,10 @@ pub struct Vault {
     /// virtual vault asset balance, accounts for tokens that may
     /// have been withdrawn by the vault authority
     pub total_asset_balance: u64,
-    pub pending_authority: Option<Pubkey>,
     pub reserve_bump: u8,
     pub pending_vault_bump: u8,
     pub bump: u8,
+    pub pending_authority: Option<Pubkey>,
 }
 
 pub const VAULT_DISCRIMINATOR: [u8; 8] = [211, 8, 232, 43, 2, 152, 117, 119];

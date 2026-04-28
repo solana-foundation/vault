@@ -12,8 +12,6 @@ pub const ACCEPT_AUTHORITY_INVITATION_DISCRIMINATOR: [u8; 8] =
 /// Accounts.
 #[derive(Debug)]
 pub struct AcceptAuthorityInvitation {
-    pub authority: solana_pubkey::Pubkey,
-
     pub new_authority: solana_pubkey::Pubkey,
 
     pub share_mint: solana_pubkey::Pubkey,
@@ -32,11 +30,7 @@ impl AcceptAuthorityInvitation {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.authority,
-            true,
-        ));
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.new_authority,
             true,
@@ -87,13 +81,11 @@ impl Default for AcceptAuthorityInvitationInstructionData {
 ///
 /// ### Accounts:
 ///
-///   0. `[signer]` authority
-///   1. `[signer]` new_authority
-///   2. `[]` share_mint
-///   3. `[writable]` vault
+///   0. `[signer]` new_authority
+///   1. `[]` share_mint
+///   2. `[writable]` vault
 #[derive(Clone, Debug, Default)]
 pub struct AcceptAuthorityInvitationBuilder {
-    authority: Option<solana_pubkey::Pubkey>,
     new_authority: Option<solana_pubkey::Pubkey>,
     share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
@@ -103,12 +95,6 @@ pub struct AcceptAuthorityInvitationBuilder {
 impl AcceptAuthorityInvitationBuilder {
     pub fn new() -> Self {
         Self::default()
-    }
-
-    #[inline(always)]
-    pub fn authority(&mut self, authority: solana_pubkey::Pubkey) -> &mut Self {
-        self.authority = Some(authority);
-        self
     }
 
     #[inline(always)]
@@ -149,7 +135,6 @@ impl AcceptAuthorityInvitationBuilder {
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let accounts = AcceptAuthorityInvitation {
-            authority: self.authority.expect("authority is not set"),
             new_authority: self.new_authority.expect("new_authority is not set"),
             share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
@@ -161,8 +146,6 @@ impl AcceptAuthorityInvitationBuilder {
 
 /// `accept_authority_invitation` CPI accounts.
 pub struct AcceptAuthorityInvitationCpiAccounts<'a, 'b> {
-    pub authority: &'b solana_account_info::AccountInfo<'a>,
-
     pub new_authority: &'b solana_account_info::AccountInfo<'a>,
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
@@ -174,8 +157,6 @@ pub struct AcceptAuthorityInvitationCpiAccounts<'a, 'b> {
 pub struct AcceptAuthorityInvitationCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
-
-    pub authority: &'b solana_account_info::AccountInfo<'a>,
 
     pub new_authority: &'b solana_account_info::AccountInfo<'a>,
 
@@ -191,7 +172,6 @@ impl<'a, 'b> AcceptAuthorityInvitationCpi<'a, 'b> {
     ) -> Self {
         Self {
             __program: program,
-            authority: accounts.authority,
             new_authority: accounts.new_authority,
             share_mint: accounts.share_mint,
             vault: accounts.vault,
@@ -224,11 +204,7 @@ impl<'a, 'b> AcceptAuthorityInvitationCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.authority.key,
-            true,
-        ));
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.new_authority.key,
             true,
@@ -254,9 +230,8 @@ impl<'a, 'b> AcceptAuthorityInvitationCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
-        account_infos.push(self.authority.clone());
         account_infos.push(self.new_authority.clone());
         account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
@@ -276,10 +251,9 @@ impl<'a, 'b> AcceptAuthorityInvitationCpi<'a, 'b> {
 ///
 /// ### Accounts:
 ///
-///   0. `[signer]` authority
-///   1. `[signer]` new_authority
-///   2. `[]` share_mint
-///   3. `[writable]` vault
+///   0. `[signer]` new_authority
+///   1. `[]` share_mint
+///   2. `[writable]` vault
 #[derive(Clone, Debug)]
 pub struct AcceptAuthorityInvitationCpiBuilder<'a, 'b> {
     instruction: Box<AcceptAuthorityInvitationCpiBuilderInstruction<'a, 'b>>,
@@ -289,19 +263,12 @@ impl<'a, 'b> AcceptAuthorityInvitationCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
         let instruction = Box::new(AcceptAuthorityInvitationCpiBuilderInstruction {
             __program: program,
-            authority: None,
             new_authority: None,
             share_mint: None,
             vault: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
-    }
-
-    #[inline(always)]
-    pub fn authority(&mut self, authority: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.authority = Some(authority);
-        self
     }
 
     #[inline(always)]
@@ -369,8 +336,6 @@ impl<'a, 'b> AcceptAuthorityInvitationCpiBuilder<'a, 'b> {
         let instruction = AcceptAuthorityInvitationCpi {
             __program: self.instruction.__program,
 
-            authority: self.instruction.authority.expect("authority is not set"),
-
             new_authority: self
                 .instruction
                 .new_authority
@@ -390,7 +355,6 @@ impl<'a, 'b> AcceptAuthorityInvitationCpiBuilder<'a, 'b> {
 #[derive(Clone, Debug)]
 struct AcceptAuthorityInvitationCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
-    authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     new_authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,

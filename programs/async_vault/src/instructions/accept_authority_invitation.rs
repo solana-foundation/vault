@@ -8,15 +8,12 @@ use crate::{
 
 #[derive(Accounts)]
 pub struct AcceptAuthorityInvitation<'info> {
-    pub authority: Signer<'info>,
-
     pub new_authority: Signer<'info>,
 
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
-        constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump = vault.bump,
     )]

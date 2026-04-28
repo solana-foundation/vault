@@ -1179,13 +1179,11 @@ pub fn update_vault_nav(
 
 pub fn accept_authority_invitation(
     svm: &mut LiteSVM,
-    authority: &Keypair,
     new_authority: &Keypair,
     share_mint: Pubkey,
     vault: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = AcceptAuthorityInvitationBuilder::new()
-        .authority(authority.pubkey())
         .new_authority(new_authority.pubkey())
         .share_mint(share_mint)
         .vault(vault)
@@ -1194,8 +1192,8 @@ pub fn accept_authority_invitation(
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
-        Some(&authority.pubkey()),
-        &[authority, new_authority],
+        Some(&new_authority.pubkey()),
+        &[new_authority],
         svm.latest_blockhash(),
     );
 
