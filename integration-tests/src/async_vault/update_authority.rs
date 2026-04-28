@@ -31,7 +31,6 @@ fn test_invite_new_authority(use_valid_authority: bool) {
         &mut svm,
         effective_authority,
         new_authority.pubkey(),
-        share_mint.pubkey(),
         vault_pubkey,
     );
 
@@ -52,17 +51,11 @@ fn test_invite_new_authority_overwrites_pending() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (authority, _, _, _, _, _, vault_pubkey) = setup_async_vault(&mut svm);
 
     let first_candidate = Keypair::new();
-    invite_new_authority(
-        &mut svm,
-        &authority,
-        first_candidate.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-    )
-    .expect("first invite should succeed");
+    invite_new_authority(&mut svm, &authority, first_candidate.pubkey(), vault_pubkey)
+        .expect("first invite should succeed");
 
     svm.expire_blockhash();
 
@@ -71,7 +64,6 @@ fn test_invite_new_authority_overwrites_pending() {
         &mut svm,
         &authority,
         second_candidate.pubkey(),
-        share_mint.pubkey(),
         vault_pubkey,
     )
     .expect("second invite should succeed");
@@ -98,14 +90,8 @@ fn test_accept_authority_invitation(invite_first: bool, use_correct_new_authorit
     svm.airdrop(&new_authority.pubkey(), 1_000_000_000).unwrap();
 
     if invite_first {
-        invite_new_authority(
-            &mut svm,
-            &authority,
-            new_authority.pubkey(),
-            share_mint.pubkey(),
-            vault_pubkey,
-        )
-        .expect("invite should succeed");
+        invite_new_authority(&mut svm, &authority, new_authority.pubkey(), vault_pubkey)
+            .expect("invite should succeed");
         svm.expire_blockhash();
     }
 
@@ -119,12 +105,7 @@ fn test_accept_authority_invitation(invite_first: bool, use_correct_new_authorit
         &wrong_new_authority
     };
 
-    let result = accept_authority_invitation(
-        &mut svm,
-        effective_new_authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-    );
+    let result = accept_authority_invitation(&mut svm, effective_new_authority, vault_pubkey);
 
     let should_succeed = invite_first && use_correct_new_authority;
 
@@ -156,40 +137,22 @@ fn test_full_authority_transfer_old_authority_loses_access() {
     let new_authority = Keypair::new();
     svm.airdrop(&new_authority.pubkey(), 1_000_000_000).unwrap();
 
-    invite_new_authority(
-        &mut svm,
-        &authority,
-        new_authority.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-    )
-    .expect("invite should succeed");
+    invite_new_authority(&mut svm, &authority, new_authority.pubkey(), vault_pubkey)
+        .expect("invite should succeed");
 
     svm.expire_blockhash();
 
-    accept_authority_invitation(&mut svm, &new_authority, share_mint.pubkey(), vault_pubkey)
+    accept_authority_invitation(&mut svm, &new_authority, vault_pubkey)
         .expect("accept should succeed");
 
     svm.expire_blockhash();
 
     let another = Keypair::new();
-    let result = invite_new_authority(
-        &mut svm,
-        &authority,
-        another.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-    );
+    let result = invite_new_authority(&mut svm, &authority, another.pubkey(), vault_pubkey);
     assert_error_code(&result.unwrap_err(), 6001, "UnauthorizedSigner");
 
     svm.expire_blockhash();
 
-    invite_new_authority(
-        &mut svm,
-        &new_authority,
-        another.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-    )
-    .expect("new authority should be able to invite");
+    invite_new_authority(&mut svm, &new_authority, another.pubkey(), vault_pubkey)
+        .expect("new authority should be able to invite");
 }

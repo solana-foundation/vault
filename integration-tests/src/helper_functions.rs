@@ -1134,12 +1134,10 @@ pub fn invite_new_authority(
     svm: &mut LiteSVM,
     authority: &Keypair,
     new_authority: Pubkey,
-    share_mint: Pubkey,
     vault: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = InviteNewAuthorityBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint)
         .vault(vault)
         .new_authority(new_authority)
         .instruction()
@@ -1180,12 +1178,10 @@ pub fn update_vault_nav(
 pub fn accept_authority_invitation(
     svm: &mut LiteSVM,
     new_authority: &Keypair,
-    share_mint: Pubkey,
     vault: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = AcceptAuthorityInvitationBuilder::new()
         .new_authority(new_authority.pubkey())
-        .share_mint(share_mint)
         .vault(vault)
         .instruction()
         .into_sdk_instruction();

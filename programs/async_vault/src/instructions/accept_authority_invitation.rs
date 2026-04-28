@@ -1,22 +1,12 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
 
-use crate::{
-    error::AsyncVaultError,
-    state::{Vault, VAULT_CONFIG_SEED},
-};
+use crate::{error::AsyncVaultError, state::Vault};
 
 #[derive(Accounts)]
 pub struct AcceptAuthorityInvitation<'info> {
     pub new_authority: Signer<'info>,
 
-    pub share_mint: InterfaceAccount<'info, Mint>,
-
-    #[account(
-        mut,
-        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
-        bump = vault.bump,
-    )]
+    #[account(mut)]
     pub vault: Account<'info, Vault>,
 }
 

@@ -14,8 +14,6 @@ pub const ACCEPT_AUTHORITY_INVITATION_DISCRIMINATOR: [u8; 8] =
 pub struct AcceptAuthorityInvitation {
     pub new_authority: solana_pubkey::Pubkey,
 
-    pub share_mint: solana_pubkey::Pubkey,
-
     pub vault: solana_pubkey::Pubkey,
 }
 
@@ -30,14 +28,10 @@ impl AcceptAuthorityInvitation {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(2 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.new_authority,
             true,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.share_mint,
-            false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.extend_from_slice(remaining_accounts);
@@ -82,12 +76,10 @@ impl Default for AcceptAuthorityInvitationInstructionData {
 /// ### Accounts:
 ///
 ///   0. `[signer]` new_authority
-///   1. `[]` share_mint
-///   2. `[writable]` vault
+///   1. `[writable]` vault
 #[derive(Clone, Debug, Default)]
 pub struct AcceptAuthorityInvitationBuilder {
     new_authority: Option<solana_pubkey::Pubkey>,
-    share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
@@ -100,12 +92,6 @@ impl AcceptAuthorityInvitationBuilder {
     #[inline(always)]
     pub fn new_authority(&mut self, new_authority: solana_pubkey::Pubkey) -> &mut Self {
         self.new_authority = Some(new_authority);
-        self
-    }
-
-    #[inline(always)]
-    pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
-        self.share_mint = Some(share_mint);
         self
     }
 
@@ -136,7 +122,6 @@ impl AcceptAuthorityInvitationBuilder {
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let accounts = AcceptAuthorityInvitation {
             new_authority: self.new_authority.expect("new_authority is not set"),
-            share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
         };
 
@@ -148,8 +133,6 @@ impl AcceptAuthorityInvitationBuilder {
 pub struct AcceptAuthorityInvitationCpiAccounts<'a, 'b> {
     pub new_authority: &'b solana_account_info::AccountInfo<'a>,
 
-    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 }
 
@@ -159,8 +142,6 @@ pub struct AcceptAuthorityInvitationCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
     pub new_authority: &'b solana_account_info::AccountInfo<'a>,
-
-    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 }
@@ -173,7 +154,6 @@ impl<'a, 'b> AcceptAuthorityInvitationCpi<'a, 'b> {
         Self {
             __program: program,
             new_authority: accounts.new_authority,
-            share_mint: accounts.share_mint,
             vault: accounts.vault,
         }
     }
@@ -204,14 +184,10 @@ impl<'a, 'b> AcceptAuthorityInvitationCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(2 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.new_authority.key,
             true,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.share_mint.key,
-            false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -230,10 +206,9 @@ impl<'a, 'b> AcceptAuthorityInvitationCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(3 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.new_authority.clone());
-        account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
         remaining_accounts
             .iter()
@@ -252,8 +227,7 @@ impl<'a, 'b> AcceptAuthorityInvitationCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[signer]` new_authority
-///   1. `[]` share_mint
-///   2. `[writable]` vault
+///   1. `[writable]` vault
 #[derive(Clone, Debug)]
 pub struct AcceptAuthorityInvitationCpiBuilder<'a, 'b> {
     instruction: Box<AcceptAuthorityInvitationCpiBuilderInstruction<'a, 'b>>,
@@ -264,7 +238,6 @@ impl<'a, 'b> AcceptAuthorityInvitationCpiBuilder<'a, 'b> {
         let instruction = Box::new(AcceptAuthorityInvitationCpiBuilderInstruction {
             __program: program,
             new_authority: None,
-            share_mint: None,
             vault: None,
             __remaining_accounts: Vec::new(),
         });
@@ -277,15 +250,6 @@ impl<'a, 'b> AcceptAuthorityInvitationCpiBuilder<'a, 'b> {
         new_authority: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.new_authority = Some(new_authority);
-        self
-    }
-
-    #[inline(always)]
-    pub fn share_mint(
-        &mut self,
-        share_mint: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.share_mint = Some(share_mint);
         self
     }
 
@@ -341,8 +305,6 @@ impl<'a, 'b> AcceptAuthorityInvitationCpiBuilder<'a, 'b> {
                 .new_authority
                 .expect("new_authority is not set"),
 
-            share_mint: self.instruction.share_mint.expect("share_mint is not set"),
-
             vault: self.instruction.vault.expect("vault is not set"),
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -356,7 +318,6 @@ impl<'a, 'b> AcceptAuthorityInvitationCpiBuilder<'a, 'b> {
 struct AcceptAuthorityInvitationCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
     new_authority: Option<&'b solana_account_info::AccountInfo<'a>>,
-    share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
