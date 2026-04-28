@@ -23,8 +23,8 @@ use async_vault_client::{
     sdk::program_id, AcceptAuthorityInvitationBuilder, CreateDepositRequestBuilder,
     CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, UpdateDepositFeeBuilder,
-    UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder,
+    InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, SetOperatorBuilder,
+    UpdateDepositFeeBuilder, UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder,
     UpdateWithdrawalFeeBuilder,
 };
 
