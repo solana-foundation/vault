@@ -1133,14 +1133,14 @@ pub fn set_operator(
     svm: &mut LiteSVM,
     authority: &Keypair,
     operator: &Keypair,
-    share_mint: Pubkey,
     vault: Pubkey,
+    request: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = SetOperatorBuilder::new()
         .authority(authority.pubkey())
         .operator(operator.pubkey())
-        .share_mint(share_mint)
         .vault(vault)
+        .request(request)
         .instruction()
         .into_sdk_instruction();
 

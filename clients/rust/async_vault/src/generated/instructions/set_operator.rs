@@ -15,9 +15,9 @@ pub struct SetOperator {
 
     pub operator: solana_pubkey::Pubkey,
 
-    pub share_mint: solana_pubkey::Pubkey,
-
     pub vault: solana_pubkey::Pubkey,
+
+    pub request: solana_pubkey::Pubkey,
 }
 
 impl SetOperator {
@@ -40,11 +40,8 @@ impl SetOperator {
             self.operator,
             true,
         ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.share_mint,
-            false,
-        ));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
+        accounts.push(solana_instruction::AccountMeta::new(self.request, false));
         accounts.extend_from_slice(remaining_accounts);
         let data = SetOperatorInstructionData::new().try_to_vec().unwrap();
 
@@ -86,14 +83,14 @@ impl Default for SetOperatorInstructionData {
 ///
 ///   0. `[signer]` authority
 ///   1. `[signer]` operator
-///   2. `[]` share_mint
-///   3. `[writable]` vault
+///   2. `[writable]` vault
+///   3. `[writable]` request
 #[derive(Clone, Debug, Default)]
 pub struct SetOperatorBuilder {
     authority: Option<solana_pubkey::Pubkey>,
     operator: Option<solana_pubkey::Pubkey>,
-    share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
+    request: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -115,14 +112,14 @@ impl SetOperatorBuilder {
     }
 
     #[inline(always)]
-    pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
-        self.share_mint = Some(share_mint);
+    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
+        self.vault = Some(vault);
         self
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-        self.vault = Some(vault);
+    pub fn request(&mut self, request: solana_pubkey::Pubkey) -> &mut Self {
+        self.request = Some(request);
         self
     }
 
@@ -148,8 +145,8 @@ impl SetOperatorBuilder {
         let accounts = SetOperator {
             authority: self.authority.expect("authority is not set"),
             operator: self.operator.expect("operator is not set"),
-            share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
+            request: self.request.expect("request is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
@@ -162,9 +159,9 @@ pub struct SetOperatorCpiAccounts<'a, 'b> {
 
     pub operator: &'b solana_account_info::AccountInfo<'a>,
 
-    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
 }
 
 /// `set_operator` CPI instruction.
@@ -176,9 +173,9 @@ pub struct SetOperatorCpi<'a, 'b> {
 
     pub operator: &'b solana_account_info::AccountInfo<'a>,
 
-    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
 }
 
 impl<'a, 'b> SetOperatorCpi<'a, 'b> {
@@ -190,8 +187,8 @@ impl<'a, 'b> SetOperatorCpi<'a, 'b> {
             __program: program,
             authority: accounts.authority,
             operator: accounts.operator,
-            share_mint: accounts.share_mint,
             vault: accounts.vault,
+            request: accounts.request,
         }
     }
 
@@ -230,11 +227,11 @@ impl<'a, 'b> SetOperatorCpi<'a, 'b> {
             *self.operator.key,
             true,
         ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.share_mint.key,
+        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.request.key,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -253,8 +250,8 @@ impl<'a, 'b> SetOperatorCpi<'a, 'b> {
         account_infos.push(self.__program.clone());
         account_infos.push(self.authority.clone());
         account_infos.push(self.operator.clone());
-        account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
+        account_infos.push(self.request.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -273,8 +270,8 @@ impl<'a, 'b> SetOperatorCpi<'a, 'b> {
 ///
 ///   0. `[signer]` authority
 ///   1. `[signer]` operator
-///   2. `[]` share_mint
-///   3. `[writable]` vault
+///   2. `[writable]` vault
+///   3. `[writable]` request
 #[derive(Clone, Debug)]
 pub struct SetOperatorCpiBuilder<'a, 'b> {
     instruction: Box<SetOperatorCpiBuilderInstruction<'a, 'b>>,
@@ -286,8 +283,8 @@ impl<'a, 'b> SetOperatorCpiBuilder<'a, 'b> {
             __program: program,
             authority: None,
             operator: None,
-            share_mint: None,
             vault: None,
+            request: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -306,17 +303,14 @@ impl<'a, 'b> SetOperatorCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
-    pub fn share_mint(
-        &mut self,
-        share_mint: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.share_mint = Some(share_mint);
+    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.vault = Some(vault);
         self
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.vault = Some(vault);
+    pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.request = Some(request);
         self
     }
 
@@ -365,9 +359,9 @@ impl<'a, 'b> SetOperatorCpiBuilder<'a, 'b> {
 
             operator: self.instruction.operator.expect("operator is not set"),
 
-            share_mint: self.instruction.share_mint.expect("share_mint is not set"),
-
             vault: self.instruction.vault.expect("vault is not set"),
+
+            request: self.instruction.request.expect("request is not set"),
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -381,8 +375,8 @@ struct SetOperatorCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
     authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     operator: Option<&'b solana_account_info::AccountInfo<'a>>,
-    share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    request: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }
