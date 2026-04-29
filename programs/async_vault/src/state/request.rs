@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 /// Pending: neither approved nor rejected by the vault authority
 /// Claimable: approved by the vault authority
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, InitSpace, PartialEq)]
 pub enum RequestState {
     Pending,
     Claimable,
