@@ -64,7 +64,6 @@ pub fn handler<'info>(
         ctx.accounts.vault.async_outflows,
         VaultProgramError::AsyncOutflowsDisabled
     );
-    require!(ctx.accounts.vault.nav > 0, VaultProgramError::NavIsNotSet);
 
     require!(args.amount > 0, VaultProgramError::InsufficientRedeemAmount);
 

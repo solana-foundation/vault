@@ -105,7 +105,8 @@ fn test_approve_request_success() {
 
 #[test_case(false, true, false, 6001 ; "unauthorized signer")]
 #[test_case(true, false, false, 6003 ; "paused vault")]
-#[test_case(false, false, true, 6020 ; "request not in pending state")]
+#[test_case(false, false, true, 6021 ; "request not in pending state")]
+#[test_case(false, false, false, 6029 ; "nav not set")]
 fn test_approve_request_fails(
     pause_vault: bool,
     use_wrong_signer: bool,

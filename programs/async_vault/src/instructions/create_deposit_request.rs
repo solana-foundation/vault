@@ -96,7 +96,6 @@ pub fn handler<'info>(
         ctx.accounts.vault.async_inflows,
         VaultProgramError::AsyncInflowsDisabled
     );
-    require!(ctx.accounts.vault.nav > 0, VaultProgramError::NavIsNotSet);
 
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 

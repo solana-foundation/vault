@@ -1,4 +1,5 @@
 use anchor_lang::prelude::*;
+use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
@@ -32,6 +33,8 @@ pub fn handler<'info>(ctx: Context<ApproveRequest>) -> Result<()> {
         matches!(request.request_state, RequestState::Pending),
         AsyncVaultError::RequestNotPending
     );
+
+    require!(vault.nav > 0, VaultProgramError::NavIsNotSet);
 
     // Update Request state to be Claimable and pin price to Vault's current NAV
     request.price = vault.nav;
