@@ -1,85 +1,106 @@
+use anchor_spl::token;
 use async_vault_client::{sdk::program_id, FeeType, Vault};
-use litesvm::LiteSVM;
-use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
+use litesvm::{
+    types::{FailedTransactionMetadata, TransactionMetadata},
+    LiteSVM,
+};
+use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
+use test_case::test_case;
 
 use crate::helper_functions::{
-    assert_error_code, init_deposit_fee, init_withdrawal_fee, setup_async_vault,
+    assert_error_code, init_deposit_fee, init_withdrawal_fee, set_up_async_vault,
     update_deposit_fee, update_withdrawal_fee,
 };
 
-#[test]
-fn test_initialize_and_update_deposit_fee() {
-    let mut svm = LiteSVM::new();
-
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
-
-    let deposit_fee = FeeType::FixedAmount { amount: 100 };
-    init_deposit_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        deposit_fee.clone(),
-    )
-    .expect("init deposit fee should succeed");
-
-    let vault_account = svm.get_account(&vault_pubkey).unwrap();
-    let vault_data = vault_account.data();
-    let vault_config = Vault::from_bytes(vault_data).unwrap();
-    assert!(!vault_config.initialized);
-
-    let new_deposit_fee = FeeType::Percentage { bps: 500 };
-    update_deposit_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        new_deposit_fee.clone(),
-    )
-    .expect("update deposit fee should succeed");
+#[derive(Clone, Copy)]
+enum FeeKind {
+    Deposit,
+    Withdrawal,
 }
 
-#[test]
-fn test_initialize_and_update_withdrawal_fee() {
-    let mut svm = LiteSVM::new();
+fn init_fee(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    fee: FeeType,
+    kind: FeeKind,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    match kind {
+        FeeKind::Deposit => init_deposit_fee(svm, authority, share_mint, vault, fee),
+        FeeKind::Withdrawal => init_withdrawal_fee(svm, authority, share_mint, vault, fee),
+    }
+}
 
+fn update_fee(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    fee: FeeType,
+    kind: FeeKind,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    match kind {
+        FeeKind::Deposit => update_deposit_fee(svm, authority, share_mint, vault, fee),
+        FeeKind::Withdrawal => update_withdrawal_fee(svm, authority, share_mint, vault, fee),
+    }
+}
+
+fn setup_vault() -> (LiteSVM, Keypair, Keypair, Pubkey) {
+    let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
+    (svm, authority, share_mint, vault_pubkey)
+}
 
-    let withdrawal_fee = FeeType::Percentage { bps: 200 };
-    init_withdrawal_fee(
+#[test_case(FeeKind::Deposit, FeeType::FixedAmount { amount: 100 }, FeeType::Percentage { bps: 500 } ; "deposit")]
+#[test_case(FeeKind::Withdrawal, FeeType::Percentage { bps: 200 }, FeeType::FixedAmount { amount: 50 } ; "withdrawal")]
+fn test_initialize_and_update_fee(kind: FeeKind, initial_fee: FeeType, updated_fee: FeeType) {
+    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
+
+    init_fee(
         &mut svm,
         &authority,
         share_mint.pubkey(),
         vault_pubkey,
-        withdrawal_fee.clone(),
+        initial_fee,
+        kind,
     )
-    .expect("init withdrawal fee should succeed");
+    .expect("init fee should succeed");
 
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
-    let vault_data = vault_account.data();
+    let vault_config = Vault::from_bytes(vault_account.data()).unwrap();
+    assert!(!vault_config.initialized);
 
-    let new_withdrawal_fee = FeeType::FixedAmount { amount: 50 };
-    update_withdrawal_fee(
+    update_fee(
         &mut svm,
         &authority,
         share_mint.pubkey(),
         vault_pubkey,
-        new_withdrawal_fee.clone(),
+        updated_fee,
+        kind,
     )
-    .expect("update withdrawal fee should succeed");
+    .expect("update fee should succeed");
 }
 
 #[test]
 fn test_initialize_both_fees() {
-    let mut svm = LiteSVM::new();
-
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
     init_deposit_fee(
@@ -87,7 +108,7 @@ fn test_initialize_both_fees() {
         &authority,
         share_mint.pubkey(),
         vault_pubkey,
-        deposit_fee.clone(),
+        deposit_fee,
     )
     .expect("init deposit fee should succeed");
 
@@ -97,157 +118,75 @@ fn test_initialize_both_fees() {
         &authority,
         share_mint.pubkey(),
         vault_pubkey,
-        withdrawal_fee.clone(),
+        withdrawal_fee,
     )
     .expect("init withdrawal fee should succeed");
-
-    let vault_account = svm.get_account(&vault_pubkey).unwrap();
-    let vault_data = vault_account.data();
 }
 
-#[test]
-fn test_initialize_deposit_fee_duplicate_fails() {
-    let mut svm = LiteSVM::new();
+#[test_case(FeeKind::Deposit, FeeType::FixedAmount { amount: 100 } ; "deposit")]
+#[test_case(FeeKind::Withdrawal, FeeType::Percentage { bps: 100 } ; "withdrawal")]
+fn test_duplicate_init_fails(kind: FeeKind, fee: FeeType) {
+    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
 
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
-
-    let deposit_fee = FeeType::FixedAmount { amount: 100 };
-    init_deposit_fee(
+    init_fee(
         &mut svm,
         &authority,
         share_mint.pubkey(),
         vault_pubkey,
-        deposit_fee.clone(),
+        fee.clone(),
+        kind,
     )
     .expect("first init should succeed");
 
     svm.expire_blockhash();
 
-    let result = init_deposit_fee(
+    let result = init_fee(
         &mut svm,
         &authority,
         share_mint.pubkey(),
         vault_pubkey,
-        deposit_fee,
+        fee,
+        kind,
     );
     assert_error_code(&result.unwrap_err(), 6005, "ExtensionAlreadyInitialized");
 }
 
-#[test]
-fn test_initialize_withdrawal_fee_duplicate_fails() {
-    let mut svm = LiteSVM::new();
+#[test_case(FeeKind::Deposit, FeeType::FixedAmount { amount: 100 } ; "deposit")]
+#[test_case(FeeKind::Withdrawal, FeeType::Percentage { bps: 100 } ; "withdrawal")]
+fn test_update_before_init_fails(kind: FeeKind, fee: FeeType) {
+    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
 
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
-
-    let withdrawal_fee = FeeType::Percentage { bps: 100 };
-    init_withdrawal_fee(
+    let result = update_fee(
         &mut svm,
         &authority,
         share_mint.pubkey(),
         vault_pubkey,
-        withdrawal_fee.clone(),
-    )
-    .expect("first init should succeed");
-
-    svm.expire_blockhash();
-
-    let result = init_withdrawal_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        withdrawal_fee,
-    );
-    assert_error_code(&result.unwrap_err(), 6005, "ExtensionAlreadyInitialized");
-}
-
-#[test]
-fn test_update_deposit_fee_before_init_fails() {
-    let mut svm = LiteSVM::new();
-
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
-
-    let deposit_fee = FeeType::FixedAmount { amount: 100 };
-    let result = update_deposit_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        deposit_fee,
+        fee,
+        kind,
     );
     assert_error_code(&result.unwrap_err(), 6006, "UninitializedExtension");
 }
 
-#[test]
-fn test_update_withdrawal_fee_before_init_fails() {
-    let mut svm = LiteSVM::new();
+#[test_case(FeeKind::Deposit ; "deposit")]
+#[test_case(FeeKind::Withdrawal ; "withdrawal")]
+fn test_invalid_bps_init_fails(kind: FeeKind) {
+    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
 
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
-
-    let withdrawal_fee = FeeType::Percentage { bps: 100 };
-    let result = update_withdrawal_fee(
+    let fee = FeeType::Percentage { bps: 10_001 };
+    let result = init_fee(
         &mut svm,
         &authority,
         share_mint.pubkey(),
         vault_pubkey,
-        withdrawal_fee,
-    );
-    assert_error_code(&result.unwrap_err(), 6006, "UninitializedExtension");
-}
-
-#[test]
-fn test_initialize_deposit_fee_invalid_bps_fails() {
-    let mut svm = LiteSVM::new();
-
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
-
-    let deposit_fee = FeeType::Percentage { bps: 10_001 };
-    let result = init_deposit_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        deposit_fee,
-    );
-    assert_error_code(&result.unwrap_err(), 6000, "FeeBPSLimitReached");
-}
-
-#[test]
-fn test_initialize_withdrawal_fee_invalid_bps_fails() {
-    let mut svm = LiteSVM::new();
-
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
-
-    let withdrawal_fee = FeeType::Percentage { bps: 10_001 };
-    let result = init_withdrawal_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        withdrawal_fee,
+        fee,
+        kind,
     );
     assert_error_code(&result.unwrap_err(), 6000, "FeeBPSLimitReached");
 }
 
 #[test]
 fn test_initialize_fee_unauthorized_signer_fails() {
-    let mut svm = LiteSVM::new();
-
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (mut svm, _authority, share_mint, vault_pubkey) = setup_vault();
 
     let unauthorized = Keypair::new();
     svm.airdrop(&unauthorized.pubkey(), 1_000_000_000).unwrap();
@@ -265,11 +204,7 @@ fn test_initialize_fee_unauthorized_signer_fails() {
 
 #[test]
 fn test_update_fee_unauthorized_signer_fails() {
-    let mut svm = LiteSVM::new();
-
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
     init_deposit_fee(

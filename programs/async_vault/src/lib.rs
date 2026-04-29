@@ -4,6 +4,7 @@ pub mod error;
 pub mod extensions;
 pub mod instructions;
 pub mod state;
+pub mod utils;
 
 use instructions::*;
 
@@ -102,6 +103,14 @@ pub mod async_vault {
         args: RequestArgs,
     ) -> Result<()> {
         instructions::create_deposit_request::handler(ctx, args)
+    }
+
+    /// Creates a redeem request with state pending (Pending vault authority acceptance)
+    pub fn create_redeem_request<'info>(
+        ctx: Context<'_, '_, '_, 'info, CreateRedeemRequest<'info>>,
+        args: RequestArgs,
+    ) -> Result<()> {
+        instructions::create_redeem_request::handler(ctx, args)
     }
 
     /// Cancels a pending request. For deposits, refunds the full amount

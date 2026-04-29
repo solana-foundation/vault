@@ -7,6 +7,7 @@
 pub(crate) mod r#accept_authority_invitation;
 pub(crate) mod r#cancel_request;
 pub(crate) mod r#create_deposit_request;
+pub(crate) mod r#create_redeem_request;
 pub(crate) mod r#create_vault;
 pub(crate) mod r#initialize_deposit_fee;
 pub(crate) mod r#initialize_vault;
@@ -20,7 +21,8 @@ pub(crate) mod r#update_withdrawal_fee;
 
 pub use self::{
     r#accept_authority_invitation::*, r#cancel_request::*, r#create_deposit_request::*,
-    r#create_vault::*, r#initialize_deposit_fee::*, r#initialize_vault::*,
-    r#initialize_withdrawal_fee::*, r#invite_new_authority::*, r#set_operator::*,
-    r#update_deposit_fee::*, r#update_vault::*, r#update_vault_nav::*, r#update_withdrawal_fee::*,
+    r#create_redeem_request::*, r#create_vault::*, r#initialize_deposit_fee::*,
+    r#initialize_vault::*, r#initialize_withdrawal_fee::*, r#invite_new_authority::*,
+    r#set_operator::*, r#update_deposit_fee::*, r#update_vault::*, r#update_vault_nav::*,
+    r#update_withdrawal_fee::*,
 };

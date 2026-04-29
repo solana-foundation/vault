@@ -1,9 +1,10 @@
+use anchor_spl::token;
 use async_vault_client::{sdk::program_id, Vault};
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, initialize_async_vault, setup_async_vault};
+use crate::helper_functions::{assert_error_code, initialize_async_vault, set_up_async_vault};
 
 #[test_case(true, false ; "succeeds and preserves other fields")]
 #[test_case(true, true ; "already initialized fails")]
@@ -13,7 +14,21 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
 
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_before = Vault::from_bytes(vault_account.data()).unwrap();
@@ -51,14 +66,8 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
 
         assert!(vault_after.initialized);
         assert_eq!(vault_before.authority, vault_after.authority);
-        assert_eq!(
-            vault_before.asset_mint_address,
-            vault_after.asset_mint_address
-        );
-        assert_eq!(
-            vault_before.share_mint_address,
-            vault_after.share_mint_address
-        );
+        assert_eq!(vault_before.asset_mint, vault_after.asset_mint);
+        assert_eq!(vault_before.share_mint, vault_after.share_mint);
         assert_eq!(
             vault_before.vault_token_account,
             vault_after.vault_token_account
