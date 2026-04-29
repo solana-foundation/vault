@@ -1,10 +1,12 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
+use anchor_spl::token_interface::{
+    self, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
+};
 use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
-    state::{Request, RequestState, Vault, VAULT_CONFIG_SEED},
+    state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
 };
 
 #[derive(Accounts)]
@@ -12,6 +14,8 @@ pub struct RejectRequest<'info> {
     pub authority: Signer<'info>,
 
     pub asset_mint: InterfaceAccount<'info, Mint>,
+
+    #[account(mut)]
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
@@ -23,6 +27,8 @@ pub struct RejectRequest<'info> {
 
     #[account(
         mut,
+        has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
+        has_one = share_mint @ AsyncVaultError::InvalidShareMint,
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump = vault.bump,
         constraint = vault.authority == authority.key() @ AsyncVaultError::UnauthorizedSigner,
@@ -41,7 +47,7 @@ pub struct RejectRequest<'info> {
         token::mint = asset_mint,
         token::authority = user,
     )]
-    pub user_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub user_token_account: Option<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -50,9 +56,71 @@ pub struct RejectRequest<'info> {
         token::token_program = asset_token_program,
         constraint = vault.pending_vault == pending_vault.key() @ AsyncVaultError::InvalidPendingVault,
     )]
-    pub pending_vault: InterfaceAccount<'info, TokenAccount>,
+    pub pending_vault: Option<InterfaceAccount<'info, TokenAccount>>,
 
-    pub asset_token_program: Interface<'info, TokenInterface>,
+    #[account(
+        mut,
+        token::mint = share_mint,
+        token::authority = user,
+        token::token_program = share_token_program,
+    )]
+    pub user_share_account: Option<InterfaceAccount<'info, TokenAccount>>,
+
+    pub share_token_program: Option<Interface<'info, TokenInterface>>,
+    pub asset_token_program: Option<Interface<'info, TokenInterface>>,
+}
+
+impl<'info> RejectRequest<'info> {
+    pub fn transfer_assets_to_user(&self, amount: u64) -> Result<()> {
+        let pending_vault = self
+            .pending_vault
+            .as_ref()
+            .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
+        let user_token_account = self
+            .user_token_account
+            .as_ref()
+            .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
+        let asset_token_program = self
+            .asset_token_program
+            .as_ref()
+            .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
+
+        let cpi_accounts = TransferChecked {
+            from: pending_vault.to_account_info(),
+            mint: self.asset_mint.to_account_info(),
+            to: user_token_account.to_account_info(),
+            authority: self.vault.to_account_info(),
+        };
+
+        let share_mint = self.share_mint.key();
+        let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
+        let cpi_ctx =
+            CpiContext::new_with_signer(asset_token_program.to_account_info(), cpi_accounts, seeds);
+        token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
+    }
+
+    pub fn mint_shares(&self, amount: u64) -> Result<()> {
+        let user_share_account = self
+            .user_share_account
+            .as_ref()
+            .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
+        let share_token_program = self
+            .share_token_program
+            .as_ref()
+            .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
+
+        let cpi_accounts = MintTo {
+            mint: self.share_mint.to_account_info(),
+            to: user_share_account.to_account_info(),
+            authority: self.vault.to_account_info(),
+        };
+
+        let share_mint = self.share_mint.key();
+        let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
+        let cpi_ctx =
+            CpiContext::new_with_signer(share_token_program.to_account_info(), cpi_accounts, seeds);
+        token_interface::mint_to(cpi_ctx, amount)
+    }
 }
 
 pub fn handler(ctx: Context<RejectRequest>) -> Result<()> {
@@ -63,27 +131,17 @@ pub fn handler(ctx: Context<RejectRequest>) -> Result<()> {
             .eq(&RequestState::Pending),
         AsyncVaultError::RequestInvalidState
     );
-    let refund_amount = ctx.accounts.request.amount;
 
-    let share_mint = ctx.accounts.share_mint.key();
-    let seeds: &[&[&[u8]]] = &[&[
-        VAULT_CONFIG_SEED,
-        share_mint.as_ref(),
-        &[ctx.accounts.vault.bump],
-    ]];
-
-    let cpi_accounts = TransferChecked {
-        from: ctx.accounts.pending_vault.to_account_info(),
-        mint: ctx.accounts.asset_mint.to_account_info(),
-        to: ctx.accounts.user_token_account.to_account_info(),
-        authority: ctx.accounts.vault.to_account_info(),
-    };
-    let cpi_ctx = CpiContext::new_with_signer(
-        ctx.accounts.asset_token_program.to_account_info(),
-        cpi_accounts,
-        seeds,
-    );
-    token_interface::transfer_checked(cpi_ctx, refund_amount, ctx.accounts.asset_mint.decimals)?;
+    match ctx.accounts.request.request_type {
+        RequestType::Deposit => {
+            let refund_amount = ctx.accounts.request.amount;
+            ctx.accounts.transfer_assets_to_user(refund_amount)?;
+        }
+        RequestType::Redeem => {
+            let shares = ctx.accounts.request.amount;
+            ctx.accounts.mint_shares(shares)?;
+        }
+    }
 
     ctx.accounts.request.request_state = RequestState::Rejected;
 
