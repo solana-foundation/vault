@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+use crate::utils::{calculate_assets, calculate_shares};
+
 /// Pending: neither approved nor rejected by the vault authority
 /// Claimable: approved by the vault authority
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, InitSpace)]
@@ -43,4 +45,20 @@ pub struct Request {
     pub nav_update_version: u64,
     /// Operator allowed to claim on behalf of user (delegated controller)
     pub operator: Option<Pubkey>,
+}
+
+impl Request {
+    /// Converts an asset amount into shares using the current NAV.
+    ///
+    /// `shares = net_amount * 10^decimals / price`
+    pub fn calculate_shares(&mut self, decimals: u8, net_amount: u64) -> Result<u64> {
+        calculate_shares(self.price, decimals, net_amount)
+    }
+
+    /// Converts a share amount into assets using the current NAV.
+    ///
+    /// `assets = share_amount * price / 10^decimals`
+    pub fn calculate_assets(&self, decimals: u8, share_amount: u64) -> Result<u64> {
+        calculate_assets(self.price, decimals, share_amount)
+    }
 }

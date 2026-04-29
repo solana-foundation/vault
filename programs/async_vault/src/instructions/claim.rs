@@ -8,6 +8,11 @@ use crate::{
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
 };
 
+// TODO use the existing calculation methods on the vault
+// TODO consolidate logic into helper methods
+// TODO make token accounts optional such that the accounts needed for deposit/redeem
+// branches are only present in the respective branch.
+
 #[derive(Accounts)]
 pub struct Claim<'info> {
     #[account(mut)]
@@ -54,7 +59,7 @@ pub struct Claim<'info> {
     )]
     pub pending_vault: InterfaceAccount<'info, TokenAccount>,
 
-    /// User's share ATA — receives minted shares on Deposit (must be owned by request.owner)
+    /// User's share TokenAccount — receives minted shares on Deposit (must be owned by request.owner)
     #[account(
         mut,
         token::mint = share_mint,
@@ -63,7 +68,7 @@ pub struct Claim<'info> {
     )]
     pub user_share_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    /// User's asset ATA — receives transferred assets on Redeem (must be owned by request.owner)
+    /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by request.owner)
     #[account(
         mut,
         token::mint = asset_mint,
@@ -92,24 +97,16 @@ pub fn handler(ctx: Context<Claim>) -> Result<()> {
         AsyncVaultError::RequestNotClaimable
     );
 
-    let price = request.price;
     let amount = request.amount;
     let decimals = ctx.accounts.share_mint.decimals;
-    let precision = 10u128
-        .checked_pow(decimals as u32)
-        .ok_or(AsyncVaultError::ArithmeticError)?;
     let share_mint_key = ctx.accounts.share_mint.key();
     let vault_bump = ctx.accounts.vault.bump;
     let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint_key.as_ref(), &[vault_bump]]];
 
     match request.request_type {
         RequestType::Deposit => {
-            let shares = u128::from(amount)
-                .checked_mul(precision)
-                .ok_or(AsyncVaultError::ArithmeticError)?
-                .checked_div(price)
-                .ok_or(AsyncVaultError::ArithmeticError)?;
-            let shares = u64::try_from(shares).map_err(|_| AsyncVaultError::ArithmeticError)?;
+            // TODO calculate fees before shares, if DepositFee extension is enabled
+            let shares = ctx.accounts.request.calculate_shares(decimals, amount)?;
 
             // Move assets: pending_vault → vault_token_account (reserve)
             token_interface::transfer_checked(
@@ -142,12 +139,7 @@ pub fn handler(ctx: Context<Claim>) -> Result<()> {
             )?;
         }
         RequestType::Redeem => {
-            let assets = u128::from(amount)
-                .checked_mul(price)
-                .ok_or(AsyncVaultError::ArithmeticError)?
-                .checked_div(precision)
-                .ok_or(AsyncVaultError::ArithmeticError)?;
-            let assets = u64::try_from(assets).map_err(|_| AsyncVaultError::ArithmeticError)?;
+            let assets = ctx.accounts.request.calculate_assets(decimals, amount)?;
 
             // Transfer assets from vault reserve to user
             token_interface::transfer_checked(

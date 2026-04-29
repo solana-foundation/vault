@@ -1393,8 +1393,7 @@ pub fn claim_request(
         .user_asset_account(user_asset_account)
         .asset_token_program(spl_token::ID)
         .share_token_program(spl_token::ID)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
