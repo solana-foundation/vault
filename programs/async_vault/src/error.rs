@@ -40,4 +40,6 @@ pub enum AsyncVaultError {
     InvalidAssetMint,
     #[msg("Share mint is not valid.")]
     InvalidShareMint,
+    #[msg("Request address is not valid.")]
+    InvalidRequest,
 }

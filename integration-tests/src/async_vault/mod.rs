@@ -1,3 +1,4 @@
+mod approve_request;
 mod constants;
 mod create_deposit_request;
 mod create_vault;

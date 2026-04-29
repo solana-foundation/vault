@@ -20,11 +20,12 @@ use vault_client::{
 };
 
 use async_vault_client::{
-    sdk::program_id, AcceptAuthorityInvitationBuilder, CreateDepositRequestBuilder,
-    CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
-    InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, SetOperatorBuilder,
-    UpdateDepositFeeBuilder, UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder,
+    sdk::program_id, AcceptAuthorityInvitationBuilder, ApproveRequestBuilder,
+    CreateDepositRequestBuilder, CreateVaultBuilder as CreateAsyncVaultBuilder,
+    FeeType as AsyncFeeType, InitializeDepositFeeBuilder,
+    InitializeVaultBuilder as InitializeAsyncVaultBuilder, InitializeWithdrawalFeeBuilder,
+    InviteNewAuthorityBuilder, SetOperatorBuilder, UpdateDepositFeeBuilder,
+    UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder,
     UpdateWithdrawalFeeBuilder,
 };
 
@@ -1183,6 +1184,32 @@ pub fn update_vault_nav(
         .authority(authority.pubkey())
         .vault(vault)
         .updated_nav(updated_nav)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
+pub fn approve_request(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    request: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = ApproveRequestBuilder::new()
+        .authority(authority.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .vault(vault)
+        .request(request)
         .instruction()
         .into_sdk_instruction();
 

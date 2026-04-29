@@ -67,6 +67,9 @@ pub enum AsyncVaultError {
     /// 6018 - Share mint is not valid.
     #[error("Share mint is not valid.")]
     InvalidShareMint = 0x1782,
+    /// 6019 - Request address is not valid.
+    #[error("Request address is not valid.")]
+    InvalidRequest = 0x1783,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {
