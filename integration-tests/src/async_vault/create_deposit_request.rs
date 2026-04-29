@@ -44,7 +44,7 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
     ) = set_up_async_vault(
         &mut svm,
         token::ID,
-        None,
+        Some(0),
         token::ID,
         user_amount,
         100_000_000,
@@ -313,7 +313,7 @@ fn test_multiple_deposit_requests_with_unique_keypairs() {
     );
 }
 
-#[test_case(Some(1), 6017 ; "deposit_request_with_nonzero_transfer_fee_fails")]
+#[test_case(Some(1), 6020 ; "deposit_request_with_nonzero_transfer_fee_fails")]
 fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_error_code: u32) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
