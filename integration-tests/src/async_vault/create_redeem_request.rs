@@ -10,8 +10,8 @@ use solana_sdk::{
 };
 
 use crate::helper_functions::{
-    create_redeem_request_ix, get_token_account_amount, initialize_async_vault, set_up_async_vault,
-    update_vault_nav,
+    assert_error_code, create_redeem_request_ix, get_token_account_amount, initialize_async_vault,
+    set_up_async_vault, update_vault_nav,
 };
 
 fn set_share_balance(
@@ -258,15 +258,7 @@ fn test_create_redeem_request_zero_amount() {
         &[&user, &request_keypair],
         svm.latest_blockhash(),
     );
-    svm.send_transaction(tx)
-        .expect("zero amount redeem request should succeed");
-
-    let request_account = svm
-        .get_account(&request_keypair.pubkey())
-        .expect("Request account should exist");
-    let request_data = Request::from_bytes(request_account.data()).unwrap();
-
-    assert_eq!(request_data.request_type, RequestType::Redeem);
-    assert_eq!(request_data.amount, 0);
-    assert_eq!(request_data.remaining_amount, 0);
+    let result = svm.send_transaction(tx);
+    assert!(result.is_err(), "zero amount redeem request should fail");
+    assert_error_code(&result.unwrap_err(), 6011, "InsufficientRedeemAmount");
 }

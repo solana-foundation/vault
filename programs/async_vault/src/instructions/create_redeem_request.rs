@@ -79,6 +79,8 @@ pub fn handler<'info>(
     );
     require!(ctx.accounts.vault.nav > 0, VaultProgramError::NavIsNotSet);
 
+    require!(args.amount > 0, VaultProgramError::InsufficientRedeemAmount);
+
     ctx.accounts.transfer_shares(args.amount)?;
 
     let gross_assets = ctx
