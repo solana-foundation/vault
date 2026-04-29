@@ -13,10 +13,10 @@ use solana_sdk::{
     transaction::Transaction,
 };
 use vault_client::{
-    sdk::IntoSdkInstruction, CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType,
-    InitializeDepositFeesBuilder, InitializeDepositHookBuilder, InitializeVaultBuilder,
-    InitializeWithdrawalFeesBuilder, MintBuilder, Pubkey, RedeemBuilder, UpdateDepositFeesBuilder,
-    UpdateVaultBuilder, UpdateWithdrawalFeesBuilder, Vault, WithdrawBuilder,
+    CloseVaultBuilder, CreateVaultBuilder, DepositBuilder, FeeType, InitializeDepositFeesBuilder,
+    InitializeDepositHookBuilder, InitializeVaultBuilder, InitializeWithdrawalFeesBuilder,
+    MintBuilder, Pubkey, RedeemBuilder, UpdateDepositFeesBuilder, UpdateVaultBuilder,
+    UpdateWithdrawalFeesBuilder, Vault, WithdrawBuilder,
 };
 
 use async_vault_client::{
@@ -54,8 +54,6 @@ use spl_token_2022::state::{Account as TokenAccount2022, Mint as Token2022Mint};
 pub const VAULT_CONFIG_SEED: &[u8] = b"vault";
 pub const RESERVE_CONFIG_SEED: &[u8] = b"reserve";
 pub const PENDING_VAULT_SEED: &[u8] = b"pending";
-pub const PENDING_SHARES_VAULT_SEED: &[u8] = b"pending_shares";
-pub const REQUEST_SEED: &[u8] = b"request";
 
 pub fn create_vault(
     svm: &mut LiteSVM,
@@ -85,8 +83,7 @@ pub fn create_vault(
         .fee_recipient(fee_recipient)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
@@ -114,8 +111,7 @@ pub fn close_vault(
         .reserve(reserve)
         .vault(vault)
         .rent_destination(payer.pubkey())
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
@@ -143,8 +139,7 @@ pub fn update_vault(
         .vault_asset_cap(vault_asset_cap)
         .paused(paused)
         .new_authority(new_authority)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
@@ -191,8 +186,7 @@ pub fn deposit(
         .hook_program(Some(hook_program))
         .protocol(protocol)
         .extra_metas(extra_metas)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
@@ -228,8 +222,7 @@ pub fn mint(
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
         .hook_program(Some(system_program::ID))
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
@@ -264,8 +257,7 @@ pub fn withdraw(
         .max_shares(max_shares)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
@@ -300,8 +292,7 @@ pub fn redeem(
         .min_assets(min_assets)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[&user], blockhash);
@@ -320,8 +311,7 @@ pub fn init_deposit_fees(
         .share_mint(*share_mint)
         .vault(*vault)
         .deposit_fee(deposit_fee.clone())
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
@@ -346,8 +336,7 @@ pub fn update_deposit_fees(
         .share_mint(*share_mint)
         .vault(*vault)
         .new_deposit_fee(new_deposit_fee.clone())
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
@@ -372,8 +361,7 @@ pub fn init_withdrawal_fees(
         .share_mint(*share_mint)
         .vault(*vault)
         .withdrawal_fee(withdrawal_fee.clone())
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
@@ -398,8 +386,7 @@ pub fn update_withdrawal_fees(
         .share_mint(*share_mint)
         .vault(*vault)
         .new_withdrawal_fee(new_withdrawal_fee.clone())
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
@@ -422,8 +409,7 @@ pub fn init_vault(
         .authority(authority.pubkey())
         .share_mint(*share_mint)
         .vault(*vault)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
@@ -750,8 +736,7 @@ pub fn init_deposit_hook(
         .share_mint(*share_mint)
         .vault(*vault)
         .hook_program(hook_program)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
@@ -857,8 +842,7 @@ pub fn init_deposit_extra_meta_accounts(
         .asset_mint(*asset_mint)
         .share_mint_address(*share_mint)
         .extra_metas(extra_metas)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(&[ix], Some(&payer.pubkey()), &[payer], blockhash);
@@ -911,8 +895,7 @@ pub fn create_async_vault(
         .initial_price(initial_price)
         .async_inflows(async_inflows)
         .async_outflows(async_outflows)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
@@ -935,8 +918,7 @@ pub fn initialize_async_vault(
         .authority(authority.pubkey())
         .share_mint(share_mint)
         .vault(vault)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -954,14 +936,12 @@ pub fn update_async_vault(
     vault: Pubkey,
     paused: bool,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
-    let mut builder = UpdateVaultAsyncBuilder::new();
-    builder
+    let ix = UpdateVaultAsyncBuilder::new()
         .authority(authority.pubkey())
         .share_mint(share_mint)
         .paused(paused)
-        .vault(vault);
-
-    let ix = builder.instruction().into_sdk_instruction();
+        .vault(vault)
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -985,8 +965,7 @@ pub fn init_deposit_fee(
         .share_mint(share_mint)
         .vault(vault)
         .deposit_fee(deposit_fee)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -1010,8 +989,7 @@ pub fn init_withdrawal_fee(
         .share_mint(share_mint)
         .vault(vault)
         .withdrawal_fee(withdrawal_fee)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -1034,8 +1012,7 @@ pub fn update_deposit_fee(
         .share_mint(share_mint)
         .vault(vault)
         .new_deposit_fee(new_deposit_fee)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -1058,8 +1035,7 @@ pub fn update_withdrawal_fee(
         .share_mint(share_mint)
         .vault(vault)
         .new_withdrawal_fee(new_withdrawal_fee)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -1080,8 +1056,7 @@ pub fn set_operator(
         .user(user.pubkey())
         .operator(operator.pubkey())
         .request(request)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -1102,8 +1077,7 @@ pub fn invite_new_authority(
         .authority(authority.pubkey())
         .vault(vault)
         .new_authority(new_authority)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&authority.pubkey()),
@@ -1123,8 +1097,7 @@ pub fn update_vault_nav(
         .authority(authority.pubkey())
         .vault(vault)
         .updated_nav(updated_nav)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -1145,8 +1118,7 @@ pub fn approve_request(
         .authority(authority.pubkey())
         .vault(vault)
         .request(request)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -1165,8 +1137,7 @@ pub fn accept_authority_invitation(
     let ix = AcceptAuthorityInvitationBuilder::new()
         .new_authority(new_authority.pubkey())
         .vault(vault)
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
@@ -1300,7 +1271,8 @@ pub fn set_up_async_vault(
     );
 }
 
-pub fn create_deposit_request_ix(
+pub fn create_deposit_request(
+    svm: &mut LiteSVM,
     user: &Keypair,
     request_keypair: &Keypair,
     asset_mint: Pubkey,
@@ -1309,9 +1281,8 @@ pub fn create_deposit_request_ix(
     user_token_account: Pubkey,
     pending_vault: Pubkey,
     amount: u64,
-) -> solana_sdk::instruction::Instruction {
-    let mut builder = CreateDepositRequestBuilder::new();
-    builder
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = CreateDepositRequestBuilder::new()
         .user(user.pubkey())
         .asset_mint(asset_mint)
         .share_mint(share_mint)
@@ -1323,19 +1294,22 @@ pub fn create_deposit_request_ix(
         .args(RequestArgs {
             amount,
             operator: None,
-        });
+        })
+        .instruction();
 
-    let mut ix = builder.instruction().into_sdk_instruction();
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&user.pubkey()),
+        &[user, request_keypair],
+        blockhash,
+    );
 
-    for meta in &mut ix.accounts {
-        if meta.pubkey == request_keypair.pubkey() {
-            meta.is_signer = true;
-        }
-    }
-    ix
+    return svm.send_transaction(tx);
 }
 
-pub fn create_redeem_request_ix(
+pub fn create_redeem_request(
+    svm: &mut LiteSVM,
     user: &Keypair,
     request_keypair: &Keypair,
     asset_mint: Pubkey,
@@ -1343,9 +1317,8 @@ pub fn create_redeem_request_ix(
     vault: Pubkey,
     user_share_account: Pubkey,
     amount: u64,
-) -> solana_sdk::instruction::Instruction {
-    let mut builder = CreateRedeemRequestBuilder::new();
-    builder
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = CreateRedeemRequestBuilder::new()
         .user(user.pubkey())
         .asset_mint(asset_mint)
         .share_mint(share_mint)
@@ -1356,20 +1329,23 @@ pub fn create_redeem_request_ix(
         .args(RequestArgs {
             amount,
             operator: None,
-        });
+        })
+        .instruction();
 
-    let mut ix = builder.instruction().into_sdk_instruction();
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&user.pubkey()),
+        &[user, request_keypair],
+        blockhash,
+    );
 
-    for meta in &mut ix.accounts {
-        if meta.pubkey == request_keypair.pubkey() {
-            meta.is_signer = true;
-        }
-    }
-    ix
+    return svm.send_transaction(tx);
 }
 
-pub fn cancel_request_ix(
-    user: Pubkey,
+pub fn cancel_request(
+    svm: &mut LiteSVM,
+    user: Keypair,
     asset_mint: Pubkey,
     share_mint: Pubkey,
     request: Pubkey,
@@ -1379,10 +1355,9 @@ pub fn cancel_request_ix(
     asset_token_program: Option<Pubkey>,
     user_share_account: Option<Pubkey>,
     share_token_program: Option<Pubkey>,
-) -> solana_sdk::instruction::Instruction {
-    let mut builder = CancelRequestBuilder::new();
-    builder
-        .user(user)
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = CancelRequestBuilder::new()
+        .user(user.pubkey())
         .asset_mint(asset_mint)
         .share_mint(share_mint)
         .request(request)
@@ -1391,9 +1366,12 @@ pub fn cancel_request_ix(
         .asset_pending_vault(asset_pending_vault)
         .asset_token_program(asset_token_program)
         .user_share_account(user_share_account)
-        .share_token_program(share_token_program);
+        .share_token_program(share_token_program)
+        .instruction();
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(&[ix], Some(&user.pubkey()), &[user], blockhash);
 
-    builder.instruction().into_sdk_instruction()
+    return svm.send_transaction(tx);
 }
 
 pub fn set_share_balance(

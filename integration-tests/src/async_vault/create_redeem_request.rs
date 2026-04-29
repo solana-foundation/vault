@@ -1,12 +1,10 @@
 use anchor_spl::token;
 use async_vault_client::{
-    sdk::{program_id, IntoSdkInstruction},
-    CreateRedeemRequestBuilder, Request, RequestArgs, RequestState, RequestType,
+    sdk::program_id, CreateRedeemRequestBuilder, Request, RequestArgs, RequestState, RequestType,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
-    signer::Signer, transaction::Transaction,
+    account::ReadableAccount, signature::Keypair, signer::Signer, transaction::Transaction,
 };
 use test_case::test_case;
 
@@ -65,8 +63,7 @@ fn test_create_redeem_request(
         None
     };
 
-    let mut builder = CreateRedeemRequestBuilder::new();
-    builder
+    let ix = CreateRedeemRequestBuilder::new()
         .user(user.pubkey())
         .asset_mint(asset_mint.pubkey())
         .share_mint(share_mint.pubkey())
@@ -77,14 +74,9 @@ fn test_create_redeem_request(
         .args(RequestArgs {
             amount: share_amount,
             operator: operator_pubkey,
-        });
+        })
+        .instruction();
 
-    let mut ix = builder.instruction().into_sdk_instruction();
-    for meta in &mut ix.accounts {
-        if meta.pubkey == request_keypair.pubkey() {
-            meta.is_signer = true;
-        }
-    }
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&user.pubkey()),

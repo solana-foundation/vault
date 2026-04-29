@@ -14,6 +14,8 @@ declare_id!("2kUpRoU8oGpstygkk3ZE51upGSq9UpkjNoEUiiQ88MMY");
 pub mod async_vault {
     use super::*;
 
+    /* Vault Authority instructions */
+
     /// Creates a new async vault with reserve and pending token accounts,
     /// transfers share mint authority to the vault PDA, and initializes
     /// the vault config in a paused + uninitialized state.
@@ -63,22 +65,6 @@ pub mod async_vault {
         instructions::update_withdrawal_fee::handler(ctx, args)
     }
 
-    /// Creates a deposit request with state pending (Pending vault authority acceptance)
-    pub fn create_deposit_request<'info>(
-        ctx: Context<'_, '_, '_, 'info, CreateDepositRequest<'info>>,
-        args: RequestArgs,
-    ) -> Result<()> {
-        instructions::create_deposit_request::handler(ctx, args)
-    }
-
-    /// It sets an operator for the vault.
-    /// Requires Request owner signature.
-    pub fn set_operator(ctx: Context<SetOperator>) -> Result<()> {
-        instructions::set_operator::handler(ctx)
-    }
-
-    /* Vault Authority instructions */
-
     /// Stores a pending authority on the vault without transferring control.
     /// The new authority must later call `accept_authority_invitation` to
     /// complete the transfer. Requires current authority signature.
@@ -113,9 +99,19 @@ pub mod async_vault {
         instructions::approve_request::handler(ctx)
     }
 
+    /* USER INSTRUCTIONS */
+
+    /// Creates a deposit request with state pending (Pending vault authority acceptance)
+    pub fn create_deposit_request(
+        ctx: Context<CreateDepositRequest>,
+        args: RequestArgs,
+    ) -> Result<()> {
+        instructions::create_deposit_request::handler(ctx, args)
+    }
+
     /// Creates a redeem request with state pending (Pending vault authority acceptance)
-    pub fn create_redeem_request<'info>(
-        ctx: Context<'_, '_, '_, 'info, CreateRedeemRequest<'info>>,
+    pub fn create_redeem_request(
+        ctx: Context<CreateRedeemRequest>,
         args: RequestArgs,
     ) -> Result<()> {
         instructions::create_redeem_request::handler(ctx, args)
@@ -123,9 +119,13 @@ pub mod async_vault {
 
     /// Cancels a pending request. For deposits, refunds the full amount
     /// back to the user. For redemptions, mints the shares back.
-    pub fn cancel_request<'info>(
-        ctx: Context<'_, '_, '_, 'info, CancelRequest<'info>>,
-    ) -> Result<()> {
+    pub fn cancel_request(ctx: Context<CancelRequest>) -> Result<()> {
         instructions::cancel_request::handler(ctx)
+    }
+
+    /// It sets an operator for the vault.
+    /// Requires Request owner signature.
+    pub fn set_operator(ctx: Context<SetOperator>) -> Result<()> {
+        instructions::set_operator::handler(ctx)
     }
 }

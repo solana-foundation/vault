@@ -36,8 +36,6 @@ pub struct CancelRequest<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
-    pub system_program: Program<'info, System>,
-
     #[account(
         mut,
         token::mint = asset_mint.key(),
@@ -64,9 +62,12 @@ pub struct CancelRequest<'info> {
 
     pub share_token_program: Option<Interface<'info, TokenInterface>>,
     pub asset_token_program: Option<Interface<'info, TokenInterface>>,
+    pub system_program: Program<'info, System>,
 }
 
 impl<'info> CancelRequest<'info> {
+    /// Transfers deposited assets from the pending vault back to the user's token account,
+    /// using the vault's PDA authority to sign the CPI transfer.
     pub fn transfer_assets_to_user(&self, amount: u64) -> Result<()> {
         let asset_pending_vault = self
             .asset_pending_vault
@@ -95,6 +96,8 @@ impl<'info> CancelRequest<'info> {
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
 
+    /// Mints share tokens back to the user's share account to reverse a pending redeem request,
+    /// using the vault's PDA authority to sign the CPI mint.
     pub fn mint_shares(&self, amount: u64) -> Result<()> {
         let user_share_account = self
             .user_share_account
@@ -119,7 +122,7 @@ impl<'info> CancelRequest<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, CancelRequest<'info>>) -> Result<()> {
+pub fn handler(ctx: Context<CancelRequest>) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
     require!(
         ctx.accounts.request.request_state == RequestState::Pending,
