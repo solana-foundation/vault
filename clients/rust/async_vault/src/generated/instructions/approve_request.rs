@@ -15,10 +15,6 @@ pub const APPROVE_REQUEST_DISCRIMINATOR: [u8; 8] = [89, 68, 167, 104, 93, 25, 17
 pub struct ApproveRequest {
     pub authority: solana_pubkey::Pubkey,
 
-    pub asset_mint: solana_pubkey::Pubkey,
-
-    pub share_mint: solana_pubkey::Pubkey,
-
     pub vault: solana_pubkey::Pubkey,
 
     pub request: solana_pubkey::Pubkey,
@@ -34,18 +30,10 @@ impl ApproveRequest {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.authority,
             true,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.asset_mint,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.share_mint,
-            false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new(self.request, false));
@@ -89,15 +77,11 @@ impl Default for ApproveRequestInstructionData {
 /// ### Accounts:
 ///
 ///   0. `[signer]` authority
-///   1. `[]` asset_mint
-///   2. `[]` share_mint
-///   3. `[writable]` vault
-///   4. `[writable]` request
+///   1. `[writable]` vault
+///   2. `[writable]` request
 #[derive(Clone, Debug, Default)]
 pub struct ApproveRequestBuilder {
     authority: Option<solana_pubkey::Pubkey>,
-    asset_mint: Option<solana_pubkey::Pubkey>,
-    share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     request: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
@@ -110,16 +94,6 @@ impl ApproveRequestBuilder {
     #[inline(always)]
     pub fn authority(&mut self, authority: solana_pubkey::Pubkey) -> &mut Self {
         self.authority = Some(authority);
-        self
-    }
-    #[inline(always)]
-    pub fn asset_mint(&mut self, asset_mint: solana_pubkey::Pubkey) -> &mut Self {
-        self.asset_mint = Some(asset_mint);
-        self
-    }
-    #[inline(always)]
-    pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
-        self.share_mint = Some(share_mint);
         self
     }
     #[inline(always)]
@@ -151,8 +125,6 @@ impl ApproveRequestBuilder {
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let accounts = ApproveRequest {
             authority: self.authority.expect("authority is not set"),
-            asset_mint: self.asset_mint.expect("asset_mint is not set"),
-            share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
             request: self.request.expect("request is not set"),
         };
@@ -165,10 +137,6 @@ impl ApproveRequestBuilder {
 pub struct ApproveRequestCpiAccounts<'a, 'b> {
     pub authority: &'b solana_account_info::AccountInfo<'a>,
 
-    pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
-
-    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub request: &'b solana_account_info::AccountInfo<'a>,
@@ -180,10 +148,6 @@ pub struct ApproveRequestCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
     pub authority: &'b solana_account_info::AccountInfo<'a>,
-
-    pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
-
-    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
@@ -198,8 +162,6 @@ impl<'a, 'b> ApproveRequestCpi<'a, 'b> {
         Self {
             __program: program,
             authority: accounts.authority,
-            asset_mint: accounts.asset_mint,
-            share_mint: accounts.share_mint,
             vault: accounts.vault,
             request: accounts.request,
         }
@@ -227,18 +189,10 @@ impl<'a, 'b> ApproveRequestCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.authority.key,
             true,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.asset_mint.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.share_mint.key,
-            false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(
@@ -259,11 +213,9 @@ impl<'a, 'b> ApproveRequestCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.authority.clone());
-        account_infos.push(self.asset_mint.clone());
-        account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.request.clone());
         remaining_accounts
@@ -283,10 +235,8 @@ impl<'a, 'b> ApproveRequestCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[signer]` authority
-///   1. `[]` asset_mint
-///   2. `[]` share_mint
-///   3. `[writable]` vault
-///   4. `[writable]` request
+///   1. `[writable]` vault
+///   2. `[writable]` request
 #[derive(Clone, Debug)]
 pub struct ApproveRequestCpiBuilder<'a, 'b> {
     instruction: Box<ApproveRequestCpiBuilderInstruction<'a, 'b>>,
@@ -297,8 +247,6 @@ impl<'a, 'b> ApproveRequestCpiBuilder<'a, 'b> {
         let instruction = Box::new(ApproveRequestCpiBuilderInstruction {
             __program: program,
             authority: None,
-            asset_mint: None,
-            share_mint: None,
             vault: None,
             request: None,
             __remaining_accounts: Vec::new(),
@@ -308,22 +256,6 @@ impl<'a, 'b> ApproveRequestCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn authority(&mut self, authority: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.authority = Some(authority);
-        self
-    }
-    #[inline(always)]
-    pub fn asset_mint(
-        &mut self,
-        asset_mint: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.asset_mint = Some(asset_mint);
-        self
-    }
-    #[inline(always)]
-    pub fn share_mint(
-        &mut self,
-        share_mint: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.share_mint = Some(share_mint);
         self
     }
     #[inline(always)]
@@ -375,10 +307,6 @@ impl<'a, 'b> ApproveRequestCpiBuilder<'a, 'b> {
 
             authority: self.instruction.authority.expect("authority is not set"),
 
-            asset_mint: self.instruction.asset_mint.expect("asset_mint is not set"),
-
-            share_mint: self.instruction.share_mint.expect("share_mint is not set"),
-
             vault: self.instruction.vault.expect("vault is not set"),
 
             request: self.instruction.request.expect("request is not set"),
@@ -394,8 +322,6 @@ impl<'a, 'b> ApproveRequestCpiBuilder<'a, 'b> {
 struct ApproveRequestCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
     authority: Option<&'b solana_account_info::AccountInfo<'a>>,
-    asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
-    share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     request: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

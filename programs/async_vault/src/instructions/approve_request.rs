@@ -1,24 +1,17 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
 
 use crate::{
     error::AsyncVaultError,
-    state::{Request, RequestState, Vault, VAULT_CONFIG_SEED},
+    state::{Request, RequestState, Vault},
 };
 
 #[derive(Accounts)]
 pub struct ApproveRequest<'info> {
     pub authority: Signer<'info>,
 
-    pub asset_mint: InterfaceAccount<'info, Mint>,
-    pub share_mint: InterfaceAccount<'info, Mint>,
-
     #[account(
         mut,
-        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
-        bump,
         constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
-        has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
     )]
     pub vault: Account<'info, Vault>,
 

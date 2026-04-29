@@ -80,8 +80,6 @@ fn test_approve_request_success() {
     approve_request(
         &mut svm,
         &authority,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
         vault_pubkey,
         request_keypair.pubkey(),
     )
@@ -127,7 +125,14 @@ fn test_approve_request_fails(pause_vault: bool, use_wrong_signer: bool, expecte
         vault_pubkey,
         pending_vault_pubkey,
         _fee_recipient_ata,
-    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, user_amount, 100_000_000);
+    ) = set_up_async_vault(
+        &mut svm,
+        token::ID,
+        None,
+        token::ID,
+        user_amount,
+        100_000_000,
+    );
 
     let user_token_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
@@ -152,11 +157,18 @@ fn test_approve_request_fails(pause_vault: bool, use_wrong_signer: bool, expecte
         &[&user, &request_keypair],
         svm.latest_blockhash(),
     );
-    svm.send_transaction(tx).expect("create deposit request should succeed");
+    svm.send_transaction(tx)
+        .expect("create deposit request should succeed");
 
     if pause_vault {
-        update_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey, true)
-            .expect("pause vault should succeed");
+        update_async_vault(
+            &mut svm,
+            &authority,
+            share_mint.pubkey(),
+            vault_pubkey,
+            true,
+        )
+        .expect("pause vault should succeed");
     }
 
     let (signer, authority_key) = if use_wrong_signer {
@@ -167,8 +179,6 @@ fn test_approve_request_fails(pause_vault: bool, use_wrong_signer: bool, expecte
 
     let ix = ApproveRequestBuilder::new()
         .authority(authority_key)
-        .asset_mint(asset_mint.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .request(request_keypair.pubkey())
         .instruction()

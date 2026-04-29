@@ -1199,15 +1199,11 @@ pub fn update_vault_nav(
 pub fn approve_request(
     svm: &mut LiteSVM,
     authority: &Keypair,
-    asset_mint: Pubkey,
-    share_mint: Pubkey,
     vault: Pubkey,
     request: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = ApproveRequestBuilder::new()
         .authority(authority.pubkey())
-        .asset_mint(asset_mint)
-        .share_mint(share_mint)
         .vault(vault)
         .request(request)
         .instruction()
