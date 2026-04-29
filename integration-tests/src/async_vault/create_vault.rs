@@ -11,23 +11,23 @@ use solana_sdk::{
 use test_case::test_case;
 
 use crate::helper_functions::{
-    assert_error_code, create_async_vault, create_mint, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED,
-    VAULT_CONFIG_SEED,
+    PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED, assert_error_code, create_async_vault, create_mint, create_mint_with_transfer_fee
 };
 
-#[test_case(100_000_000, true, true, true, false, token::ID,token::ID ; "both async inflows and outflows")]
-#[test_case(100_000_000, true, true, true, false, token_2022::ID,token_2022::ID ; "Token 2022 program for both mints")]
-#[test_case(100_000_000, true, true, true, false, token::ID,token_2022::ID ; "Token program for asset, Token program 2022 for share")]
-#[test_case(100_000_000, true, true, true, false, token::ID,token_2022::ID ; "Token 2022 program for asset, Token program for share")]
-#[test_case(100_000_000, true, false, true, false,token_2022::ID,token_2022::ID ; "async inflows only")]
-#[test_case(100_000_000, false, true, true, false,token_2022::ID,token_2022::ID ; "async outflows only")]
-#[test_case(100_000_000, false, false, true, false,token_2022::ID,token_2022::ID ; "no async flows")]
-#[test_case(1, true, true, true, false,token_2022::ID,token_2022::ID ; "minimum price")]
-#[test_case(u64::MAX, true, true, true,  false,token_2022::ID,token_2022::ID ; "maximum price")]
-#[test_case(0, true, true, true,  false,token_2022::ID,token_2022::ID ; "zero initial price fails")]
-#[test_case(100_000_000, true, true, false, false,token_2022::ID,token_2022::ID ; "invalid mint authority fails")]
-#[test_case(100_000_000, true, true, true,  false,token_2022::ID,token_2022::ID ; "duplicate vault creation fails")]
-#[test_case(100_000_000, true, true, true,  true, token_2022::ID,token_2022::ID; "same mints fails")]
+#[test_case(100_000_000, true, true, true, false, token::ID,token::ID, 0 ; "both async inflows and outflows")]
+#[test_case(100_000_000, true, true, true, false, token_2022::ID,token_2022::ID, 0 ; "Token 2022 program for both mints")]
+#[test_case(100_000_000, true, true, true, false, token::ID,token_2022::ID, 0 ; "Token program for asset, Token program 2022 for share")]
+#[test_case(100_000_000, true, true, true, false, token::ID,token_2022::ID, 0 ; "Token 2022 program for asset, Token program for share")]
+#[test_case(100_000_000, true, false, true, false,token_2022::ID,token_2022::ID, 0 ; "async inflows only")]
+#[test_case(100_000_000, false, true, true, false,token_2022::ID,token_2022::ID, 0 ; "async outflows only")]
+#[test_case(100_000_000, false, false, true, false,token_2022::ID,token_2022::ID, 0 ; "no async flows")]
+#[test_case(1, true, true, true, false,token_2022::ID,token_2022::ID, 0 ; "minimum price")]
+#[test_case(u64::MAX, true, true, true,  false,token_2022::ID,token_2022::ID, 0 ; "maximum price")]
+#[test_case(0, true, true, true,  false,token_2022::ID,token_2022::ID, 0 ; "zero initial price fails")]
+#[test_case(100_000_000, true, true, false, false,token_2022::ID,token_2022::ID, 0 ; "invalid mint authority fails")]
+#[test_case(100_000_000, true, true, true,  false,token_2022::ID,token_2022::ID, 0 ; "duplicate vault creation fails")]
+#[test_case(100_000_000, true, true, true,  true, token_2022::ID,token_2022::ID, 0 ; "same mints fails")]
+#[test_case(100_000_000, true, true, true,  false, token_2022::ID,token_2022::ID, 1 ; "nonzero transfer fee asset mint fails")]
 fn test_create_vault(
     initial_price: u64,
     async_inflows: bool,
@@ -36,6 +36,7 @@ fn test_create_vault(
     use_same_mints: bool,
     asset_program: Pubkey,
     share_program: Pubkey,
+    asset_transfer_fee: u16,
 ) {
     let mut svm = LiteSVM::new();
 
@@ -58,7 +59,11 @@ fn test_create_vault(
     svm.airdrop(&fake_mint_authority.pubkey(), 1_000_000_000)
         .unwrap();
 
-    create_mint(&mut svm, &mint_authority, &asset_mint, &asset_program);
+    if asset_program == token_2022::ID {
+        create_mint_with_transfer_fee(&mut svm, &mint_authority, &asset_mint, asset_transfer_fee, u64::MAX);
+    } else {
+        create_mint(&mut svm, &mint_authority, &asset_mint, &asset_program);
+    }
     if !use_same_mints {
         create_mint(&mut svm, &mint_authority, &share_mint, &share_program);
     }
@@ -106,7 +111,7 @@ fn test_create_vault(
         share_program,
     );
 
-    let should_succeed = initial_price != 0 && use_valid_mint_authority && !use_same_mints;
+    let should_succeed = initial_price != 0 && use_valid_mint_authority && !use_same_mints && asset_transfer_fee == 0;
 
     if should_succeed {
         result.expect("async vault creation should succeed");
@@ -142,6 +147,9 @@ fn test_create_vault(
 
         if use_same_mints {
             assert_error_code(err_result, 6010, "Mints should be different.");
+        }
+        if asset_transfer_fee > 0 {
+            assert_error_code(err_result, 6016, "Nonzero transfer fee should fail");
         }
     }
 }
@@ -238,3 +246,4 @@ fn test_create_vault_nonzero_share_mint_supply_fails() {
     let err_result = &result.unwrap_err();
     assert_error_code(err_result, 6011, "Share mint supply should be zero.");
 }
+

@@ -7,6 +7,7 @@ use anchor_spl::{
 use crate::{
     error::AsyncVaultError,
     state::{Vault, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    utils::validate_asset_mint_extensions_from_acct_info,
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -90,7 +91,7 @@ impl<'info> CreateVault<'info> {
 /// Transfers the share mint authority to the vault PDA so only the
 /// program can mint/burn share tokens.
 ///
-/// The vault starts `paused = true` and `initialized = false`; call
+/// The vault starts `initialized = false`; call
 /// `initialize_vault` after configuring extensions to activate it.
 /// Freeze authority is not transferred since is up to the implementator to manage it.
 pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
@@ -102,6 +103,8 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         ctx.accounts.share_mint.supply == 0,
         AsyncVaultError::ShareMintSupplyShouldBeZero
     );
+
+    validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
     ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
 

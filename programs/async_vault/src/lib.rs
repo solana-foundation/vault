@@ -4,6 +4,7 @@ pub mod error;
 pub mod extensions;
 pub mod instructions;
 pub mod state;
+pub mod utils;
 
 use instructions::*;
 

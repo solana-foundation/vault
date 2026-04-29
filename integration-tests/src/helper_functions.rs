@@ -1164,7 +1164,6 @@ pub fn invite_new_authority(
         .new_authority(new_authority)
         .instruction()
         .into_sdk_instruction();
-    let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&authority.pubkey()),
@@ -1187,7 +1186,6 @@ pub fn update_vault_nav(
         .instruction()
         .into_sdk_instruction();
 
-    let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&authority.pubkey()),
@@ -1221,6 +1219,7 @@ pub fn accept_authority_invitation(
 pub fn set_up_async_vault(
     svm: &mut LiteSVM,
     asset_token_program: Pubkey,
+    asset_mint_transfer_fee_bps: Option<u16>,
     share_token_program: Pubkey,
     user_amount: u64,
     initial_price: u64,
@@ -1255,7 +1254,18 @@ pub fn set_up_async_vault(
     svm.airdrop(&user.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&operator.pubkey(), 1_000_000_000).unwrap();
 
-    create_mint(svm, &mint_authority, &asset_mint, &asset_token_program);
+    if asset_token_program == token_2022::ID && asset_mint_transfer_fee_bps.is_some() {
+        // Initialize with TransferFee extension enabled
+        create_mint_with_transfer_fee(
+            svm,
+            &mint_authority,
+            &asset_mint,
+            asset_mint_transfer_fee_bps.unwrap(),
+            u64::MAX,
+        );
+    } else {
+        create_mint(svm, &mint_authority, &asset_mint, &asset_token_program);
+    }
     create_mint(svm, &mint_authority, &share_mint, &share_token_program);
 
     let (reserve_pubkey, _) = Pubkey::find_program_address(

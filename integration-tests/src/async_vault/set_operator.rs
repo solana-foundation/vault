@@ -25,7 +25,14 @@ fn test_set_operator_succeeds() {
         vault_pubkey,
         pending_vault_pubkey,
         _fee_recipient_ata,
-    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 1_000_000_000, 100_000_000);
+    ) = set_up_async_vault(
+        &mut svm,
+        token::ID,
+        None,
+        token::ID,
+        1_000_000_000,
+        100_000_000,
+    );
 
     let user_token_account = get_associated_token_address_with_program_id(
         &user.pubkey(),

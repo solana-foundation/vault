@@ -34,4 +34,6 @@ pub enum AsyncVaultError {
     MissingFeeRecipient,
     #[msg("Fee recipient account is invalid.")]
     InvalidFeeRecipient,
+    #[msg("Asset mint has invalid extensions.")]
+    InvalidAssetMintExtensions,
 }
