@@ -99,6 +99,13 @@ pub mod async_vault {
         instructions::approve_request::handler(ctx)
     }
 
+    /// Reject a pending request. For deposit requests, the deposited assets are
+    /// refunded to the user. For redeem requests, the shares are minted back to the user.
+    /// The request account is closed and its rent is returned to the user.
+    pub fn reject_request(ctx: Context<RejectRequest>) -> Result<()> {
+        instructions::reject_request::handler(ctx)
+    }
+
     /* USER INSTRUCTIONS */
 
     /// Creates a deposit request with state pending (Pending vault authority acceptance)

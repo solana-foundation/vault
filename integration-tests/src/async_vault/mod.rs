@@ -6,6 +6,7 @@ mod create_redeem_request;
 mod create_vault;
 mod fee_extensions;
 mod initialize_vault;
+mod reject_request;
 mod set_operator;
 mod update_async_vault;
 mod update_authority;

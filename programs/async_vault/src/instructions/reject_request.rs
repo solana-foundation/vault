@@ -44,23 +44,23 @@ pub struct RejectRequest<'info> {
 
     #[account(
         mut,
-        token::mint = asset_mint,
-        token::authority = user,
+        token::mint = asset_mint.key(),
+        token::authority = user
     )]
     pub user_token_account: Option<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
-        token::mint = asset_mint,
+        token::mint = asset_mint.key(),
         token::authority = vault,
         token::token_program = asset_token_program,
-        constraint = vault.pending_vault == pending_vault.key() @ AsyncVaultError::InvalidPendingVault,
+        constraint = vault.pending_vault.key() == asset_pending_vault.key() @ AsyncVaultError::InvalidPendingVault
     )]
-    pub pending_vault: Option<InterfaceAccount<'info, TokenAccount>>,
+    pub asset_pending_vault: Option<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
-        token::mint = share_mint,
+        token::mint = share_mint.key(),
         token::authority = user,
         token::token_program = share_token_program,
     )]
@@ -68,12 +68,13 @@ pub struct RejectRequest<'info> {
 
     pub share_token_program: Option<Interface<'info, TokenInterface>>,
     pub asset_token_program: Option<Interface<'info, TokenInterface>>,
+    pub system_program: Program<'info, System>,
 }
 
 impl<'info> RejectRequest<'info> {
     pub fn transfer_assets_to_user(&self, amount: u64) -> Result<()> {
         let pending_vault = self
-            .pending_vault
+            .asset_pending_vault
             .as_ref()
             .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
         let user_token_account = self
