@@ -1,8 +1,5 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
-use async_vault_client::{
-    sdk::{program_id, IntoSdkInstruction},
-    CancelRequestBuilder, Vault,
-};
+use async_vault_client::{sdk::program_id, Vault};
 use litesvm::LiteSVM;
 use solana_sdk::{
     account::ReadableAccount, signature::Keypair, signer::Signer, transaction::Transaction,
@@ -10,9 +7,9 @@ use solana_sdk::{
 use test_case::test_case;
 
 use crate::helper_functions::{
-    assert_error_code, create_ata, create_deposit_request_ix, create_redeem_request_ix,
-    get_token_account_amount, initialize_async_vault, set_share_balance, set_up_async_vault,
-    update_async_vault, update_vault_nav,
+    assert_error_code, cancel_request_ix, create_ata, create_deposit_request_ix,
+    create_redeem_request_ix, get_token_account_amount, initialize_async_vault, set_share_balance,
+    set_up_async_vault, update_async_vault, update_vault_nav,
 };
 
 #[test_case(1_000_000 ; "cancel deposit request refunds user")]
@@ -89,18 +86,18 @@ fn test_cancel_deposit_request(deposit_amount: u64) {
     let vault_before = Vault::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
     let pending_before = vault_before.pending_async_requests;
 
-    let mut builder = CancelRequestBuilder::new();
-    builder
-        .user(user.pubkey())
-        .asset_mint(asset_mint.pubkey())
-        .share_mint(share_mint.pubkey())
-        .request(request_keypair.pubkey())
-        .vault(vault_pubkey)
-        .user_token_account(Some(user_token_account))
-        .asset_pending_vault(Some(pending_vault_pubkey))
-        .asset_token_program(Some(token::ID));
-
-    let ix = builder.instruction().into_sdk_instruction();
+    let ix = cancel_request_ix(
+        user.pubkey(),
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        request_keypair.pubkey(),
+        vault_pubkey,
+        Some(user_token_account),
+        Some(pending_vault_pubkey),
+        Some(token::ID),
+        None,
+        None,
+    );
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&user.pubkey()),
@@ -215,18 +212,18 @@ fn test_cancel_deposit_request_fails(wrong_user: bool) {
         &token::ID,
     );
 
-    let mut builder = CancelRequestBuilder::new();
-    builder
-        .user(cancel_signer.pubkey())
-        .asset_mint(asset_mint.pubkey())
-        .share_mint(share_mint.pubkey())
-        .request(request_keypair.pubkey())
-        .vault(vault_pubkey)
-        .user_token_account(Some(cancel_user_ata))
-        .asset_pending_vault(Some(pending_vault_pubkey))
-        .asset_token_program(Some(token::ID));
-
-    let ix = builder.instruction().into_sdk_instruction();
+    let ix = cancel_request_ix(
+        cancel_signer.pubkey(),
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        request_keypair.pubkey(),
+        vault_pubkey,
+        Some(cancel_user_ata),
+        Some(pending_vault_pubkey),
+        Some(token::ID),
+        None,
+        None,
+    );
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&cancel_signer.pubkey()),
@@ -329,18 +326,18 @@ fn test_cancel_multiple_deposit_requests() {
         deposit_amount * 2
     );
 
-    let mut builder = CancelRequestBuilder::new();
-    builder
-        .user(user.pubkey())
-        .asset_mint(asset_mint.pubkey())
-        .share_mint(share_mint.pubkey())
-        .request(request_1.pubkey())
-        .vault(vault_pubkey)
-        .user_token_account(Some(user_token_account))
-        .asset_pending_vault(Some(pending_vault_pubkey))
-        .asset_token_program(Some(token::ID));
-
-    let ix = builder.instruction().into_sdk_instruction();
+    let ix = cancel_request_ix(
+        user.pubkey(),
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        request_1.pubkey(),
+        vault_pubkey,
+        Some(user_token_account),
+        Some(pending_vault_pubkey),
+        Some(token::ID),
+        None,
+        None,
+    );
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&user.pubkey()),
@@ -357,18 +354,18 @@ fn test_cancel_multiple_deposit_requests() {
     assert!(svm.get_account(&request_1.pubkey()).is_none());
     assert!(svm.get_account(&request_2.pubkey()).is_some());
 
-    let mut builder2 = CancelRequestBuilder::new();
-    builder2
-        .user(user.pubkey())
-        .asset_mint(asset_mint.pubkey())
-        .share_mint(share_mint.pubkey())
-        .request(request_2.pubkey())
-        .vault(vault_pubkey)
-        .user_token_account(Some(user_token_account))
-        .asset_pending_vault(Some(pending_vault_pubkey))
-        .asset_token_program(Some(token::ID));
-
-    let ix2 = builder2.instruction().into_sdk_instruction();
+    let ix2 = cancel_request_ix(
+        user.pubkey(),
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        request_2.pubkey(),
+        vault_pubkey,
+        Some(user_token_account),
+        Some(pending_vault_pubkey),
+        Some(token::ID),
+        None,
+        None,
+    );
     let tx2 = Transaction::new_signed_with_payer(
         &[ix2],
         Some(&user.pubkey()),
@@ -452,17 +449,18 @@ fn test_cancel_redeem_request(share_amount: u64) {
     let vault_before = Vault::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
     let pending_before = vault_before.pending_async_requests;
 
-    let mut builder = CancelRequestBuilder::new();
-    builder
-        .user(user.pubkey())
-        .asset_mint(asset_mint.pubkey())
-        .share_mint(share_mint.pubkey())
-        .request(request_keypair.pubkey())
-        .vault(vault_pubkey)
-        .user_share_account(Some(user_share_account))
-        .share_token_program(Some(token::ID));
-
-    let ix = builder.instruction().into_sdk_instruction();
+    let ix = cancel_request_ix(
+        user.pubkey(),
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        request_keypair.pubkey(),
+        vault_pubkey,
+        None,
+        None,
+        None,
+        Some(user_share_account),
+        Some(token::ID),
+    );
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&user.pubkey()),
