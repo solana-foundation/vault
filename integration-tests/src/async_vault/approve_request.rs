@@ -1,8 +1,5 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
-use async_vault_client::{
-    sdk::{program_id, IntoSdkInstruction},
-    ApproveRequestBuilder, Request, RequestState, Vault,
-};
+use async_vault_client::{sdk::program_id, ApproveRequestBuilder, Request, RequestState, Vault};
 use borsh::BorshSerialize;
 use litesvm::LiteSVM;
 use solana_sdk::{
@@ -11,7 +8,7 @@ use solana_sdk::{
 use test_case::test_case;
 
 use crate::helper_functions::{
-    approve_request, assert_error_code, create_deposit_request_ix, initialize_async_vault,
+    approve_request, assert_error_code, create_deposit_request, initialize_async_vault,
     set_up_async_vault, update_async_vault, update_vault_nav,
 };
 
@@ -56,7 +53,8 @@ fn test_approve_request_success() {
     let deposit_amount = 1_000_000;
     let request_keypair = Keypair::new();
 
-    let ix = create_deposit_request_ix(
+    create_deposit_request(
+        &mut svm,
         &user,
         &request_keypair,
         asset_mint.pubkey(),
@@ -65,15 +63,8 @@ fn test_approve_request_success() {
         user_token_account,
         pending_vault_pubkey,
         deposit_amount,
-    );
-    let tx = Transaction::new_signed_with_payer(
-        &[ix],
-        Some(&user.pubkey()),
-        &[&user, &request_keypair],
-        svm.latest_blockhash(),
-    );
-    svm.send_transaction(tx)
-        .expect("create deposit request should succeed");
+    )
+    .expect("create deposit request should succeed");
 
     // Update NAV to a new value — approve_request should lock in this newer NAV
     let new_nav = 200u128;
@@ -150,7 +141,8 @@ fn test_approve_request_fails(
     );
 
     let request_keypair = Keypair::new();
-    let ix = create_deposit_request_ix(
+    create_deposit_request(
+        &mut svm,
         &user,
         &request_keypair,
         asset_mint.pubkey(),
@@ -159,15 +151,8 @@ fn test_approve_request_fails(
         user_token_account,
         pending_vault_pubkey,
         1_000_000,
-    );
-    let tx = Transaction::new_signed_with_payer(
-        &[ix],
-        Some(&user.pubkey()),
-        &[&user, &request_keypair],
-        svm.latest_blockhash(),
-    );
-    svm.send_transaction(tx)
-        .expect("create deposit request should succeed");
+    )
+    .expect("create deposit request should succeed");
 
     if override_to_claimable {
         let mut account = svm.get_account(&request_keypair.pubkey()).unwrap();
@@ -200,8 +185,7 @@ fn test_approve_request_fails(
         .authority(authority_key)
         .vault(vault_pubkey)
         .request(request_keypair.pubkey())
-        .instruction()
-        .into_sdk_instruction();
+        .instruction();
 
     let tx = Transaction::new_signed_with_payer(
         &[ix],
