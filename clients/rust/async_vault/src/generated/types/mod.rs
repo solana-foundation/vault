@@ -3,14 +3,10 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
-//!
 
 pub(crate) mod r#fee_type;
 pub(crate) mod r#request_args;
 pub(crate) mod r#request_state;
 pub(crate) mod r#request_type;
 
-pub use self::r#fee_type::*;
-pub use self::r#request_args::*;
-pub use self::r#request_state::*;
-pub use self::r#request_type::*;
+pub use self::{r#fee_type::*, r#request_args::*, r#request_state::*, r#request_type::*};

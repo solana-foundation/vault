@@ -3,11 +3,9 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
-//!
 
 use crate::generated::types::RequestArgs;
-use borsh::BorshDeserialize;
-use borsh::BorshSerialize;
+use borsh::{BorshDeserialize, BorshSerialize};
 
 pub const CREATE_DEPOSIT_REQUEST_DISCRIMINATOR: [u8; 8] = [143, 189, 167, 78, 192, 226, 23, 170];
 
@@ -40,6 +38,7 @@ impl CreateDepositRequest {
     ) -> solana_instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
+
     #[allow(clippy::arithmetic_side_effects)]
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
@@ -158,63 +157,75 @@ impl CreateDepositRequestBuilder {
     pub fn new() -> Self {
         Self::default()
     }
+
     #[inline(always)]
     pub fn user(&mut self, user: solana_pubkey::Pubkey) -> &mut Self {
         self.user = Some(user);
         self
     }
+
     #[inline(always)]
     pub fn asset_mint(&mut self, asset_mint: solana_pubkey::Pubkey) -> &mut Self {
         self.asset_mint = Some(asset_mint);
         self
     }
+
     #[inline(always)]
     pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
         self.share_mint = Some(share_mint);
         self
     }
+
     #[inline(always)]
     pub fn request(&mut self, request: solana_pubkey::Pubkey) -> &mut Self {
         self.request = Some(request);
         self
     }
+
     #[inline(always)]
     pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
         self.vault = Some(vault);
         self
     }
+
     #[inline(always)]
     pub fn user_token_account(&mut self, user_token_account: solana_pubkey::Pubkey) -> &mut Self {
         self.user_token_account = Some(user_token_account);
         self
     }
+
     #[inline(always)]
     pub fn pending_vault(&mut self, pending_vault: solana_pubkey::Pubkey) -> &mut Self {
         self.pending_vault = Some(pending_vault);
         self
     }
+
     #[inline(always)]
     pub fn asset_token_program(&mut self, asset_token_program: solana_pubkey::Pubkey) -> &mut Self {
         self.asset_token_program = Some(asset_token_program);
         self
     }
+
     /// `[optional account, default to '11111111111111111111111111111111']`
     #[inline(always)]
     pub fn system_program(&mut self, system_program: solana_pubkey::Pubkey) -> &mut Self {
         self.system_program = Some(system_program);
         self
     }
+
     #[inline(always)]
     pub fn args(&mut self, args: RequestArgs) -> &mut Self {
         self.args = Some(args);
         self
     }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
         self.__remaining_accounts.push(account);
         self
     }
+
     /// Add additional accounts to the instruction.
     #[inline(always)]
     pub fn add_remaining_accounts(
@@ -224,6 +235,7 @@ impl CreateDepositRequestBuilder {
         self.__remaining_accounts.extend_from_slice(accounts);
         self
     }
+
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let accounts = CreateDepositRequest {
@@ -318,10 +330,12 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
             __args: args,
         }
     }
+
     #[inline(always)]
     pub fn invoke(&self) -> solana_program_error::ProgramResult {
         self.invoke_signed_with_remaining_accounts(&[], &[])
     }
+
     #[inline(always)]
     pub fn invoke_with_remaining_accounts(
         &self,
@@ -329,10 +343,12 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
     ) -> solana_program_error::ProgramResult {
         self.invoke_signed_with_remaining_accounts(&[], remaining_accounts)
     }
+
     #[inline(always)]
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
         self.invoke_signed_with_remaining_accounts(signers_seeds, &[])
     }
+
     #[allow(clippy::arithmetic_side_effects)]
     #[allow(clippy::clone_on_copy)]
     #[allow(clippy::vec_init_then_push)]
@@ -449,11 +465,13 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
         });
         Self { instruction }
     }
+
     #[inline(always)]
     pub fn user(&mut self, user: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.user = Some(user);
         self
     }
+
     #[inline(always)]
     pub fn asset_mint(
         &mut self,
@@ -462,6 +480,7 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
         self.instruction.asset_mint = Some(asset_mint);
         self
     }
+
     #[inline(always)]
     pub fn share_mint(
         &mut self,
@@ -470,16 +489,19 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
         self.instruction.share_mint = Some(share_mint);
         self
     }
+
     #[inline(always)]
     pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.request = Some(request);
         self
     }
+
     #[inline(always)]
     pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.vault = Some(vault);
         self
     }
+
     #[inline(always)]
     pub fn user_token_account(
         &mut self,
@@ -488,6 +510,7 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
         self.instruction.user_token_account = Some(user_token_account);
         self
     }
+
     #[inline(always)]
     pub fn pending_vault(
         &mut self,
@@ -496,6 +519,7 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
         self.instruction.pending_vault = Some(pending_vault);
         self
     }
+
     #[inline(always)]
     pub fn asset_token_program(
         &mut self,
@@ -504,6 +528,7 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
         self.instruction.asset_token_program = Some(asset_token_program);
         self
     }
+
     #[inline(always)]
     pub fn system_program(
         &mut self,
@@ -512,11 +537,13 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
         self.instruction.system_program = Some(system_program);
         self
     }
+
     #[inline(always)]
     pub fn args(&mut self, args: RequestArgs) -> &mut Self {
         self.instruction.args = Some(args);
         self
     }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -530,10 +557,12 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
             .push((account, is_writable, is_signer));
         self
     }
+
     /// Add additional accounts to the instruction.
     ///
-    /// Each account is represented by a tuple of the `AccountInfo`, a `bool` indicating whether the account is writable or not,
-    /// and a `bool` indicating whether the account is a signer or not.
+    /// Each account is represented by a tuple of the `AccountInfo`, a `bool` indicating whether the
+    /// account is writable or not, and a `bool` indicating whether the account is a signer or
+    /// not.
     #[inline(always)]
     pub fn add_remaining_accounts(
         &mut self,
@@ -544,10 +573,12 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
             .extend_from_slice(accounts);
         self
     }
+
     #[inline(always)]
     pub fn invoke(&self) -> solana_program_error::ProgramResult {
         self.invoke_signed(&[])
     }
+
     #[allow(clippy::clone_on_copy)]
     #[allow(clippy::vec_init_then_push)]
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
