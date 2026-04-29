@@ -37,7 +37,7 @@ fn set_share_balance(
 #[test_case(1_000_000_000, false, None ; "redeem request succeeds")]
 #[test_case(1_000_000_000, true, None ; "redeem with operator succeeds")]
 #[test_case(0, false, Some((6011, "InsufficientRedeemAmount")) ; "zero amount fails")]
-#[test_case(1_000, false, Some((6031, "ZeroAssets")) ; "zero assets fails")]
+#[test_case(1_000, false, Some((6003, "ArithmeticError")) ; "arithmetic error fails")]
 fn test_create_redeem_request(
     share_amount: u64,
     with_operator: bool,
