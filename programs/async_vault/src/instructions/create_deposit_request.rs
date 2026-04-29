@@ -32,11 +32,7 @@ pub struct CreateDepositRequest<'info> {
     )]
     pub request: Account<'info, Request>,
 
-    #[account(
-        mut,
-        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
-        bump
-    )]
+    #[account(mut)]
     pub vault: Account<'info, Vault>,
 
     #[account(

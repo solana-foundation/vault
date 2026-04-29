@@ -6,7 +6,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 use vault_common::VaultProgramError;
 
-use crate::state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED};
+use crate::state::{Request, RequestState, RequestType, Vault};
 
 use super::create_deposit_request::RequestArgs;
 
@@ -28,11 +28,7 @@ pub struct CreateRedeemRequest<'info> {
     )]
     pub request: Account<'info, Request>,
 
-    #[account(
-        mut,
-        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
-        bump
-    )]
+    #[account(mut)]
     pub vault: Account<'info, Vault>,
 
     #[account(
