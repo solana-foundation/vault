@@ -1,7 +1,4 @@
-use crate::{
-    error::AsyncVaultError, extensions::get_deposit_fee,
-    utils::validate_asset_mint_extensions_from_acct_info,
-};
+use crate::{error::AsyncVaultError, utils::validate_asset_mint_extensions_from_acct_info};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 use vault_common::VaultProgramError;
@@ -103,6 +100,7 @@ pub fn handler<'info>(
 
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
+    // SAFETY: TransferFees are required to be 0, therefore using args.amount is safe.
     ctx.accounts.transfer_asset_token(
         ctx.accounts.user_token_account.to_account_info(),
         ctx.accounts.pending_vault.to_account_info(),
@@ -110,32 +108,17 @@ pub fn handler<'info>(
         args.amount,
     )?;
 
-    let vault_info = ctx.accounts.vault.to_account_info();
-    let fee = get_deposit_fee(&vault_info.try_borrow_data()?, args.amount)?;
-
-    let net_amount = args
-        .amount
-        .checked_sub(fee)
-        .ok_or(VaultProgramError::ArithmeticError)?;
-
-    let shares = ctx
-        .accounts
-        .vault
-        .calculate_shares(ctx.accounts.share_mint.decimals, net_amount)?;
-
     let current_timestamp = Clock::get()?.unix_timestamp;
     ctx.accounts.request.set_inner(Request {
         vault: ctx.accounts.vault.key(),
         request_type: RequestType::Deposit,
         request_state: RequestState::Pending,
         owner: ctx.accounts.user.key(),
-        amount: net_amount,
+        amount: args.amount,
         price: ctx.accounts.vault.nav,
-        remaining_amount: shares,
         asset_mint_address: ctx.accounts.asset_mint.key(),
         created_at: current_timestamp,
         nav_update_version: ctx.accounts.vault.nav_version,
-        fee,
         operator: args.operator,
     });
 

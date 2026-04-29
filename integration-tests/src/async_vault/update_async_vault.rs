@@ -32,14 +32,8 @@ fn test_update_async_vault(paused: bool) {
     assert_eq!(vault_after.paused, paused);
 
     assert_eq!(vault_after.authority, vault_before.authority);
-    assert_eq!(
-        vault_after.asset_mint_address,
-        vault_before.asset_mint_address
-    );
-    assert_eq!(
-        vault_after.share_mint_address,
-        vault_before.share_mint_address
-    );
+    assert_eq!(vault_after.asset_mint, vault_before.asset_mint);
+    assert_eq!(vault_after.share_mint, vault_before.share_mint);
     assert_eq!(vault_after.initial_price, vault_before.initial_price);
     assert_eq!(vault_after.nav, vault_before.nav);
     assert_eq!(vault_after.nav_version, vault_before.nav_version);

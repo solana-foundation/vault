@@ -3,6 +3,7 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
 use num_derive::FromPrimitive;
 use thiserror::Error;
@@ -57,6 +58,15 @@ pub enum AsyncVaultError {
     /// 6015 - Fee recipient account is invalid.
     #[error("Fee recipient account is invalid.")]
     InvalidFeeRecipient = 0x177F,
+    /// 6016 - Asset mint has invalid extensions.
+    #[error("Asset mint has invalid extensions.")]
+    InvalidAssetMintExtensions = 0x1780,
+    /// 6017 - Asset mint is not valid.
+    #[error("Asset mint is not valid.")]
+    InvalidAssetMint = 0x1781,
+    /// 6018 - Share mint is not valid.
+    #[error("Share mint is not valid.")]
+    InvalidShareMint = 0x1782,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

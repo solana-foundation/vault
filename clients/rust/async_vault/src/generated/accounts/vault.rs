@@ -3,8 +3,10 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
-use borsh::{BorshDeserialize, BorshSerialize};
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 use solana_pubkey::Pubkey;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
@@ -15,13 +17,13 @@ pub struct Vault {
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
-    pub asset_mint_address: Pubkey,
+    pub asset_mint: Pubkey,
     /// share mint address
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
-    pub share_mint_address: Pubkey,
+    pub share_mint: Pubkey,
     /// token account holding confirmed vault assets
     #[cfg_attr(
         feature = "serde",

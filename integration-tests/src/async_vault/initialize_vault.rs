@@ -51,14 +51,8 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
 
         assert!(vault_after.initialized);
         assert_eq!(vault_before.authority, vault_after.authority);
-        assert_eq!(
-            vault_before.asset_mint_address,
-            vault_after.asset_mint_address
-        );
-        assert_eq!(
-            vault_before.share_mint_address,
-            vault_after.share_mint_address
-        );
+        assert_eq!(vault_before.asset_mint, vault_after.asset_mint);
+        assert_eq!(vault_before.share_mint, vault_after.share_mint);
         assert_eq!(
             vault_before.vault_token_account,
             vault_after.vault_token_account

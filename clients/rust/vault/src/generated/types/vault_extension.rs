@@ -3,9 +3,13 @@
 //! to add features, then rerun codama to update it.
 //!
 //! <https://github.com/codama-idl/codama>
+//!
 
-use crate::generated::types::{DepositHook, FeeType, WithdrawHook};
-use borsh::{BorshDeserialize, BorshSerialize};
+use crate::generated::types::DepositHook;
+use crate::generated::types::FeeType;
+use crate::generated::types::WithdrawHook;
+use borsh::BorshDeserialize;
+use borsh::BorshSerialize;
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]

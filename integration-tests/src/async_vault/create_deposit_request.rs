@@ -124,7 +124,6 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
     assert_eq!(request_data.price, 100);
     assert_eq!(request_data.asset_mint_address, asset_mint.pubkey());
     assert_eq!(request_data.nav_update_version, 1);
-    assert_eq!(request_data.fee, 0);
 
     if with_operator {
         assert_eq!(request_data.operator, Some(operator.pubkey()));
