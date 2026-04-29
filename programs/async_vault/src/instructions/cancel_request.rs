@@ -1,7 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{
-    self, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
-};
+use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 use vault_common::VaultProgramError;
 
 use crate::{
@@ -16,7 +14,6 @@ pub struct CancelRequest<'info> {
 
     pub asset_mint: InterfaceAccount<'info, Mint>,
 
-    #[account(mut)]
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
@@ -48,9 +45,17 @@ pub struct CancelRequest<'info> {
         token::mint = asset_mint.key(),
         token::authority = vault,
         token::token_program = asset_token_program,
-        constraint = vault.pending_vault.key() == pending_vault.key() @ AsyncVaultError::InvalidPendingVault
+        constraint = vault.pending_vault.key() == asset_pending_vault.key() @ AsyncVaultError::InvalidPendingVault
     )]
-    pub pending_vault: Option<InterfaceAccount<'info, TokenAccount>>,
+    pub asset_pending_vault: Option<InterfaceAccount<'info, TokenAccount>>,
+
+    #[account(
+        mut,
+        token::mint = share_mint.key(),
+        token::authority = vault,
+        token::token_program = share_token_program,
+    )]
+    pub share_pending_vault: Option<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -65,8 +70,8 @@ pub struct CancelRequest<'info> {
 
 impl<'info> CancelRequest<'info> {
     pub fn transfer_assets_to_user(&self, amount: u64) -> Result<()> {
-        let pending_vault = self
-            .pending_vault
+        let asset_pending_vault = self
+            .asset_pending_vault
             .as_ref()
             .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
         let user_token_account = self
@@ -79,7 +84,7 @@ impl<'info> CancelRequest<'info> {
             .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
 
         let cpi_accounts = TransferChecked {
-            from: pending_vault.to_account_info(),
+            from: asset_pending_vault.to_account_info(),
             mint: self.asset_mint.to_account_info(),
             to: user_token_account.to_account_info(),
             authority: self.vault.to_account_info(),
@@ -92,7 +97,11 @@ impl<'info> CancelRequest<'info> {
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
 
-    pub fn mint_shares_to_user(&self, amount: u64) -> Result<()> {
+    pub fn transfer_shares_to_user(&self, amount: u64) -> Result<()> {
+        let share_pending_vault = self
+            .share_pending_vault
+            .as_ref()
+            .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
         let user_share_token_account = self
             .user_share_token_account
             .as_ref()
@@ -102,7 +111,8 @@ impl<'info> CancelRequest<'info> {
             .as_ref()
             .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
 
-        let cpi_accounts = MintTo {
+        let cpi_accounts = TransferChecked {
+            from: share_pending_vault.to_account_info(),
             mint: self.share_mint.to_account_info(),
             to: user_share_token_account.to_account_info(),
             authority: self.vault.to_account_info(),
@@ -112,7 +122,7 @@ impl<'info> CancelRequest<'info> {
         let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
         let cpi_ctx =
             CpiContext::new_with_signer(share_token_program.to_account_info(), cpi_accounts, seeds);
-        token_interface::mint_to(cpi_ctx, amount)
+        token_interface::transfer_checked(cpi_ctx, amount, self.share_mint.decimals)
     }
 }
 
@@ -135,7 +145,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, CancelRequest<'info>>) -> 
         }
         RequestType::Redeem => {
             let shares = ctx.accounts.request.amount;
-            ctx.accounts.mint_shares_to_user(shares)?;
+            ctx.accounts.transfer_shares_to_user(shares)?;
         }
     }
     ctx.accounts.vault.pending_async_requests = ctx

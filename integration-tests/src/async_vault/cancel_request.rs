@@ -84,7 +84,7 @@ fn test_cancel_deposit_request(deposit_amount: u64) {
         .request(request_keypair.pubkey())
         .vault(vault_pubkey)
         .user_token_account(Some(user_token_account))
-        .pending_vault(Some(pending_vault_pubkey))
+        .asset_pending_vault(Some(pending_vault_pubkey))
         .asset_token_program(Some(token::ID));
 
     let ix = builder.instruction().into_sdk_instruction();
@@ -198,7 +198,7 @@ fn test_cancel_deposit_request_fails(wrong_user: bool) {
         .request(request_keypair.pubkey())
         .vault(vault_pubkey)
         .user_token_account(Some(cancel_user_ata))
-        .pending_vault(Some(pending_vault_pubkey))
+        .asset_pending_vault(Some(pending_vault_pubkey))
         .asset_token_program(Some(token::ID));
 
     let ix = builder.instruction().into_sdk_instruction();
@@ -300,7 +300,7 @@ fn test_cancel_multiple_deposit_requests() {
         .request(request_1.pubkey())
         .vault(vault_pubkey)
         .user_token_account(Some(user_token_account))
-        .pending_vault(Some(pending_vault_pubkey))
+        .asset_pending_vault(Some(pending_vault_pubkey))
         .asset_token_program(Some(token::ID));
 
     let ix = builder.instruction().into_sdk_instruction();
@@ -328,7 +328,7 @@ fn test_cancel_multiple_deposit_requests() {
         .request(request_2.pubkey())
         .vault(vault_pubkey)
         .user_token_account(Some(user_token_account))
-        .pending_vault(Some(pending_vault_pubkey))
+        .asset_pending_vault(Some(pending_vault_pubkey))
         .asset_token_program(Some(token::ID));
 
     let ix2 = builder2.instruction().into_sdk_instruction();
