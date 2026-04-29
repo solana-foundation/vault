@@ -65,10 +65,24 @@ pub mod async_vault {
 
     /// Creates a deposit request with state pending (Pending vault authority acceptance)
     pub fn create_deposit_request<'info>(
-        ctx: Context<'_, '_, '_, 'info, CreateDepositRequest<'info>>,
+        ctx: Context<CreateDepositRequest>,
         args: RequestArgs,
     ) -> Result<()> {
         instructions::create_deposit_request::handler(ctx, args)
+    }
+
+    /// Creates a redeem request with state pending (Pending vault authority acceptance)
+    pub fn create_redeem_request(
+        ctx: Context<CreateRedeemRequest>,
+        args: RequestArgs,
+    ) -> Result<()> {
+        instructions::create_redeem_request::handler(ctx, args)
+    }
+
+    /// User claims their shares or assets from an approved Deposit or Redemption request.
+    /// Request must be Claimable.
+    pub fn claim(ctx: Context<Claim>) -> Result<()> {
+        instructions::claim::handler(ctx)
     }
 
     /// It sets an operator for the vault.
@@ -110,13 +124,5 @@ pub mod async_vault {
     /// This sets the Request's claimable NAV to the Vault's current NAV.
     pub fn approve_request(ctx: Context<ApproveRequest>) -> Result<()> {
         instructions::approve_request::handler(ctx)
-    }
-
-    /// Creates a redeem request with state pending (Pending vault authority acceptance)
-    pub fn create_redeem_request<'info>(
-        ctx: Context<'_, '_, '_, 'info, CreateRedeemRequest<'info>>,
-        args: RequestArgs,
-    ) -> Result<()> {
-        instructions::create_redeem_request::handler(ctx, args)
     }
 }

@@ -46,4 +46,6 @@ pub enum AsyncVaultError {
     InvalidRequest,
     #[msg("Request is not in a Pending state.")]
     RequestNotPending,
+    #[msg("Request is not in a Claimable state.")]
+    RequestNotClaimable,
 }

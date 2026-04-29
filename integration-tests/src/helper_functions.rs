@@ -20,7 +20,7 @@ use vault_client::{
 };
 
 use async_vault_client::{
-    sdk::program_id, AcceptAuthorityInvitationBuilder, ApproveRequestBuilder,
+    sdk::program_id, AcceptAuthorityInvitationBuilder, ApproveRequestBuilder, ClaimBuilder,
     CreateDepositRequestBuilder, CreateRedeemRequestBuilder,
     CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
@@ -1366,4 +1366,41 @@ pub fn create_redeem_request_ix(
         }
     }
     ix
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn claim_request(
+    svm: &mut LiteSVM,
+    user: &Keypair,
+    vault: Pubkey,
+    request: Pubkey,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    vault_token_account: Pubkey,
+    pending_vault: Pubkey,
+    user_share_account: Pubkey,
+    user_asset_account: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = ClaimBuilder::new()
+        .user(user.pubkey())
+        .vault(vault)
+        .request(request)
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .vault_token_account(vault_token_account)
+        .pending_vault(pending_vault)
+        .user_share_account(user_share_account)
+        .user_asset_account(user_asset_account)
+        .asset_token_program(spl_token::ID)
+        .share_token_program(spl_token::ID)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&user.pubkey()),
+        &[user],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
 }
