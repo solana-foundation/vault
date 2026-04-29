@@ -11,7 +11,8 @@ use solana_sdk::{
 use test_case::test_case;
 
 use crate::helper_functions::{
-    PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED, assert_error_code, create_async_vault, create_mint, create_mint_with_transfer_fee
+    assert_error_code, create_async_vault, create_mint, create_mint_with_transfer_fee,
+    PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
 };
 
 #[test_case(100_000_000, true, true, true, false, token::ID,token::ID, 0 ; "both async inflows and outflows")]
@@ -60,7 +61,13 @@ fn test_create_vault(
         .unwrap();
 
     if asset_program == token_2022::ID {
-        create_mint_with_transfer_fee(&mut svm, &mint_authority, &asset_mint, asset_transfer_fee, u64::MAX);
+        create_mint_with_transfer_fee(
+            &mut svm,
+            &mint_authority,
+            &asset_mint,
+            asset_transfer_fee,
+            u64::MAX,
+        );
     } else {
         create_mint(&mut svm, &mint_authority, &asset_mint, &asset_program);
     }
@@ -111,7 +118,10 @@ fn test_create_vault(
         share_program,
     );
 
-    let should_succeed = initial_price != 0 && use_valid_mint_authority && !use_same_mints && asset_transfer_fee == 0;
+    let should_succeed = initial_price != 0
+        && use_valid_mint_authority
+        && !use_same_mints
+        && asset_transfer_fee == 0;
 
     if should_succeed {
         result.expect("async vault creation should succeed");
@@ -246,4 +256,3 @@ fn test_create_vault_nonzero_share_mint_supply_fails() {
     let err_result = &result.unwrap_err();
     assert_error_code(err_result, 6011, "Share mint supply should be zero.");
 }
-

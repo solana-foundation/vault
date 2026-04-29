@@ -21,7 +21,6 @@ pub fn validate_asset_mint_extensions_from_acct_info(mint_acct: &AccountInfo) ->
     if let Ok(transfer_fee_config) =
         mint.get_extension::<spl_token_2022::extension::transfer_fee::TransferFeeConfig>()
     {
-      msg!("Validating TransferFeeConfig extension on asset mint {:?}", transfer_fee_config);
         let clock = Clock::get()?;
         let transfer_fee_bps = u16::from_le_bytes(
             transfer_fee_config
@@ -29,7 +28,6 @@ pub fn validate_asset_mint_extensions_from_acct_info(mint_acct: &AccountInfo) ->
                 .transfer_fee_basis_points
                 .0,
         );
-        msg!("Found transfer fee bps: {}", transfer_fee_bps);
         if transfer_fee_bps != 0 {
             return Err(AsyncVaultError::InvalidAssetMintExtensions.into());
         }

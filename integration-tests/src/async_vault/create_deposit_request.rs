@@ -7,12 +7,15 @@ use async_vault_client::{
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, clock::Clock, pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction
+    account::ReadableAccount, clock::Clock, pubkey::Pubkey, signature::Keypair, signer::Signer,
+    transaction::Transaction,
 };
 use test_case::test_case;
 
 use crate::helper_functions::{
-    PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED, assert_error_code, create_async_vault, create_ata, create_deposit_request_ix, create_mint, get_token_account_amount, helper_mint_to, initialize_async_vault, set_up_async_vault, update_vault_nav
+    assert_error_code, create_async_vault, create_ata, create_deposit_request_ix, create_mint,
+    get_token_account_amount, helper_mint_to, initialize_async_vault, set_up_async_vault,
+    update_vault_nav, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
 };
 
 #[test_case(1_000_000, false ; "deposit request succeeds")]
@@ -329,7 +332,6 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
 
     // Update TransferFee to nonzero after vault creation
     if let Some(fee_bps) = asset_transfer_fee {
-        println!("HERE!");
         let set_fee_ix =
             token_2022::spl_token_2022::extension::transfer_fee::instruction::set_transfer_fee(
                 &token_2022::ID,
@@ -383,8 +385,6 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
         blockhash,
     );
 
-    let res = svm.send_transaction(tx);
-    println!("RES: {:#?}", res);
-    // .err().unwrap();
-    assert_error_code(&res.err().unwrap(), expected_error_code, "Incorrect error code"); 
+    let res = svm.send_transaction(tx).err().unwrap();
+    assert_error_code(&res, expected_error_code, "Incorrect error code");
 }
