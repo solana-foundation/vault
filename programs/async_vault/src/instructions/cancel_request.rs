@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{
-    self, Burn, Mint, TokenAccount, TokenInterface, TransferChecked,
+    self, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
 };
 use vault_common::VaultProgramError;
 
@@ -29,8 +29,10 @@ pub struct CancelRequest<'info> {
 
     #[account(
         mut,
+        has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
+        has_one = share_mint @ AsyncVaultError::InvalidShareMint,
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
-        bump
+        bump = vault.bump
     )]
     pub vault: Account<'info, Vault>,
 
@@ -55,10 +57,10 @@ pub struct CancelRequest<'info> {
     #[account(
         mut,
         token::mint = share_mint.key(),
-        token::authority = vault,
+        token::authority = user,
         token::token_program = share_token_program,
     )]
-    pub share_pending_vault: Option<InterfaceAccount<'info, TokenAccount>>,
+    pub user_share_account: Option<InterfaceAccount<'info, TokenAccount>>,
 
     pub share_token_program: Option<Interface<'info, TokenInterface>>,
     pub asset_token_program: Option<Interface<'info, TokenInterface>>,
@@ -93,9 +95,9 @@ impl<'info> CancelRequest<'info> {
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
 
-    pub fn burn_shares(&self, amount: u64) -> Result<()> {
-        let share_pending_vault = self
-            .share_pending_vault
+    pub fn mint_shares(&self, amount: u64) -> Result<()> {
+        let user_share_account = self
+            .user_share_account
             .as_ref()
             .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
         let share_token_program = self
@@ -103,9 +105,9 @@ impl<'info> CancelRequest<'info> {
             .as_ref()
             .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
 
-        let cpi_accounts = Burn {
+        let cpi_accounts = MintTo {
             mint: self.share_mint.to_account_info(),
-            from: share_pending_vault.to_account_info(),
+            to: user_share_account.to_account_info(),
             authority: self.vault.to_account_info(),
         };
 
@@ -113,7 +115,7 @@ impl<'info> CancelRequest<'info> {
         let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
         let cpi_ctx =
             CpiContext::new_with_signer(share_token_program.to_account_info(), cpi_accounts, seeds);
-        token_interface::burn(cpi_ctx, amount)
+        token_interface::mint_to(cpi_ctx, amount)
     }
 }
 
@@ -130,7 +132,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, CancelRequest<'info>>) -> 
         }
         RequestType::Redeem => {
             let shares = ctx.accounts.request.amount;
-            ctx.accounts.burn_shares(shares)?;
+            ctx.accounts.mint_shares(shares)?;
         }
     }
     ctx.accounts.vault.pending_async_requests = ctx

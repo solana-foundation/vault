@@ -5,14 +5,35 @@ use async_vault_client::{
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, signature::Keypair, signer::Signer, transaction::Transaction,
+    account::ReadableAccount, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
+    signer::Signer, transaction::Transaction,
 };
 use test_case::test_case;
 
 use crate::helper_functions::{
-    assert_error_code, create_ata, create_deposit_request_ix, get_token_account_amount,
-    initialize_async_vault, set_up_async_vault, update_async_vault, update_vault_nav,
+    assert_error_code, create_ata, create_deposit_request_ix, create_redeem_request_ix,
+    get_token_account_amount, initialize_async_vault, set_up_async_vault, update_async_vault,
+    update_vault_nav,
 };
+
+fn set_share_balance(
+    svm: &mut LiteSVM,
+    user_share_account: &Pubkey,
+    share_mint: &Pubkey,
+    amount: u64,
+) {
+    let mut acct = svm.get_account(user_share_account).unwrap();
+    let mut token_state = spl_token::state::Account::unpack(&acct.data).unwrap();
+    token_state.amount = amount;
+    spl_token::state::Account::pack(token_state, &mut acct.data).unwrap();
+    svm.set_account(*user_share_account, acct).unwrap();
+
+    let mut mint_acct = svm.get_account(share_mint).unwrap();
+    let mut mint_state = spl_token::state::Mint::unpack(&mint_acct.data).unwrap();
+    mint_state.supply = amount;
+    spl_token::state::Mint::pack(mint_state, &mut mint_acct.data).unwrap();
+    svm.set_account(*share_mint, mint_acct).unwrap();
+}
 
 #[test_case(1_000_000 ; "cancel deposit request refunds user")]
 #[test_case(0 ; "cancel zero amount deposit succeeds")]
@@ -388,4 +409,99 @@ fn test_cancel_multiple_deposit_requests() {
 
     let vault = Vault::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
     assert_eq!(vault.pending_async_requests, 0);
+}
+
+#[test_case(1_000_000_000 ; "cancel redeem request mints shares back")]
+#[test_case(500_000_000 ; "cancel partial redeem mints correct amount")]
+fn test_cancel_redeem_request(share_amount: u64) {
+    let mut svm = LiteSVM::new();
+    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
+    svm.add_program(program_id(), program_bytes).unwrap();
+
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        asset_mint,
+        share_mint,
+        user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _fee_recipient_ata,
+        user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
+
+    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+        .expect("initialize vault should succeed");
+    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
+
+    set_share_balance(
+        &mut svm,
+        &user_share_account,
+        &share_mint.pubkey(),
+        share_amount,
+    );
+
+    let request_keypair = Keypair::new();
+    let ix = create_redeem_request_ix(
+        &user,
+        &request_keypair,
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        vault_pubkey,
+        user_share_account,
+        share_amount,
+    );
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&user.pubkey()),
+        &[&user, &request_keypair],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+        .expect("redeem request should succeed");
+
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&user_share_account).unwrap()),
+        0
+    );
+
+    let vault_before = Vault::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
+    let pending_before = vault_before.pending_async_requests;
+
+    let mut builder = CancelRequestBuilder::new();
+    builder
+        .user(user.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .request(request_keypair.pubkey())
+        .vault(vault_pubkey)
+        .user_share_account(Some(user_share_account))
+        .share_token_program(Some(token::ID));
+
+    let ix = builder.instruction().into_sdk_instruction();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&user.pubkey()),
+        &[&user],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+        .expect("cancel redeem request should succeed");
+
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&user_share_account).unwrap()),
+        share_amount,
+    );
+
+    assert!(
+        svm.get_account(&request_keypair.pubkey()).is_none(),
+        "Request account should be closed"
+    );
+
+    let vault_after = Vault::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
+    assert_eq!(vault_after.pending_async_requests, pending_before - 1);
 }

@@ -27,7 +27,7 @@ pub struct CancelRequest {
 
     pub asset_pending_vault: Option<solana_pubkey::Pubkey>,
 
-    pub share_pending_vault: Option<solana_pubkey::Pubkey>,
+    pub user_share_account: Option<solana_pubkey::Pubkey>,
 
     pub share_token_program: Option<solana_pubkey::Pubkey>,
 
@@ -80,9 +80,9 @@ impl CancelRequest {
                 false,
             ));
         }
-        if let Some(share_pending_vault) = self.share_pending_vault {
+        if let Some(user_share_account) = self.user_share_account {
             accounts.push(solana_instruction::AccountMeta::new(
-                share_pending_vault,
+                user_share_account,
                 false,
             ));
         } else {
@@ -160,7 +160,7 @@ impl Default for CancelRequestInstructionData {
 ///   5. `[optional]` system_program (default to `11111111111111111111111111111111`)
 ///   6. `[writable, optional]` user_token_account
 ///   7. `[writable, optional]` asset_pending_vault
-///   8. `[writable, optional]` share_pending_vault
+///   8. `[writable, optional]` user_share_account
 ///   9. `[optional]` share_token_program
 ///   10. `[optional]` asset_token_program
 #[derive(Clone, Debug, Default)]
@@ -173,7 +173,7 @@ pub struct CancelRequestBuilder {
     system_program: Option<solana_pubkey::Pubkey>,
     user_token_account: Option<solana_pubkey::Pubkey>,
     asset_pending_vault: Option<solana_pubkey::Pubkey>,
-    share_pending_vault: Option<solana_pubkey::Pubkey>,
+    user_share_account: Option<solana_pubkey::Pubkey>,
     share_token_program: Option<solana_pubkey::Pubkey>,
     asset_token_program: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
@@ -243,11 +243,11 @@ impl CancelRequestBuilder {
 
     /// `[optional account]`
     #[inline(always)]
-    pub fn share_pending_vault(
+    pub fn user_share_account(
         &mut self,
-        share_pending_vault: Option<solana_pubkey::Pubkey>,
+        user_share_account: Option<solana_pubkey::Pubkey>,
     ) -> &mut Self {
-        self.share_pending_vault = share_pending_vault;
+        self.user_share_account = user_share_account;
         self
     }
 
@@ -301,7 +301,7 @@ impl CancelRequestBuilder {
                 .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
             user_token_account: self.user_token_account,
             asset_pending_vault: self.asset_pending_vault,
-            share_pending_vault: self.share_pending_vault,
+            user_share_account: self.user_share_account,
             share_token_program: self.share_token_program,
             asset_token_program: self.asset_token_program,
         };
@@ -328,7 +328,7 @@ pub struct CancelRequestCpiAccounts<'a, 'b> {
 
     pub asset_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
 
-    pub share_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    pub user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,
 
     pub share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
 
@@ -356,7 +356,7 @@ pub struct CancelRequestCpi<'a, 'b> {
 
     pub asset_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
 
-    pub share_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    pub user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,
 
     pub share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
 
@@ -378,7 +378,7 @@ impl<'a, 'b> CancelRequestCpi<'a, 'b> {
             system_program: accounts.system_program,
             user_token_account: accounts.user_token_account,
             asset_pending_vault: accounts.asset_pending_vault,
-            share_pending_vault: accounts.share_pending_vault,
+            user_share_account: accounts.user_share_account,
             share_token_program: accounts.share_token_program,
             asset_token_program: accounts.asset_token_program,
         }
@@ -451,9 +451,9 @@ impl<'a, 'b> CancelRequestCpi<'a, 'b> {
                 false,
             ));
         }
-        if let Some(share_pending_vault) = self.share_pending_vault {
+        if let Some(user_share_account) = self.user_share_account {
             accounts.push(solana_instruction::AccountMeta::new(
-                *share_pending_vault.key,
+                *user_share_account.key,
                 false,
             ));
         } else {
@@ -512,8 +512,8 @@ impl<'a, 'b> CancelRequestCpi<'a, 'b> {
         if let Some(asset_pending_vault) = self.asset_pending_vault {
             account_infos.push(asset_pending_vault.clone());
         }
-        if let Some(share_pending_vault) = self.share_pending_vault {
-            account_infos.push(share_pending_vault.clone());
+        if let Some(user_share_account) = self.user_share_account {
+            account_infos.push(user_share_account.clone());
         }
         if let Some(share_token_program) = self.share_token_program {
             account_infos.push(share_token_program.clone());
@@ -545,7 +545,7 @@ impl<'a, 'b> CancelRequestCpi<'a, 'b> {
 ///   5. `[]` system_program
 ///   6. `[writable, optional]` user_token_account
 ///   7. `[writable, optional]` asset_pending_vault
-///   8. `[writable, optional]` share_pending_vault
+///   8. `[writable, optional]` user_share_account
 ///   9. `[optional]` share_token_program
 ///   10. `[optional]` asset_token_program
 #[derive(Clone, Debug)]
@@ -565,7 +565,7 @@ impl<'a, 'b> CancelRequestCpiBuilder<'a, 'b> {
             system_program: None,
             user_token_account: None,
             asset_pending_vault: None,
-            share_pending_vault: None,
+            user_share_account: None,
             share_token_program: None,
             asset_token_program: None,
             __remaining_accounts: Vec::new(),
@@ -640,11 +640,11 @@ impl<'a, 'b> CancelRequestCpiBuilder<'a, 'b> {
 
     /// `[optional account]`
     #[inline(always)]
-    pub fn share_pending_vault(
+    pub fn user_share_account(
         &mut self,
-        share_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+        user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     ) -> &mut Self {
-        self.instruction.share_pending_vault = share_pending_vault;
+        self.instruction.user_share_account = user_share_account;
         self
     }
 
@@ -728,7 +728,7 @@ impl<'a, 'b> CancelRequestCpiBuilder<'a, 'b> {
 
             asset_pending_vault: self.instruction.asset_pending_vault,
 
-            share_pending_vault: self.instruction.share_pending_vault,
+            user_share_account: self.instruction.user_share_account,
 
             share_token_program: self.instruction.share_token_program,
 
@@ -752,7 +752,7 @@ struct CancelRequestCpiBuilderInstruction<'a, 'b> {
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-    share_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.

@@ -122,7 +122,7 @@ pub mod async_vault {
     }
 
     /// Cancels a pending request. For deposits, refunds the full amount
-    /// (net_amount + fee) back to the user. For redeems, mints the shares back.
+    /// back to the user. For redemptions, mints the shares back.
     pub fn cancel_request<'info>(
         ctx: Context<'_, '_, '_, 'info, CancelRequest<'info>>,
     ) -> Result<()> {
