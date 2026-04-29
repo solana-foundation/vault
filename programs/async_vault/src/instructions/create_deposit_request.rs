@@ -1,5 +1,5 @@
 use crate::{
-    error::AsyncVaultError, extensions::get_deposit_fee,
+    error::AsyncVaultError, extensions::get_deposit_fee_and_net,
     utils::validate_asset_mint_extensions_from_acct_info,
 };
 use anchor_lang::prelude::*;
@@ -105,12 +105,7 @@ pub fn handler<'info>(
     )?;
 
     let vault_info = ctx.accounts.vault.to_account_info();
-    let fee = get_deposit_fee(&vault_info.try_borrow_data()?, args.amount)?;
-
-    let net_amount = args
-        .amount
-        .checked_sub(fee)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+    let (fee, net_amount) = get_deposit_fee_and_net(&vault_info.try_borrow_data()?, args.amount)?;
 
     let shares = ctx
         .accounts

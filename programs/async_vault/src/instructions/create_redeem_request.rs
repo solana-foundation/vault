@@ -1,7 +1,4 @@
-use crate::{
-    error::AsyncVaultError,
-    extensions::{get_fee_extension, ExtensionType},
-};
+use crate::extensions::get_withdrawal_fee_and_net;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Burn, Mint, TokenAccount, TokenInterface};
 use vault_common::VaultProgramError;
@@ -79,16 +76,7 @@ pub fn handler<'info>(
 
     let vault_info = ctx.accounts.vault.to_account_info();
     let vault_data = vault_info.try_borrow_data()?;
-    let (fee, net_assets) =
-        if let Some(fee_type) = get_fee_extension(&vault_data, ExtensionType::WithdrawalFee)? {
-            let fee = fee_type.get_fee(gross_assets)?;
-            let net = gross_assets
-                .checked_sub(fee)
-                .ok_or(VaultProgramError::ArithmeticError)?;
-            (fee, net)
-        } else {
-            (0, gross_assets)
-        };
+    let (fee, net_assets) = get_withdrawal_fee_and_net(&vault_data, gross_assets)?;
 
     let current_timestamp = Clock::get()?.unix_timestamp;
     ctx.accounts.request.set_inner(Request {
