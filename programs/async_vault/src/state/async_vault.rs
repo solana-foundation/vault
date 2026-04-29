@@ -82,6 +82,9 @@ impl Vault {
             .ok_or(VaultProgramError::ArithmeticError)?
             .checked_div(precision)
             .ok_or(VaultProgramError::ArithmeticError)?;
+        if assets.eq(&0u128) {
+            return Err(VaultProgramError::ArithmeticError.into());
+        }
         Ok(u64::try_from(assets).map_err(|_| VaultProgramError::ArithmeticError)?)
     }
 }
