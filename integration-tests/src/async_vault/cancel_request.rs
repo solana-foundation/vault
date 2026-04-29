@@ -5,35 +5,15 @@ use async_vault_client::{
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
-    signer::Signer, transaction::Transaction,
+    account::ReadableAccount, signature::Keypair, signer::Signer, transaction::Transaction,
 };
 use test_case::test_case;
 
 use crate::helper_functions::{
     assert_error_code, create_ata, create_deposit_request_ix, create_redeem_request_ix,
-    get_token_account_amount, initialize_async_vault, set_up_async_vault, update_async_vault,
-    update_vault_nav,
+    get_token_account_amount, initialize_async_vault, set_share_balance, set_up_async_vault,
+    update_async_vault, update_vault_nav,
 };
-
-fn set_share_balance(
-    svm: &mut LiteSVM,
-    user_share_account: &Pubkey,
-    share_mint: &Pubkey,
-    amount: u64,
-) {
-    let mut acct = svm.get_account(user_share_account).unwrap();
-    let mut token_state = spl_token::state::Account::unpack(&acct.data).unwrap();
-    token_state.amount = amount;
-    spl_token::state::Account::pack(token_state, &mut acct.data).unwrap();
-    svm.set_account(*user_share_account, acct).unwrap();
-
-    let mut mint_acct = svm.get_account(share_mint).unwrap();
-    let mut mint_state = spl_token::state::Mint::unpack(&mint_acct.data).unwrap();
-    mint_state.supply = amount;
-    spl_token::state::Mint::pack(mint_state, &mut mint_acct.data).unwrap();
-    svm.set_account(*share_mint, mint_acct).unwrap();
-}
 
 #[test_case(1_000_000 ; "cancel deposit request refunds user")]
 #[test_case(0 ; "cancel zero amount deposit succeeds")]
