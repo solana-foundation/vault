@@ -1,7 +1,6 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
 use async_vault_client::{
     sdk::program_id, CreateDepositRequestBuilder, CreateRedeemRequestBuilder, RequestArgs,
-    RequestType,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
@@ -100,11 +99,109 @@ fn setup(
     )
 }
 
-#[test_case(RequestType::Deposit, false ; "owner claims deposit")]
-#[test_case(RequestType::Redeem,  false ; "owner claims redeem")]
-#[test_case(RequestType::Deposit, true  ; "operator claims deposit")]
-#[test_case(RequestType::Redeem,  true  ; "operator claims redeem")]
-fn test_claim_success(request_type: RequestType, use_operator: bool) {
+
+#[test_case(false ; "owner claims deposit")]
+#[test_case(true  ; "operator claims deposit")]
+fn test_claim_deposit_success(use_operator: bool) {
+    let mut svm = LiteSVM::new();
+    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
+    svm.add_program(program_id(), program_bytes).unwrap();
+
+    let (
+        authority,
+        _mint_authority,
+        asset_mint,
+        share_mint,
+        user,
+        operator,
+        reserve_pubkey,
+        vault_pubkey,
+        pending_vault_pubkey,
+        user_asset_account,
+        user_share_account,
+    ) = setup(&mut svm);
+
+    let request_keypair = Keypair::new();
+    let operator_pubkey = use_operator.then_some(operator.pubkey());
+
+    let ix = CreateDepositRequestBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .request(request_keypair.pubkey())
+        .vault(vault_pubkey)
+        .user_token_account(user_asset_account)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(spl_token::ID)
+        .args(RequestArgs {
+            amount: DEPOSIT_AMOUNT,
+            operator: operator_pubkey,
+        })
+        .instruction();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&user.pubkey()),
+        &[&user, &request_keypair],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+        .expect("create deposit request should succeed");
+
+    approve_request(&mut svm, &authority, vault_pubkey, request_keypair.pubkey())
+        .expect("approve_request should succeed");
+
+    // Snapshot balances before claim
+    let pending_vault_before =
+        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
+    let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
+    let user_shares_before =
+        get_token_account_amount(&svm.get_account(&user_share_account).unwrap());
+    let share_supply_before = get_mint_supply(&svm.get_account(&share_mint.pubkey()).unwrap());
+
+    let claimer = if use_operator { &operator } else { &user };
+    claim_request(
+        &mut svm,
+        claimer,
+        vault_pubkey,
+        request_keypair.pubkey(),
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        pending_vault_pubkey,
+        user_share_account,
+        user_asset_account,
+    )
+    .expect("claim_request should succeed");
+
+    assert!(
+        svm.get_account(&request_keypair.pubkey()).is_none(),
+        "request account should be closed after claim"
+    );
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&user_share_account).unwrap()),
+        user_shares_before + EXPECTED_DEPOSIT_SHARES,
+        "user should receive minted shares"
+    );
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
+        pending_vault_before - DEPOSIT_AMOUNT,
+        "pending_vault should be drained of deposited assets"
+    );
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap()),
+        reserve_before + DEPOSIT_AMOUNT,
+        "vault reserve should receive the deposited assets"
+    );
+    assert_eq!(
+        get_mint_supply(&svm.get_account(&share_mint.pubkey()).unwrap()),
+        share_supply_before + EXPECTED_DEPOSIT_SHARES,
+        "share mint supply should increase by minted shares"
+    );
+}
+
+#[test_case(false ; "owner claims redeem")]
+#[test_case(true  ; "operator claims redeem")]
+fn test_claim_redeem_success(use_operator: bool) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
@@ -123,94 +220,56 @@ fn test_claim_success(request_type: RequestType, use_operator: bool) {
         user_share_account,
     ) = setup(&mut svm);
 
+    // Fund the reserve so the vault can pay out on claim
+    helper_mint_to(
+        &mut svm,
+        &asset_mint.pubkey(),
+        &reserve_pubkey,
+        &mint_authority,
+        EXPECTED_REDEEM_ASSETS,
+        &token::ID,
+    );
+    // Give the user shares to redeem
+    set_share_balance(
+        &mut svm,
+        &user_share_account,
+        &share_mint.pubkey(),
+        REDEEM_AMOUNT,
+    );
+
     let request_keypair = Keypair::new();
-    let operator_pubkey = if use_operator {
-        Some(operator.pubkey())
-    } else {
-        None
-    };
+    let operator_pubkey = use_operator.then_some(operator.pubkey());
 
-    match request_type {
-        RequestType::Deposit => {
-            let ix = CreateDepositRequestBuilder::new()
-                .user(user.pubkey())
-                .asset_mint(asset_mint.pubkey())
-                .share_mint(share_mint.pubkey())
-                .request(request_keypair.pubkey())
-                .vault(vault_pubkey)
-                .user_token_account(user_asset_account)
-                .pending_vault(pending_vault_pubkey)
-                .asset_token_program(spl_token::ID)
-                .args(RequestArgs {
-                    amount: DEPOSIT_AMOUNT,
-                    operator: if use_operator { operator_pubkey } else { None },
-                })
-                .instruction();
-            let tx = Transaction::new_signed_with_payer(
-                &[ix],
-                Some(&user.pubkey()),
-                &[&user, &request_keypair],
-                svm.latest_blockhash(),
-            );
-            svm.send_transaction(tx)
-                .expect("create deposit request should succeed");
-        }
-        RequestType::Redeem => {
-            // Fund the reserve so the vault can pay out on claim
-            helper_mint_to(
-                &mut svm,
-                &asset_mint.pubkey(),
-                &reserve_pubkey,
-                &mint_authority,
-                EXPECTED_REDEEM_ASSETS,
-                &token::ID,
-            );
-            // Give the user shares to redeem
-            set_share_balance(
-                &mut svm,
-                &user_share_account,
-                &share_mint.pubkey(),
-                REDEEM_AMOUNT,
-            );
-
-            let ix = CreateRedeemRequestBuilder::new()
-                .user(user.pubkey())
-                .asset_mint(asset_mint.pubkey())
-                .share_mint(share_mint.pubkey())
-                .request(request_keypair.pubkey())
-                .vault(vault_pubkey)
-                .user_share_account(user_share_account)
-                .share_token_program(spl_token::ID)
-                .args(RequestArgs {
-                    amount: REDEEM_AMOUNT,
-                    operator: if use_operator { operator_pubkey } else { None },
-                })
-                .instruction();
-            let tx = Transaction::new_signed_with_payer(
-                &[ix],
-                Some(&user.pubkey()),
-                &[&user, &request_keypair],
-                svm.latest_blockhash(),
-            );
-            svm.send_transaction(tx)
-                .expect("create redeem request should succeed");
-        }
-    }
+    let ix = CreateRedeemRequestBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .request(request_keypair.pubkey())
+        .vault(vault_pubkey)
+        .user_share_account(user_share_account)
+        .share_token_program(spl_token::ID)
+        .args(RequestArgs {
+            amount: REDEEM_AMOUNT,
+            operator: operator_pubkey,
+        })
+        .instruction();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&user.pubkey()),
+        &[&user, &request_keypair],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+        .expect("create redeem request should succeed");
 
     approve_request(&mut svm, &authority, vault_pubkey, request_keypair.pubkey())
         .expect("approve_request should succeed");
 
     // Snapshot balances before claim
-    let pending_vault_before =
-        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
     let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
-    let user_shares_before =
-        get_token_account_amount(&svm.get_account(&user_share_account).unwrap());
     let user_assets_before =
         get_token_account_amount(&svm.get_account(&user_asset_account).unwrap());
-    let share_supply_before = get_mint_supply(&svm.get_account(&share_mint.pubkey()).unwrap());
 
-    // Claim — signed by operator if use_operator, otherwise by user
     let claimer = if use_operator { &operator } else { &user };
     claim_request(
         &mut svm,
@@ -226,48 +285,20 @@ fn test_claim_success(request_type: RequestType, use_operator: bool) {
     )
     .expect("claim_request should succeed");
 
-    // Request account should be closed
     assert!(
         svm.get_account(&request_keypair.pubkey()).is_none(),
         "request account should be closed after claim"
     );
-
-    match request_type {
-        RequestType::Deposit => {
-            assert_eq!(
-                get_token_account_amount(&svm.get_account(&user_share_account).unwrap()),
-                user_shares_before + EXPECTED_DEPOSIT_SHARES,
-                "user should receive minted shares"
-            );
-            assert_eq!(
-                get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
-                pending_vault_before - DEPOSIT_AMOUNT,
-                "pending_vault should be drained of deposited assets"
-            );
-            assert_eq!(
-                get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap()),
-                reserve_before + DEPOSIT_AMOUNT,
-                "vault reserve should receive the deposited assets"
-            );
-            assert_eq!(
-                get_mint_supply(&svm.get_account(&share_mint.pubkey()).unwrap()),
-                share_supply_before + EXPECTED_DEPOSIT_SHARES,
-                "share mint supply should increase by minted shares"
-            );
-        }
-        RequestType::Redeem => {
-            assert_eq!(
-                get_token_account_amount(&svm.get_account(&user_asset_account).unwrap()),
-                user_assets_before + EXPECTED_REDEEM_ASSETS,
-                "user should receive assets"
-            );
-            assert_eq!(
-                get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap()),
-                reserve_before - EXPECTED_REDEEM_ASSETS,
-                "vault reserve should decrease by transferred assets"
-            );
-        }
-    }
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&user_asset_account).unwrap()),
+        user_assets_before + EXPECTED_REDEEM_ASSETS,
+        "user should receive assets"
+    );
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap()),
+        reserve_before - EXPECTED_REDEEM_ASSETS,
+        "vault reserve should decrease by transferred assets"
+    );
 }
 
 #[test_case(true,  false, false, 6001 ; "unauthorized signer")]
@@ -297,7 +328,6 @@ fn test_claim_fails(
         user_share_account,
     ) = setup(&mut svm);
 
-    // Create a deposit request for all failure cases
     let request_keypair = Keypair::new();
     let ix = create_deposit_request_ix(
         &user,

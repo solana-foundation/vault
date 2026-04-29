@@ -13,20 +13,22 @@ pub const CLAIM_DISCRIMINATOR: [u8; 8] = [62, 198, 214, 193, 213, 159, 108, 210]
 pub struct Claim {
     pub user: solana_pubkey::Pubkey,
 
-    pub vault: solana_pubkey::Pubkey,
-
-    pub request: solana_pubkey::Pubkey,
-
     pub asset_mint: solana_pubkey::Pubkey,
 
     pub share_mint: solana_pubkey::Pubkey,
+
+    pub vault: solana_pubkey::Pubkey,
+
+    pub request: solana_pubkey::Pubkey,
     /// Reserve — destination for Deposit assets; source for Redeem assets
     pub vault_token_account: solana_pubkey::Pubkey,
     /// Pending deposit vault — source for Deposit claims
     pub pending_vault: solana_pubkey::Pubkey,
-    /// User's share ATA — receives minted shares on Deposit
+    /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
+    /// request.owner)
     pub user_share_account: solana_pubkey::Pubkey,
-    /// User's asset ATA — receives transferred assets on Redeem
+    /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
+    /// request.owner)
     pub user_asset_account: solana_pubkey::Pubkey,
 
     pub asset_token_program: solana_pubkey::Pubkey,
@@ -47,13 +49,13 @@ impl Claim {
     ) -> solana_instruction::Instruction {
         let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.user, true));
-        accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
-        accounts.push(solana_instruction::AccountMeta::new(self.request, false));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.share_mint, false));
+        accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
+        accounts.push(solana_instruction::AccountMeta::new(self.request, false));
         accounts.push(solana_instruction::AccountMeta::new(
             self.vault_token_account,
             false,
@@ -118,10 +120,10 @@ impl Default for ClaimInstructionData {
 /// ### Accounts:
 ///
 ///   0. `[writable, signer]` user
-///   1. `[writable]` vault
-///   2. `[writable]` request
-///   3. `[]` asset_mint
-///   4. `[writable]` share_mint
+///   1. `[]` asset_mint
+///   2. `[writable]` share_mint
+///   3. `[writable]` vault
+///   4. `[writable]` request
 ///   5. `[writable]` vault_token_account
 ///   6. `[writable]` pending_vault
 ///   7. `[writable]` user_share_account
@@ -131,10 +133,10 @@ impl Default for ClaimInstructionData {
 #[derive(Clone, Debug, Default)]
 pub struct ClaimBuilder {
     user: Option<solana_pubkey::Pubkey>,
-    vault: Option<solana_pubkey::Pubkey>,
-    request: Option<solana_pubkey::Pubkey>,
     asset_mint: Option<solana_pubkey::Pubkey>,
     share_mint: Option<solana_pubkey::Pubkey>,
+    vault: Option<solana_pubkey::Pubkey>,
+    request: Option<solana_pubkey::Pubkey>,
     vault_token_account: Option<solana_pubkey::Pubkey>,
     pending_vault: Option<solana_pubkey::Pubkey>,
     user_share_account: Option<solana_pubkey::Pubkey>,
@@ -156,18 +158,6 @@ impl ClaimBuilder {
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-        self.vault = Some(vault);
-        self
-    }
-
-    #[inline(always)]
-    pub fn request(&mut self, request: solana_pubkey::Pubkey) -> &mut Self {
-        self.request = Some(request);
-        self
-    }
-
-    #[inline(always)]
     pub fn asset_mint(&mut self, asset_mint: solana_pubkey::Pubkey) -> &mut Self {
         self.asset_mint = Some(asset_mint);
         self
@@ -176,6 +166,18 @@ impl ClaimBuilder {
     #[inline(always)]
     pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
         self.share_mint = Some(share_mint);
+        self
+    }
+
+    #[inline(always)]
+    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
+        self.vault = Some(vault);
+        self
+    }
+
+    #[inline(always)]
+    pub fn request(&mut self, request: solana_pubkey::Pubkey) -> &mut Self {
+        self.request = Some(request);
         self
     }
 
@@ -193,14 +195,16 @@ impl ClaimBuilder {
         self
     }
 
-    /// User's share ATA — receives minted shares on Deposit
+    /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
+    /// request.owner)
     #[inline(always)]
     pub fn user_share_account(&mut self, user_share_account: solana_pubkey::Pubkey) -> &mut Self {
         self.user_share_account = Some(user_share_account);
         self
     }
 
-    /// User's asset ATA — receives transferred assets on Redeem
+    /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
+    /// request.owner)
     #[inline(always)]
     pub fn user_asset_account(&mut self, user_asset_account: solana_pubkey::Pubkey) -> &mut Self {
         self.user_asset_account = Some(user_asset_account);
@@ -240,10 +244,10 @@ impl ClaimBuilder {
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let accounts = Claim {
             user: self.user.expect("user is not set"),
-            vault: self.vault.expect("vault is not set"),
-            request: self.request.expect("request is not set"),
             asset_mint: self.asset_mint.expect("asset_mint is not set"),
             share_mint: self.share_mint.expect("share_mint is not set"),
+            vault: self.vault.expect("vault is not set"),
+            request: self.request.expect("request is not set"),
             vault_token_account: self
                 .vault_token_account
                 .expect("vault_token_account is not set"),
@@ -270,20 +274,22 @@ impl ClaimBuilder {
 pub struct ClaimCpiAccounts<'a, 'b> {
     pub user: &'b solana_account_info::AccountInfo<'a>,
 
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
-
-    pub request: &'b solana_account_info::AccountInfo<'a>,
-
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
+
+    pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
     /// Reserve — destination for Deposit assets; source for Redeem assets
     pub vault_token_account: &'b solana_account_info::AccountInfo<'a>,
     /// Pending deposit vault — source for Deposit claims
     pub pending_vault: &'b solana_account_info::AccountInfo<'a>,
-    /// User's share ATA — receives minted shares on Deposit
+    /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
+    /// request.owner)
     pub user_share_account: &'b solana_account_info::AccountInfo<'a>,
-    /// User's asset ATA — receives transferred assets on Redeem
+    /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
+    /// request.owner)
     pub user_asset_account: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
@@ -298,20 +304,22 @@ pub struct ClaimCpi<'a, 'b> {
 
     pub user: &'b solana_account_info::AccountInfo<'a>,
 
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
-
-    pub request: &'b solana_account_info::AccountInfo<'a>,
-
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
+
+    pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
     /// Reserve — destination for Deposit assets; source for Redeem assets
     pub vault_token_account: &'b solana_account_info::AccountInfo<'a>,
     /// Pending deposit vault — source for Deposit claims
     pub pending_vault: &'b solana_account_info::AccountInfo<'a>,
-    /// User's share ATA — receives minted shares on Deposit
+    /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
+    /// request.owner)
     pub user_share_account: &'b solana_account_info::AccountInfo<'a>,
-    /// User's asset ATA — receives transferred assets on Redeem
+    /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
+    /// request.owner)
     pub user_asset_account: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
@@ -327,10 +335,10 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
         Self {
             __program: program,
             user: accounts.user,
-            vault: accounts.vault,
-            request: accounts.request,
             asset_mint: accounts.asset_mint,
             share_mint: accounts.share_mint,
+            vault: accounts.vault,
+            request: accounts.request,
             vault_token_account: accounts.vault_token_account,
             pending_vault: accounts.pending_vault,
             user_share_account: accounts.user_share_account,
@@ -368,17 +376,17 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
     ) -> solana_program_error::ProgramResult {
         let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.user.key, true));
-        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
-        accounts.push(solana_instruction::AccountMeta::new(
-            *self.request.key,
-            false,
-        ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.share_mint.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.request.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(
@@ -422,10 +430,10 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
         let mut account_infos = Vec::with_capacity(12 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.user.clone());
-        account_infos.push(self.vault.clone());
-        account_infos.push(self.request.clone());
         account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint.clone());
+        account_infos.push(self.vault.clone());
+        account_infos.push(self.request.clone());
         account_infos.push(self.vault_token_account.clone());
         account_infos.push(self.pending_vault.clone());
         account_infos.push(self.user_share_account.clone());
@@ -449,10 +457,10 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[writable, signer]` user
-///   1. `[writable]` vault
-///   2. `[writable]` request
-///   3. `[]` asset_mint
-///   4. `[writable]` share_mint
+///   1. `[]` asset_mint
+///   2. `[writable]` share_mint
+///   3. `[writable]` vault
+///   4. `[writable]` request
 ///   5. `[writable]` vault_token_account
 ///   6. `[writable]` pending_vault
 ///   7. `[writable]` user_share_account
@@ -469,10 +477,10 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
         let instruction = Box::new(ClaimCpiBuilderInstruction {
             __program: program,
             user: None,
-            vault: None,
-            request: None,
             asset_mint: None,
             share_mint: None,
+            vault: None,
+            request: None,
             vault_token_account: None,
             pending_vault: None,
             user_share_account: None,
@@ -491,18 +499,6 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.vault = Some(vault);
-        self
-    }
-
-    #[inline(always)]
-    pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.request = Some(request);
-        self
-    }
-
-    #[inline(always)]
     pub fn asset_mint(
         &mut self,
         asset_mint: &'b solana_account_info::AccountInfo<'a>,
@@ -517,6 +513,18 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
         share_mint: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.share_mint = Some(share_mint);
+        self
+    }
+
+    #[inline(always)]
+    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.vault = Some(vault);
+        self
+    }
+
+    #[inline(always)]
+    pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.request = Some(request);
         self
     }
 
@@ -540,7 +548,8 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
         self
     }
 
-    /// User's share ATA — receives minted shares on Deposit
+    /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
+    /// request.owner)
     #[inline(always)]
     pub fn user_share_account(
         &mut self,
@@ -550,7 +559,8 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
         self
     }
 
-    /// User's asset ATA — receives transferred assets on Redeem
+    /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
+    /// request.owner)
     #[inline(always)]
     pub fn user_asset_account(
         &mut self,
@@ -621,13 +631,13 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
 
             user: self.instruction.user.expect("user is not set"),
 
-            vault: self.instruction.vault.expect("vault is not set"),
-
-            request: self.instruction.request.expect("request is not set"),
-
             asset_mint: self.instruction.asset_mint.expect("asset_mint is not set"),
 
             share_mint: self.instruction.share_mint.expect("share_mint is not set"),
+
+            vault: self.instruction.vault.expect("vault is not set"),
+
+            request: self.instruction.request.expect("request is not set"),
 
             vault_token_account: self
                 .instruction
@@ -670,10 +680,10 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
 struct ClaimCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
     user: Option<&'b solana_account_info::AccountInfo<'a>>,
-    vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-    request: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
+    vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    request: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,

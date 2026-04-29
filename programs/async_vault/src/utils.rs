@@ -119,4 +119,3 @@ mod tests {
         assert_eq!(shares, u64::MAX);
     }
 }
-

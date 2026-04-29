@@ -59,7 +59,8 @@ pub struct Claim<'info> {
     )]
     pub pending_vault: InterfaceAccount<'info, TokenAccount>,
 
-    /// User's share TokenAccount — receives minted shares on Deposit (must be owned by request.owner)
+    /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
+    /// request.owner)
     #[account(
         mut,
         token::mint = share_mint,
@@ -68,7 +69,8 @@ pub struct Claim<'info> {
     )]
     pub user_share_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
-    /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by request.owner)
+    /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
+    /// request.owner)
     #[account(
         mut,
         token::mint = asset_mint,
