@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use vault_common::FeeType;
+use vault_common::{FeeType, VaultProgramError};
 
 use crate::{
     error::AsyncVaultError,
@@ -54,4 +54,20 @@ pub fn calculate_withdraw_fee_when_redeeming(
         Some(fee) => fee.get_withdraw_fee_when_redeeming(gross_assets),
         None => Ok(0),
     }
+}
+
+pub fn get_deposit_fee_and_net(account_data: &[u8], amount: u64) -> Result<(u64, u64)> {
+    let fee = get_deposit_fee(account_data, amount)?;
+    let net = amount
+        .checked_sub(fee)
+        .ok_or(VaultProgramError::ArithmeticError)?;
+    Ok((fee, net))
+}
+
+pub fn get_withdrawal_fee_and_net(account_data: &[u8], amount: u64) -> Result<(u64, u64)> {
+    let fee = get_withdrawal_fee(account_data, amount)?;
+    let net = amount
+        .checked_sub(fee)
+        .ok_or(VaultProgramError::ArithmeticError)?;
+    Ok((fee, net))
 }

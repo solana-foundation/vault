@@ -11,8 +11,8 @@ use solana_sdk::{
 use test_case::test_case;
 
 use crate::helper_functions::{
-    approve_request, assert_error_code, create_deposit_request_ix, set_up_async_vault,
-    update_async_vault, update_vault_nav,
+    approve_request, assert_error_code, create_deposit_request_ix, initialize_async_vault,
+    set_up_async_vault, update_async_vault, update_vault_nav,
 };
 
 #[test]
@@ -35,6 +35,7 @@ fn test_approve_request_success() {
         vault_pubkey,
         pending_vault_pubkey,
         _fee_recipient_ata,
+        _user_share_account,
     ) = set_up_async_vault(
         &mut svm,
         token::ID,
@@ -43,6 +44,8 @@ fn test_approve_request_success() {
         user_amount,
         100_000_000,
     );
+    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+        .expect("initialize vault should succeed");
 
     let user_token_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
@@ -127,6 +130,7 @@ fn test_approve_request_fails(
         vault_pubkey,
         pending_vault_pubkey,
         _fee_recipient_ata,
+        _user_share_account,
     ) = set_up_async_vault(
         &mut svm,
         token::ID,
@@ -135,6 +139,8 @@ fn test_approve_request_fails(
         user_amount,
         100_000_000,
     );
+    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+        .expect("initialize vault should succeed");
 
     let user_token_account = get_associated_token_address_with_program_id(
         &user.pubkey(),

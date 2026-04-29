@@ -89,6 +89,7 @@ fn test_create_vault(
         &[PENDING_VAULT_SEED, effective_share_mint.as_ref()],
         &program_id(),
     );
+
     let (vault_pubkey, _) = Pubkey::find_program_address(
         &[VAULT_CONFIG_SEED, effective_share_mint.as_ref()],
         &program_id(),
@@ -230,6 +231,7 @@ fn test_create_vault_nonzero_share_mint_supply_fails() {
         &[PENDING_VAULT_SEED, share_mint.pubkey().as_ref()],
         &program_id(),
     );
+
     let (vault_pubkey, _) = Pubkey::find_program_address(
         &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
         &program_id(),

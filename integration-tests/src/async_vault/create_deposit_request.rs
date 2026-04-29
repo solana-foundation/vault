@@ -3,7 +3,7 @@ use anchor_spl::{
 };
 use async_vault_client::{
     sdk::{program_id, IntoSdkInstruction},
-    CreateDepositRequestBuilder, Request, RequestState, RequestType,
+    CreateDepositRequestBuilder, Request, RequestArgs, RequestState, RequestType,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
@@ -28,7 +28,7 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
 
     let user_amount = 1_000_000_000;
     let (
-        _authority,
+        authority,
         _payer,
         _mint_authority,
         asset_mint,
@@ -40,6 +40,7 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
         vault_pubkey,
         pending_vault_pubkey,
         fee_recipient_ata,
+        _user_share_account,
     ) = set_up_async_vault(
         &mut svm,
         token::ID,
@@ -48,6 +49,10 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
         user_amount,
         100_000_000,
     );
+
+    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+        .expect("initialize vault should succeed");
+    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
 
     let user_token_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
@@ -84,11 +89,18 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
         .vault(vault_pubkey)
         .user_token_account(user_token_account)
         .pending_vault(pending_vault_pubkey)
-        .asset_token_program(spl_token::ID)
-        .amount(deposit_amount);
+        .asset_token_program(spl_token::ID);
 
     if with_operator {
-        builder.operator(operator.pubkey());
+        builder.args(RequestArgs {
+            amount: deposit_amount,
+            operator: Some(operator.pubkey()),
+        });
+    } else {
+        builder.args(RequestArgs {
+            amount: deposit_amount,
+            operator: None,
+        });
     }
 
     let mut ix = builder.instruction().into_sdk_instruction();
@@ -300,7 +312,7 @@ fn test_multiple_deposit_requests_with_unique_keypairs() {
     );
 }
 
-#[test_case(Some(1), 6016 ; "deposit_request_with_nonzero_transfer_fee_fails")]
+#[test_case(Some(1), 6017 ; "deposit_request_with_nonzero_transfer_fee_fails")]
 fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_error_code: u32) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
@@ -308,7 +320,7 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
 
     let user_amount = 1_000_000_000;
     let (
-        _authority,
+        authority,
         _payer,
         mint_authority,
         asset_mint,
@@ -320,6 +332,7 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
         vault_pubkey,
         pending_vault_pubkey,
         _fee_recipient_ata,
+        _user_share_account,
     ) = set_up_async_vault(
         &mut svm,
         token_2022::ID,
@@ -328,6 +341,10 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
         user_amount,
         100_000_000,
     );
+
+    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+        .expect("initialize vault should succeed");
+    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
 
     // Update TransferFee to nonzero after vault creation
     if let Some(fee_bps) = asset_transfer_fee {
@@ -373,7 +390,10 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
         .user_token_account(user_token_account)
         .pending_vault(pending_vault_pubkey)
         .asset_token_program(token_2022::ID)
-        .amount(1_000_000)
+        .args(RequestArgs {
+            amount: user_amount,
+            operator: None,
+        })
         .instruction();
 
     let blockhash = svm.latest_blockhash();

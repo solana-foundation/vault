@@ -69,6 +69,24 @@ impl Vault {
             .ok_or(VaultProgramError::ArithmeticError)?;
         Ok(u64::try_from(shares).map_err(|_| VaultProgramError::ArithmeticError)?)
     }
+
+    /// Converts a share amount into assets using the current NAV.
+    ///
+    /// `assets = share_amount * nav / 10^decimals`
+    pub fn calculate_assets(&self, decimals: u8, share_amount: u64) -> Result<u64> {
+        let precision = 10u128
+            .checked_pow(decimals as u32)
+            .ok_or(VaultProgramError::ArithmeticError)?;
+        let assets = u128::from(share_amount)
+            .checked_mul(self.nav)
+            .ok_or(VaultProgramError::ArithmeticError)?
+            .checked_div(precision)
+            .ok_or(VaultProgramError::ArithmeticError)?;
+        if assets.eq(&0u128) {
+            return Err(VaultProgramError::ArithmeticError.into());
+        }
+        Ok(u64::try_from(assets).map_err(|_| VaultProgramError::ArithmeticError)?)
+    }
 }
 
 #[cfg(test)]
@@ -86,6 +104,7 @@ mod tests {
             paused: false,
             initialized: true,
             pending_vault: Pubkey::default(),
+
             nav,
             nav_version: 1,
             async_inflows: true,
@@ -94,6 +113,7 @@ mod tests {
             total_asset_balance: 0,
             reserve_bump: 0,
             pending_vault_bump: 0,
+
             bump: 0,
             pending_authority: None,
         }

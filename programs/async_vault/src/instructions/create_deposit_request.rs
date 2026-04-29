@@ -28,10 +28,10 @@ pub struct CreateDepositRequest<'info> {
 
     #[account(
         mut,
-        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
-        bump,
         has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
         has_one = share_mint @ AsyncVaultError::InvalidShareMint,
+        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
+        bump = vault.bump
     )]
     pub vault: Account<'info, Vault>,
 

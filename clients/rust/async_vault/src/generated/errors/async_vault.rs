@@ -52,24 +52,30 @@ pub enum AsyncVaultError {
     /// 6013 - Pending Vault is not valid.
     #[error("Pending Vault is not valid.")]
     InvalidPendingVault = 0x177D,
-    /// 6014 - Fee recipient account must be provided as a remaining account when fee > 0.
+    /// 6014 - Pending Shares Vault is not valid.
+    #[error("Pending Shares Vault is not valid.")]
+    InvalidPendingSharesVault = 0x177E,
+    /// 6015 - Fee recipient account must be provided as a remaining account when fee > 0.
     #[error("Fee recipient account must be provided as a remaining account when fee > 0.")]
-    MissingFeeRecipient = 0x177E,
-    /// 6015 - Fee recipient account is invalid.
+    MissingFeeRecipient = 0x177F,
+    /// 6016 - Fee recipient account is invalid.
     #[error("Fee recipient account is invalid.")]
-    InvalidFeeRecipient = 0x177F,
-    /// 6016 - Asset mint has invalid extensions.
+    InvalidFeeRecipient = 0x1780,
+    /// 6017 - Asset mint has invalid extensions.
     #[error("Asset mint has invalid extensions.")]
-    InvalidAssetMintExtensions = 0x1780,
-    /// 6017 - Asset mint is not valid.
+    InvalidAssetMintExtensions = 0x1781,
+    /// 6018 - Asset mint is not valid.
     #[error("Asset mint is not valid.")]
-    InvalidAssetMint = 0x1781,
-    /// 6018 - Share mint is not valid.
+    InvalidAssetMint = 0x1782,
+    /// 6019 - Share mint is not valid.
     #[error("Share mint is not valid.")]
-    InvalidShareMint = 0x1782,
-    /// 6019 - Request address is not valid.
+    InvalidShareMint = 0x1783,
+    /// 6020 - Request address is not valid.
     #[error("Request address is not valid.")]
-    InvalidRequest = 0x1783,
+    InvalidRequest = 0x1784,
+    /// 6021 - Request is not in a Pending state.
+    #[error("Request is not in a Pending state.")]
+    RequestNotPending = 0x1785,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

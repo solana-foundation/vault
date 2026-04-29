@@ -111,4 +111,12 @@ pub mod async_vault {
     pub fn approve_request(ctx: Context<ApproveRequest>) -> Result<()> {
         instructions::approve_request::handler(ctx)
     }
+
+    /// Creates a redeem request with state pending (Pending vault authority acceptance)
+    pub fn create_redeem_request<'info>(
+        ctx: Context<'_, '_, '_, 'info, CreateRedeemRequest<'info>>,
+        args: RequestArgs,
+    ) -> Result<()> {
+        instructions::create_redeem_request::handler(ctx, args)
+    }
 }

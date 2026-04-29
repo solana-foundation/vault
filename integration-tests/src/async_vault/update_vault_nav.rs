@@ -20,7 +20,7 @@ fn test_update_vault_nav(updated_nav: u128) {
         _payer,
         _mint_authority,
         _asset_mint,
-        share_mint,
+        _share_mint,
         _user,
         _operator,
         _fee_recipient,
@@ -28,6 +28,7 @@ fn test_update_vault_nav(updated_nav: u128) {
         vault_pubkey,
         _pending_vault_pubkey,
         _fee_recipient_ata,
+        _user_share_account,
     ) = set_up_async_vault(
         &mut svm,
         token::ID,

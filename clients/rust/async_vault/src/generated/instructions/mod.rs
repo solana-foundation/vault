@@ -8,6 +8,7 @@
 pub(crate) mod r#accept_authority_invitation;
 pub(crate) mod r#approve_request;
 pub(crate) mod r#create_deposit_request;
+pub(crate) mod r#create_redeem_request;
 pub(crate) mod r#create_vault;
 pub(crate) mod r#initialize_deposit_fee;
 pub(crate) mod r#initialize_vault;
@@ -22,6 +23,7 @@ pub(crate) mod r#update_withdrawal_fee;
 pub use self::r#accept_authority_invitation::*;
 pub use self::r#approve_request::*;
 pub use self::r#create_deposit_request::*;
+pub use self::r#create_redeem_request::*;
 pub use self::r#create_vault::*;
 pub use self::r#initialize_deposit_fee::*;
 pub use self::r#initialize_vault::*;
