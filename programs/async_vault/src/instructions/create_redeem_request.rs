@@ -1,4 +1,4 @@
-use crate::extensions::get_withdrawal_fee_and_net;
+use crate::{error::AsyncVaultError, extensions::get_withdrawal_fee_and_net};
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Burn, Mint, TokenAccount, TokenInterface};
 use vault_common::VaultProgramError;
@@ -12,9 +12,6 @@ pub struct CreateRedeemRequest<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
-    #[account(
-        constraint = vault.asset_mint_address == asset_mint.key()
-    )]
     pub asset_mint: InterfaceAccount<'info, Mint>,
     #[account(mut)]
     pub share_mint: InterfaceAccount<'info, Mint>,
@@ -26,7 +23,11 @@ pub struct CreateRedeemRequest<'info> {
     )]
     pub request: Account<'info, Request>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
+        has_one = share_mint @ AsyncVaultError::InvalidShareMint,
+    )]
     pub vault: Account<'info, Vault>,
 
     #[account(

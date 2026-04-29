@@ -134,8 +134,8 @@ fn test_create_vault(
 
         let vault_config = Vault::from_bytes(vault_account.data()).unwrap();
         assert_eq!(vault_config.authority, authority.pubkey());
-        assert_eq!(vault_config.asset_mint_address, asset_mint.pubkey());
-        assert_eq!(vault_config.share_mint_address, effective_share_mint);
+        assert_eq!(vault_config.asset_mint, asset_mint.pubkey());
+        assert_eq!(vault_config.share_mint, effective_share_mint);
         assert_eq!(vault_config.vault_token_account, reserve_pubkey);
         assert_eq!(vault_config.pending_vault, pending_vault_pubkey);
         assert_eq!(vault_config.initial_price, initial_price);
