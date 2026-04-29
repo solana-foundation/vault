@@ -56,7 +56,7 @@ fn test_cancel_deposit_request(deposit_amount: u64) {
 
     let request_keypair = Keypair::new();
 
-    let ix = create_deposit_request(
+    create_deposit_request(
         &mut svm,
         &user,
         &request_keypair,
@@ -128,12 +128,12 @@ fn test_cancel_deposit_request_fails(wrong_user: bool) {
         asset_mint,
         share_mint,
         user,
-        operator,
+        _operator,
         _fee_recipient,
-        reserve_pubkey,
+        _reserve_pubkey,
         vault_pubkey,
         pending_vault_pubkey,
-        fee_recipient_ata,
+        _fee_recipient_ata,
         _user_share_account,
     ) = set_up_async_vault(
         &mut svm,
@@ -251,7 +251,7 @@ fn test_cancel_redeem_request(share_amount: u64) {
     );
 
     let request_keypair = Keypair::new();
-    let ix = create_redeem_request(
+    create_redeem_request(
         &mut svm,
         &user,
         &request_keypair,
@@ -271,7 +271,7 @@ fn test_cancel_redeem_request(share_amount: u64) {
     let vault_before = Vault::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
     let pending_before = vault_before.pending_async_requests;
 
-    let ix = cancel_request(
+    cancel_request(
         &mut svm,
         user,
         asset_mint.pubkey(),
