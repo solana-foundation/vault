@@ -134,7 +134,7 @@ fn test_create_redeem_request(
     assert_eq!(request_data.asset_mint_address, asset_mint.pubkey());
     assert_eq!(request_data.nav_update_version, 1);
     assert_eq!(request_data.fee, 0);
-    assert_eq!(request_data.remaining_amount, 100);
+    assert_eq!(request_data.remaining_amount, 0);
     assert_eq!(request_data.operator, operator_pubkey);
 
     assert_eq!(

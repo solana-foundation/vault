@@ -1,4 +1,4 @@
-use crate::{error::AsyncVaultError, extensions::get_withdrawal_fee_and_net};
+use crate::error::AsyncVaultError;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Burn, Mint, TokenAccount, TokenInterface};
 use vault_common::VaultProgramError;
@@ -75,10 +75,6 @@ pub fn handler<'info>(
 
     require!(gross_assets > 0, VaultProgramError::ZeroAssets);
 
-    let vault_info = ctx.accounts.vault.to_account_info();
-    let vault_data = vault_info.try_borrow_data()?;
-    let (fee, net_assets) = get_withdrawal_fee_and_net(&vault_data, gross_assets)?;
-
     let current_timestamp = Clock::get()?.unix_timestamp;
     ctx.accounts.request.set_inner(Request {
         vault: ctx.accounts.vault.key(),
@@ -87,11 +83,11 @@ pub fn handler<'info>(
         owner: ctx.accounts.user.key(),
         amount: args.amount,
         price: ctx.accounts.vault.nav,
-        remaining_amount: net_assets,
+        remaining_amount: 0,
         asset_mint_address: ctx.accounts.asset_mint.key(),
         created_at: current_timestamp,
         nav_update_version: ctx.accounts.vault.nav_version,
-        fee,
+        fee: 0,
         operator: args.operator,
     });
 
