@@ -36,4 +36,8 @@ pub enum AsyncVaultError {
     InvalidFeeRecipient,
     #[msg("Asset mint has invalid extensions.")]
     InvalidAssetMintExtensions,
+    #[msg("Asset mint is not valid.")]
+    InvalidAssetMint,
+    #[msg("Share mint is not valid.")]
+    InvalidShareMint,
 }
