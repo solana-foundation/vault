@@ -1,10 +1,11 @@
+use anchor_spl::token;
 use async_vault_client::{sdk::program_id, Vault};
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
 use crate::helper_functions::{
-    accept_authority_invitation, assert_error_code, invite_new_authority, setup_async_vault,
+    accept_authority_invitation, assert_error_code, invite_new_authority, set_up_async_vault,
 };
 
 #[test_case(true ; "succeeds")]
@@ -14,7 +15,22 @@ fn test_invite_new_authority(use_valid_authority: bool) {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let new_authority = Keypair::new();
 
@@ -51,7 +67,22 @@ fn test_invite_new_authority_overwrites_pending() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, _, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        _share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let first_candidate = Keypair::new();
     invite_new_authority(&mut svm, &authority, first_candidate.pubkey(), vault_pubkey)
@@ -84,7 +115,22 @@ fn test_accept_authority_invitation(invite_first: bool, use_correct_new_authorit
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let new_authority = Keypair::new();
     svm.airdrop(&new_authority.pubkey(), 1_000_000_000).unwrap();
@@ -132,7 +178,22 @@ fn test_full_authority_transfer_old_authority_loses_access() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let new_authority = Keypair::new();
     svm.airdrop(&new_authority.pubkey(), 1_000_000_000).unwrap();

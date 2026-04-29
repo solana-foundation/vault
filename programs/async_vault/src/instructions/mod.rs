@@ -1,5 +1,6 @@
 pub mod accept_authority_invitation;
 pub mod create_deposit_request;
+pub mod create_redeem_request;
 pub mod create_vault;
 pub mod initialize_deposit_fee;
 pub mod initialize_vault;
@@ -13,6 +14,7 @@ pub mod update_withdrawal_fee;
 
 pub use accept_authority_invitation::*;
 pub use create_deposit_request::*;
+pub use create_redeem_request::*;
 pub use create_vault::*;
 pub use initialize_deposit_fee::*;
 pub use initialize_vault::*;

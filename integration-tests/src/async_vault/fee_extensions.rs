@@ -1,9 +1,10 @@
+use anchor_spl::token;
 use async_vault_client::{sdk::program_id, FeeType, Vault};
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 
 use crate::helper_functions::{
-    assert_error_code, init_deposit_fee, init_withdrawal_fee, setup_async_vault,
+    assert_error_code, init_deposit_fee, init_withdrawal_fee, set_up_async_vault,
     update_deposit_fee, update_withdrawal_fee,
 };
 
@@ -13,7 +14,22 @@ fn test_initialize_and_update_deposit_fee() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
     init_deposit_fee(
@@ -47,7 +63,22 @@ fn test_initialize_and_update_withdrawal_fee() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let withdrawal_fee = FeeType::Percentage { bps: 200 };
     init_withdrawal_fee(
@@ -79,7 +110,22 @@ fn test_initialize_both_fees() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
     init_deposit_fee(
@@ -111,7 +157,22 @@ fn test_initialize_deposit_fee_duplicate_fails() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
     init_deposit_fee(
@@ -141,7 +202,22 @@ fn test_initialize_withdrawal_fee_duplicate_fails() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let withdrawal_fee = FeeType::Percentage { bps: 100 };
     init_withdrawal_fee(
@@ -171,7 +247,22 @@ fn test_update_deposit_fee_before_init_fails() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
     let result = update_deposit_fee(
@@ -190,7 +281,22 @@ fn test_update_withdrawal_fee_before_init_fails() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let withdrawal_fee = FeeType::Percentage { bps: 100 };
     let result = update_withdrawal_fee(
@@ -209,7 +315,22 @@ fn test_initialize_deposit_fee_invalid_bps_fails() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let deposit_fee = FeeType::Percentage { bps: 10_001 };
     let result = init_deposit_fee(
@@ -228,7 +349,22 @@ fn test_initialize_withdrawal_fee_invalid_bps_fails() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let withdrawal_fee = FeeType::Percentage { bps: 10_001 };
     let result = init_withdrawal_fee(
@@ -247,7 +383,22 @@ fn test_initialize_fee_unauthorized_signer_fails() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let unauthorized = Keypair::new();
     svm.airdrop(&unauthorized.pubkey(), 1_000_000_000).unwrap();
@@ -269,7 +420,22 @@ fn test_update_fee_unauthorized_signer_fails() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
     init_deposit_fee(

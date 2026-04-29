@@ -30,6 +30,8 @@ pub enum AsyncVaultError {
     NoPendingAuthority,
     #[msg("Pending Vault is not valid.")]
     InvalidPendingVault,
+    #[msg("Pending Shares Vault is not valid.")]
+    InvalidPendingSharesVault,
     #[msg("Fee recipient account must be provided as a remaining account when fee > 0.")]
     MissingFeeRecipient,
     #[msg("Fee recipient account is invalid.")]

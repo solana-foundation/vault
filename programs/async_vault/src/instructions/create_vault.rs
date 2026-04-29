@@ -6,7 +6,10 @@ use anchor_spl::{
 
 use crate::{
     error::AsyncVaultError,
-    state::{Vault, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    state::{
+        Vault, PENDING_SHARES_VAULT_SEED, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED,
+        VAULT_CONFIG_SEED,
+    },
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -54,6 +57,17 @@ pub struct CreateVault<'info> {
         bump,
     )]
     pub pending_vault: InterfaceAccount<'info, TokenAccount>,
+
+    #[account(
+        init,
+        token::authority = vault,
+        token::mint = share_mint,
+        token::token_program = share_token_program,
+        payer = payer,
+        seeds = [PENDING_SHARES_VAULT_SEED, share_mint.key().as_ref()],
+        bump,
+    )]
+    pub pending_shares_vault: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         init,
@@ -115,6 +129,7 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         paused: false,
         initialized: false,
         pending_vault: ctx.accounts.pending_vault.key(),
+        pending_shares_vault: ctx.accounts.pending_shares_vault.key(),
         nav: 0,
         nav_version: 0,
         async_inflows: args.async_inflows,
@@ -124,6 +139,7 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         pending_authority: None,
         reserve_bump: ctx.bumps.reserve,
         pending_vault_bump: ctx.bumps.pending_vault,
+        pending_shares_vault_bump: ctx.bumps.pending_shares_vault,
         bump: ctx.bumps.vault,
     });
 

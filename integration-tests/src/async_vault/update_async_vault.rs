@@ -1,9 +1,10 @@
+use anchor_spl::token;
 use async_vault_client::{sdk::program_id, Vault};
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, setup_async_vault, update_async_vault};
+use crate::helper_functions::{assert_error_code, set_up_async_vault, update_async_vault};
 
 #[test_case(true; "pause vault")]
 #[test_case(false ; "unpause vault")]
@@ -12,7 +13,22 @@ fn test_update_async_vault(paused: bool) {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_before = Vault::from_bytes(vault_account.data()).unwrap();
@@ -51,7 +67,22 @@ fn test_update_async_vault_unauthorized_signer_fails() {
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
-    let (_authority, _, _, share_mint, _, _, vault_pubkey) = setup_async_vault(&mut svm);
+    let (
+        _authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
 
     let unauthorized = Keypair::new();
     svm.airdrop(&unauthorized.pubkey(), 1_000_000_000).unwrap();

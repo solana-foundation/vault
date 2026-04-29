@@ -3,7 +3,10 @@ use async_vault_client::{sdk::program_id, Request};
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 
-use crate::helper_functions::{create_deposit_request_ix, set_operator, set_up_async_vault};
+use crate::helper_functions::{
+    create_deposit_request_ix, initialize_async_vault, set_operator, set_up_async_vault,
+    update_vault_nav,
+};
 
 #[test]
 fn test_set_operator_succeeds() {
@@ -24,8 +27,14 @@ fn test_set_operator_succeeds() {
         _reserve_pubkey,
         vault_pubkey,
         pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
         _fee_recipient_ata,
+        _user_share_account,
     ) = set_up_async_vault(&mut svm, token::ID, token::ID, 1_000_000_000, 100_000_000);
+
+    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+        .expect("initialize vault should succeed");
+    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
 
     let user_token_account = get_associated_token_address_with_program_id(
         &user.pubkey(),

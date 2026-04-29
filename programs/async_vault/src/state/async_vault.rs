@@ -26,6 +26,8 @@ pub struct Vault {
     pub initialized: bool,
     /// token account holding assets from deposits awaiting share issuance
     pub pending_vault: Pubkey,
+    /// token account holding shares from redemptions awaiting asset settlement
+    pub pending_shares_vault: Pubkey,
     /// net asset value (assets per share), default 0 until first NAV update
     pub nav: u128,
     /// nav version, incremented on each NAV update
@@ -41,6 +43,7 @@ pub struct Vault {
     pub total_asset_balance: u64,
     pub reserve_bump: u8,
     pub pending_vault_bump: u8,
+    pub pending_shares_vault_bump: u8,
     pub bump: u8,
     // Used for updating the vault authority (New Authority)
     pub pending_authority: Option<Pubkey>,
@@ -72,6 +75,21 @@ impl Vault {
             .ok_or(VaultProgramError::ArithmeticError)?;
         Ok(u64::try_from(shares).map_err(|_| VaultProgramError::ArithmeticError)?)
     }
+
+    /// Converts a share amount into assets using the current NAV.
+    ///
+    /// `assets = share_amount * nav / 10^decimals`
+    pub fn calculate_assets(&self, decimals: u8, share_amount: u64) -> Result<u64> {
+        let precision = 10u128
+            .checked_pow(decimals as u32)
+            .ok_or(VaultProgramError::ArithmeticError)?;
+        let assets = u128::from(share_amount)
+            .checked_mul(self.nav)
+            .ok_or(VaultProgramError::ArithmeticError)?
+            .checked_div(precision)
+            .ok_or(VaultProgramError::ArithmeticError)?;
+        Ok(u64::try_from(assets).map_err(|_| VaultProgramError::ArithmeticError)?)
+    }
 }
 
 #[cfg(test)]
@@ -89,6 +107,7 @@ mod tests {
             paused: false,
             initialized: true,
             pending_vault: Pubkey::default(),
+            pending_shares_vault: Pubkey::default(),
             nav,
             nav_version: 1,
             async_inflows: true,
@@ -97,6 +116,7 @@ mod tests {
             total_asset_balance: 0,
             reserve_bump: 0,
             pending_vault_bump: 0,
+            pending_shares_vault_bump: 0,
             bump: 0,
             pending_authority: None,
         }

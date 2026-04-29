@@ -1,7 +1,7 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
 use async_vault_client::{
     sdk::{program_id, IntoSdkInstruction},
-    CreateDepositRequestBuilder, Request, RequestState, RequestType,
+    CreateDepositRequestBuilder, Request, RequestArgs, RequestState, RequestType,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
@@ -13,7 +13,8 @@ use test_case::test_case;
 use crate::helper_functions::{
     create_async_vault, create_ata, create_deposit_request_ix, create_mint,
     get_token_account_amount, helper_mint_to, initialize_async_vault, set_up_async_vault,
-    update_vault_nav, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
+    update_vault_nav, PENDING_SHARES_VAULT_SEED, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED,
+    VAULT_CONFIG_SEED,
 };
 
 #[test_case(1_000_000, false ; "deposit request succeeds")]
@@ -26,7 +27,7 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
 
     let user_amount = 1_000_000_000;
     let (
-        _authority,
+        authority,
         _payer,
         _mint_authority,
         asset_mint,
@@ -37,8 +38,14 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
         reserve_pubkey,
         vault_pubkey,
         pending_vault_pubkey,
+        _pending_shares_vault_pubkey,
         fee_recipient_ata,
+        _user_share_account,
     ) = set_up_async_vault(&mut svm, token::ID, token::ID, user_amount, 100_000_000);
+
+    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+        .expect("initialize vault should succeed");
+    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
 
     let user_token_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
@@ -75,11 +82,18 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
         .vault(vault_pubkey)
         .user_token_account(user_token_account)
         .pending_vault(pending_vault_pubkey)
-        .asset_token_program(spl_token::ID)
-        .amount(deposit_amount);
+        .asset_token_program(spl_token::ID);
 
     if with_operator {
-        builder.operator(operator.pubkey());
+        builder.args(RequestArgs {
+            amount: deposit_amount,
+            operator: Some(operator.pubkey()),
+        });
+    } else {
+        builder.args(RequestArgs {
+            amount: deposit_amount,
+            operator: None,
+        });
     }
 
     let mut ix = builder.instruction().into_sdk_instruction();
@@ -178,6 +192,10 @@ fn test_multiple_deposit_requests_with_unique_keypairs() {
         &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
         &program_id(),
     );
+    let (pending_shares_vault_pubkey, _) = Pubkey::find_program_address(
+        &[PENDING_SHARES_VAULT_SEED, share_mint.pubkey().as_ref()],
+        &program_id(),
+    );
 
     create_async_vault(
         &mut svm,
@@ -189,6 +207,7 @@ fn test_multiple_deposit_requests_with_unique_keypairs() {
         share_mint.pubkey(),
         reserve_pubkey,
         pending_vault_pubkey,
+        pending_shares_vault_pubkey,
         vault_pubkey,
         100_000_000,
         true,

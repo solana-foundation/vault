@@ -51,12 +51,15 @@ pub enum AsyncVaultError {
     /// 6013 - Pending Vault is not valid.
     #[error("Pending Vault is not valid.")]
     InvalidPendingVault = 0x177D,
-    /// 6014 - Fee recipient account must be provided as a remaining account when fee > 0.
+    /// 6014 - Pending Shares Vault is not valid.
+    #[error("Pending Shares Vault is not valid.")]
+    InvalidPendingSharesVault = 0x177E,
+    /// 6015 - Fee recipient account must be provided as a remaining account when fee > 0.
     #[error("Fee recipient account must be provided as a remaining account when fee > 0.")]
-    MissingFeeRecipient = 0x177E,
-    /// 6015 - Fee recipient account is invalid.
+    MissingFeeRecipient = 0x177F,
+    /// 6016 - Fee recipient account is invalid.
     #[error("Fee recipient account is invalid.")]
-    InvalidFeeRecipient = 0x177F,
+    InvalidFeeRecipient = 0x1780,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

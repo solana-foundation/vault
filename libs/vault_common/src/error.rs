@@ -86,6 +86,9 @@ pub enum VaultProgramError {
     #[msg("Async inflows are disabled, cannot deposit.")]
     AsyncInflowsDisabled,
 
+    #[msg("Async outflows are disabled, cannot redeem.")]
+    AsyncOutflowsDisabled,
+
     #[msg("Nav is not set.")]
     NavIsNotSet,
 

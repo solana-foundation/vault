@@ -52,6 +52,12 @@ pub struct Vault {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub pending_vault: Pubkey,
+    /// token account holding shares from redemptions awaiting asset settlement
+    #[cfg_attr(
+        feature = "serde",
+        serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
+    )]
+    pub pending_shares_vault: Pubkey,
     /// net asset value (assets per share), default 0 until first NAV update
     pub nav: u128,
     /// nav version, incremented on each NAV update
@@ -67,6 +73,7 @@ pub struct Vault {
     pub total_asset_balance: u64,
     pub reserve_bump: u8,
     pub pending_vault_bump: u8,
+    pub pending_shares_vault_bump: u8,
     pub bump: u8,
     pub pending_authority: Option<Pubkey>,
 }
