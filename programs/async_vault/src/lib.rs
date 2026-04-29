@@ -63,11 +63,21 @@ pub mod async_vault {
         instructions::update_withdrawal_fee::handler(ctx, args)
     }
 
+    /// Creates a deposit request with state pending (Pending vault authority acceptance)
+    pub fn create_deposit_request<'info>(
+        ctx: Context<'_, '_, '_, 'info, CreateDepositRequest<'info>>,
+        args: RequestArgs,
+    ) -> Result<()> {
+        instructions::create_deposit_request::handler(ctx, args)
+    }
+
     /// It sets an operator for the vault.
-    /// Requires authority signature.
+    /// Requires Request owner signature.
     pub fn set_operator(ctx: Context<SetOperator>) -> Result<()> {
         instructions::set_operator::handler(ctx)
     }
+
+    /* Vault Authority instructions */
 
     /// Stores a pending authority on the vault without transferring control.
     /// The new authority must later call `accept_authority_invitation` to
@@ -97,12 +107,10 @@ pub mod async_vault {
         instructions::update_nav::handler(ctx, updated_nav)
     }
 
-    /// Creates a deposit request with state pending (Pending vault authority acceptance)
-    pub fn create_deposit_request<'info>(
-        ctx: Context<'_, '_, '_, 'info, CreateDepositRequest<'info>>,
-        args: RequestArgs,
-    ) -> Result<()> {
-        instructions::create_deposit_request::handler(ctx, args)
+    /// Approve a pending request, allowing the User to execute the Claim instruction.
+    /// This sets the Request's claimable NAV to the Vault's current NAV.
+    pub fn approve_request(ctx: Context<ApproveRequest>) -> Result<()> {
+        instructions::approve_request::handler(ctx)
     }
 
     /// Creates a redeem request with state pending (Pending vault authority acceptance)

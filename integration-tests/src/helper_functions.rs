@@ -20,12 +20,12 @@ use vault_client::{
 };
 
 use async_vault_client::{
-    sdk::program_id, AcceptAuthorityInvitationBuilder, CreateDepositRequestBuilder,
-    CreateRedeemRequestBuilder, CreateVaultBuilder as CreateAsyncVaultBuilder,
-    FeeType as AsyncFeeType, InitializeDepositFeeBuilder,
-    InitializeVaultBuilder as InitializeAsyncVaultBuilder, InitializeWithdrawalFeeBuilder,
-    InviteNewAuthorityBuilder, RequestArgs, SetOperatorBuilder, UpdateDepositFeeBuilder,
-    UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder,
+    sdk::program_id, AcceptAuthorityInvitationBuilder, ApproveRequestBuilder,
+    CreateDepositRequestBuilder, CreateRedeemRequestBuilder,
+    CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
+    InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
+    InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, RequestArgs, SetOperatorBuilder,
+    UpdateDepositFeeBuilder, UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder,
     UpdateWithdrawalFeeBuilder,
 };
 
@@ -34,7 +34,7 @@ use anchor_spl::{
         get_associated_token_address_with_program_id,
         spl_associated_token_account::instruction::create_associated_token_account,
     },
-    token::{self, spl_token},
+    token::spl_token,
     token_2022::{
         self,
         spl_token_2022::{
@@ -1123,6 +1123,28 @@ pub fn update_vault_nav(
         .authority(authority.pubkey())
         .vault(vault)
         .updated_nav(updated_nav)
+        .instruction()
+        .into_sdk_instruction();
+
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
+pub fn approve_request(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    vault: Pubkey,
+    request: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = ApproveRequestBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault)
+        .request(request)
         .instruction()
         .into_sdk_instruction();
 

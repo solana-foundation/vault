@@ -33,8 +33,6 @@ pub struct Request {
     pub amount: u64,
     /// NAV at which the assets (deposit) or shares (redeem) are being converted
     pub price: u128,
-    /// Amount that is pending claim
-    pub remaining_amount: u64,
     /// mint address for deposit request (7575)
     #[cfg_attr(
         feature = "serde",
@@ -45,7 +43,6 @@ pub struct Request {
     pub created_at: i64,
     /// nav update version (for permissionless actions)
     pub nav_update_version: u64,
-    pub fee: u64,
     /// Operator allowed to claim on behalf of user (delegated controller)
     pub operator: Option<Pubkey>,
 }

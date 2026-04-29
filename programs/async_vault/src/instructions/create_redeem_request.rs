@@ -64,7 +64,6 @@ pub fn handler<'info>(
         ctx.accounts.vault.async_outflows,
         VaultProgramError::AsyncOutflowsDisabled
     );
-    require!(ctx.accounts.vault.nav > 0, VaultProgramError::NavIsNotSet);
 
     require!(args.amount > 0, VaultProgramError::InsufficientRedeemAmount);
 
@@ -85,11 +84,9 @@ pub fn handler<'info>(
         owner: ctx.accounts.user.key(),
         amount: args.amount,
         price: ctx.accounts.vault.nav,
-        remaining_amount: 0,
         asset_mint_address: ctx.accounts.asset_mint.key(),
         created_at: current_timestamp,
         nav_update_version: ctx.accounts.vault.nav_version,
-        fee: 0,
         operator: args.operator,
     });
 
