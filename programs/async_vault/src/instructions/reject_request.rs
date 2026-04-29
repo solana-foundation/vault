@@ -63,12 +63,7 @@ pub fn handler(ctx: Context<RejectRequest>) -> Result<()> {
             .eq(&RequestState::Pending),
         AsyncVaultError::RequestInvalidState
     );
-    let refund_amount = ctx
-        .accounts
-        .request
-        .amount
-        .checked_add(ctx.accounts.request.fee)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+    let refund_amount = ctx.accounts.request.amount;
 
     let share_mint = ctx.accounts.share_mint.key();
     let seeds: &[&[&[u8]]] = &[&[
