@@ -15,8 +15,7 @@ use test_case::test_case;
 use crate::helper_functions::{
     assert_error_code, create_async_vault, create_ata, create_deposit_request_ix, create_mint,
     get_token_account_amount, helper_mint_to, initialize_async_vault, set_up_async_vault,
-    update_vault_nav, PENDING_SHARES_VAULT_SEED, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED,
-    VAULT_CONFIG_SEED,
+    update_vault_nav, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
 };
 
 #[test_case(1_000_000, false ; "deposit request succeeds")]
@@ -40,8 +39,8 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
         reserve_pubkey,
         vault_pubkey,
         pending_vault_pubkey,
-        _pending_shares_vault_pubkey,
         fee_recipient_ata,
+        _user_share_account,
     ) = set_up_async_vault(
         &mut svm,
         token::ID,
@@ -200,10 +199,6 @@ fn test_multiple_deposit_requests_with_unique_keypairs() {
         &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
         &program_id(),
     );
-    let (pending_shares_vault_pubkey, _) = Pubkey::find_program_address(
-        &[PENDING_SHARES_VAULT_SEED, share_mint.pubkey().as_ref()],
-        &program_id(),
-    );
 
     create_async_vault(
         &mut svm,
@@ -215,7 +210,6 @@ fn test_multiple_deposit_requests_with_unique_keypairs() {
         share_mint.pubkey(),
         reserve_pubkey,
         pending_vault_pubkey,
-        pending_shares_vault_pubkey,
         vault_pubkey,
         100_000_000,
         true,
@@ -319,7 +313,7 @@ fn test_multiple_deposit_requests_with_unique_keypairs() {
     );
 }
 
-#[test_case(Some(1), 6016 ; "deposit_request_with_nonzero_transfer_fee_fails")]
+#[test_case(Some(1), 6017 ; "deposit_request_with_nonzero_transfer_fee_fails")]
 fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_error_code: u32) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
@@ -327,7 +321,7 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
 
     let user_amount = 1_000_000_000;
     let (
-        _authority,
+        authority,
         _payer,
         mint_authority,
         asset_mint,
@@ -339,6 +333,7 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
         vault_pubkey,
         pending_vault_pubkey,
         _fee_recipient_ata,
+        _user_share_account,
     ) = set_up_async_vault(
         &mut svm,
         token_2022::ID,
@@ -347,6 +342,10 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
         user_amount,
         100_000_000,
     );
+
+    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+        .expect("initialize vault should succeed");
+    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
 
     // Update TransferFee to nonzero after vault creation
     if let Some(fee_bps) = asset_transfer_fee {
@@ -392,7 +391,10 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
         .user_token_account(user_token_account)
         .pending_vault(pending_vault_pubkey)
         .asset_token_program(token_2022::ID)
-        .amount(1_000_000)
+        .args(RequestArgs {
+            amount: user_amount,
+            operator: None,
+        })
         .instruction();
 
     let blockhash = svm.latest_blockhash();

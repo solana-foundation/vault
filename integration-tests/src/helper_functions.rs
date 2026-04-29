@@ -889,7 +889,6 @@ pub fn create_async_vault(
     share_mint: Pubkey,
     reserve: Pubkey,
     pending_vault: Pubkey,
-    pending_shares_vault: Pubkey,
     vault: Pubkey,
     initial_price: u64,
     async_inflows: bool,
@@ -905,7 +904,6 @@ pub fn create_async_vault(
         .share_mint(share_mint)
         .reserve(reserve)
         .pending_vault(pending_vault)
-        .pending_shares_vault(pending_shares_vault)
         .vault(vault)
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
@@ -1179,7 +1177,6 @@ pub fn set_up_async_vault(
     Pubkey,
     Pubkey,
     Pubkey,
-    Pubkey,
 ) {
     let authority = Keypair::new();
     let payer = Keypair::new();
@@ -1220,10 +1217,7 @@ pub fn set_up_async_vault(
         &[PENDING_VAULT_SEED, share_mint.pubkey().as_ref()],
         &program_id(),
     );
-    let (pending_shares_vault_pubkey, _) = Pubkey::find_program_address(
-        &[PENDING_SHARES_VAULT_SEED, share_mint.pubkey().as_ref()],
-        &program_id(),
-    );
+
     let (vault_pubkey, _) = Pubkey::find_program_address(
         &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
         &program_id(),
@@ -1239,7 +1233,6 @@ pub fn set_up_async_vault(
         share_mint.pubkey(),
         reserve_pubkey,
         pending_vault_pubkey,
-        pending_shares_vault_pubkey,
         vault_pubkey,
         initial_price,
         true,
@@ -1280,7 +1273,6 @@ pub fn set_up_async_vault(
         reserve_pubkey,
         vault_pubkey,
         pending_vault_pubkey,
-        pending_shares_vault_pubkey,
         fee_recipient_ata,
         user_share_account,
     );
@@ -1328,7 +1320,6 @@ pub fn create_redeem_request_ix(
     share_mint: Pubkey,
     vault: Pubkey,
     user_share_account: Pubkey,
-    pending_shares_vault: Pubkey,
     amount: u64,
 ) -> solana_sdk::instruction::Instruction {
     let mut builder = CreateRedeemRequestBuilder::new();
@@ -1339,7 +1330,6 @@ pub fn create_redeem_request_ix(
         .request(request_keypair.pubkey())
         .vault(vault)
         .user_share_account(user_share_account)
-        .pending_shares_vault(pending_shares_vault)
         .share_token_program(spl_token::ID)
         .args(RequestArgs {
             amount,

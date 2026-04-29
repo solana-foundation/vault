@@ -24,8 +24,6 @@ pub struct CreateRedeemRequest {
 
     pub user_share_account: solana_pubkey::Pubkey,
 
-    pub pending_shares_vault: solana_pubkey::Pubkey,
-
     pub share_token_program: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
@@ -46,24 +44,17 @@ impl CreateRedeemRequest {
         args: CreateRedeemRequestInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.user, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.share_mint,
-            false,
-        ));
+        accounts.push(solana_instruction::AccountMeta::new(self.share_mint, false));
         accounts.push(solana_instruction::AccountMeta::new(self.request, true));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new(
             self.user_share_account,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new(
-            self.pending_shares_vault,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -131,13 +122,12 @@ impl CreateRedeemRequestInstructionArgs {
 ///
 ///   0. `[writable, signer]` user
 ///   1. `[]` asset_mint
-///   2. `[]` share_mint
+///   2. `[writable]` share_mint
 ///   3. `[writable, signer]` request
 ///   4. `[writable]` vault
 ///   5. `[writable]` user_share_account
-///   6. `[writable]` pending_shares_vault
-///   7. `[]` share_token_program
-///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   6. `[]` share_token_program
+///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct CreateRedeemRequestBuilder {
     user: Option<solana_pubkey::Pubkey>,
@@ -146,7 +136,6 @@ pub struct CreateRedeemRequestBuilder {
     request: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     user_share_account: Option<solana_pubkey::Pubkey>,
-    pending_shares_vault: Option<solana_pubkey::Pubkey>,
     share_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     args: Option<RequestArgs>,
@@ -191,15 +180,6 @@ impl CreateRedeemRequestBuilder {
     #[inline(always)]
     pub fn user_share_account(&mut self, user_share_account: solana_pubkey::Pubkey) -> &mut Self {
         self.user_share_account = Some(user_share_account);
-        self
-    }
-
-    #[inline(always)]
-    pub fn pending_shares_vault(
-        &mut self,
-        pending_shares_vault: solana_pubkey::Pubkey,
-    ) -> &mut Self {
-        self.pending_shares_vault = Some(pending_shares_vault);
         self
     }
 
@@ -250,9 +230,6 @@ impl CreateRedeemRequestBuilder {
             user_share_account: self
                 .user_share_account
                 .expect("user_share_account is not set"),
-            pending_shares_vault: self
-                .pending_shares_vault
-                .expect("pending_shares_vault is not set"),
             share_token_program: self
                 .share_token_program
                 .expect("share_token_program is not set"),
@@ -282,8 +259,6 @@ pub struct CreateRedeemRequestCpiAccounts<'a, 'b> {
 
     pub user_share_account: &'b solana_account_info::AccountInfo<'a>,
 
-    pub pending_shares_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
@@ -306,8 +281,6 @@ pub struct CreateRedeemRequestCpi<'a, 'b> {
 
     pub user_share_account: &'b solana_account_info::AccountInfo<'a>,
 
-    pub pending_shares_vault: &'b solana_account_info::AccountInfo<'a>,
-
     pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
@@ -329,7 +302,6 @@ impl<'a, 'b> CreateRedeemRequestCpi<'a, 'b> {
             request: accounts.request,
             vault: accounts.vault,
             user_share_account: accounts.user_share_account,
-            pending_shares_vault: accounts.pending_shares_vault,
             share_token_program: accounts.share_token_program,
             system_program: accounts.system_program,
             __args: args,
@@ -362,13 +334,13 @@ impl<'a, 'b> CreateRedeemRequestCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(9 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.user.key, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
+        accounts.push(solana_instruction::AccountMeta::new(
             *self.share_mint.key,
             false,
         ));
@@ -379,10 +351,6 @@ impl<'a, 'b> CreateRedeemRequestCpi<'a, 'b> {
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.user_share_account.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new(
-            *self.pending_shares_vault.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -411,7 +379,7 @@ impl<'a, 'b> CreateRedeemRequestCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(9 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.user.clone());
         account_infos.push(self.asset_mint.clone());
@@ -419,7 +387,6 @@ impl<'a, 'b> CreateRedeemRequestCpi<'a, 'b> {
         account_infos.push(self.request.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.user_share_account.clone());
-        account_infos.push(self.pending_shares_vault.clone());
         account_infos.push(self.share_token_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
@@ -440,13 +407,12 @@ impl<'a, 'b> CreateRedeemRequestCpi<'a, 'b> {
 ///
 ///   0. `[writable, signer]` user
 ///   1. `[]` asset_mint
-///   2. `[]` share_mint
+///   2. `[writable]` share_mint
 ///   3. `[writable, signer]` request
 ///   4. `[writable]` vault
 ///   5. `[writable]` user_share_account
-///   6. `[writable]` pending_shares_vault
-///   7. `[]` share_token_program
-///   8. `[]` system_program
+///   6. `[]` share_token_program
+///   7. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct CreateRedeemRequestCpiBuilder<'a, 'b> {
     instruction: Box<CreateRedeemRequestCpiBuilderInstruction<'a, 'b>>,
@@ -462,7 +428,6 @@ impl<'a, 'b> CreateRedeemRequestCpiBuilder<'a, 'b> {
             request: None,
             vault: None,
             user_share_account: None,
-            pending_shares_vault: None,
             share_token_program: None,
             system_program: None,
             args: None,
@@ -513,15 +478,6 @@ impl<'a, 'b> CreateRedeemRequestCpiBuilder<'a, 'b> {
         user_share_account: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.user_share_account = Some(user_share_account);
-        self
-    }
-
-    #[inline(always)]
-    pub fn pending_shares_vault(
-        &mut self,
-        pending_shares_vault: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.pending_shares_vault = Some(pending_shares_vault);
         self
     }
 
@@ -608,11 +564,6 @@ impl<'a, 'b> CreateRedeemRequestCpiBuilder<'a, 'b> {
                 .user_share_account
                 .expect("user_share_account is not set"),
 
-            pending_shares_vault: self
-                .instruction
-                .pending_shares_vault
-                .expect("pending_shares_vault is not set"),
-
             share_token_program: self
                 .instruction
                 .share_token_program
@@ -640,7 +591,6 @@ struct CreateRedeemRequestCpiBuilderInstruction<'a, 'b> {
     request: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,
-    pending_shares_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     args: Option<RequestArgs>,

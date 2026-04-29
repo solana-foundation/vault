@@ -59,10 +59,9 @@ fn test_create_redeem_request(
         _reserve_pubkey,
         vault_pubkey,
         _pending_vault_pubkey,
-        pending_shares_vault_pubkey,
         _fee_recipient_ata,
         user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
 
     initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
         .expect("initialize vault should succeed");
@@ -93,7 +92,6 @@ fn test_create_redeem_request(
         .request(request_keypair.pubkey())
         .vault(vault_pubkey)
         .user_share_account(user_share_account)
-        .pending_shares_vault(pending_shares_vault_pubkey)
         .share_token_program(spl_token::ID)
         .args(RequestArgs {
             amount: share_amount,
@@ -142,9 +140,5 @@ fn test_create_redeem_request(
     assert_eq!(
         get_token_account_amount(&svm.get_account(&user_share_account).unwrap()),
         0
-    );
-    assert_eq!(
-        get_token_account_amount(&svm.get_account(&pending_shares_vault_pubkey).unwrap()),
-        share_amount
     );
 }

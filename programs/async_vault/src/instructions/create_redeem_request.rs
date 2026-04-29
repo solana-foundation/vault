@@ -3,7 +3,7 @@ use crate::{
     extensions::{get_fee_extension, ExtensionType},
 };
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
+use anchor_spl::token_interface::{self, Burn, Mint, TokenAccount, TokenInterface};
 use vault_common::VaultProgramError;
 
 use crate::state::{Request, RequestState, RequestType, Vault};
@@ -19,6 +19,7 @@ pub struct CreateRedeemRequest<'info> {
         constraint = vault.asset_mint_address == asset_mint.key()
     )]
     pub asset_mint: InterfaceAccount<'info, Mint>,
+    #[account(mut)]
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
@@ -38,29 +39,19 @@ pub struct CreateRedeemRequest<'info> {
     )]
     pub user_share_account: InterfaceAccount<'info, TokenAccount>,
 
-    #[account(
-        mut,
-        token::mint = share_mint.key(),
-        token::authority = vault,
-        token::token_program = share_token_program,
-        constraint = vault.pending_shares_vault.key() == pending_shares_vault.key() @ AsyncVaultError::InvalidPendingSharesVault
-    )]
-    pub pending_shares_vault: InterfaceAccount<'info, TokenAccount>,
-
     pub share_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 
 impl<'info> CreateRedeemRequest<'info> {
-    pub fn transfer_shares(&self, amount: u64) -> Result<()> {
-        let cpi_accounts = TransferChecked {
-            from: self.user_share_account.to_account_info(),
+    pub fn burn_shares(&self, amount: u64) -> Result<()> {
+        let cpi_accounts = Burn {
             mint: self.share_mint.to_account_info(),
-            to: self.pending_shares_vault.to_account_info(),
+            from: self.user_share_account.to_account_info(),
             authority: self.user.to_account_info(),
         };
         let cpi_ctx = CpiContext::new(self.share_token_program.to_account_info(), cpi_accounts);
-        token_interface::transfer_checked(cpi_ctx, amount, self.share_mint.decimals)
+        token_interface::burn(cpi_ctx, amount)
     }
 }
 
@@ -77,7 +68,7 @@ pub fn handler<'info>(
 
     require!(args.amount > 0, VaultProgramError::InsufficientRedeemAmount);
 
-    ctx.accounts.transfer_shares(args.amount)?;
+    ctx.accounts.burn_shares(args.amount)?;
 
     let gross_assets = ctx
         .accounts

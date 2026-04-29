@@ -25,10 +25,9 @@ fn test_update_async_vault(paused: bool) {
         _reserve_pubkey,
         vault_pubkey,
         _pending_vault_pubkey,
-        _pending_shares_vault_pubkey,
         _fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
 
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_before = Vault::from_bytes(vault_account.data()).unwrap();
@@ -79,10 +78,9 @@ fn test_update_async_vault_unauthorized_signer_fails() {
         _reserve_pubkey,
         vault_pubkey,
         _pending_vault_pubkey,
-        _pending_shares_vault_pubkey,
         _fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
 
     let unauthorized = Keypair::new();
     svm.airdrop(&unauthorized.pubkey(), 1_000_000_000).unwrap();

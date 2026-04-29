@@ -26,10 +26,9 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
         _reserve_pubkey,
         vault_pubkey,
         _pending_vault_pubkey,
-        _pending_shares_vault_pubkey,
         _fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
 
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_before = Vault::from_bytes(vault_account.data()).unwrap();

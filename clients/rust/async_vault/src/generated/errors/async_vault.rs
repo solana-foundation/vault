@@ -60,6 +60,9 @@ pub enum AsyncVaultError {
     /// 6016 - Fee recipient account is invalid.
     #[error("Fee recipient account is invalid.")]
     InvalidFeeRecipient = 0x1780,
+    /// 6017 - Asset mint has invalid extensions.
+    #[error("Asset mint has invalid extensions.")]
+    InvalidAssetMintExtensions = 0x1781,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {
