@@ -3,6 +3,7 @@ use async_vault_client::{
     sdk::{program_id, IntoSdkInstruction},
     ApproveRequestBuilder, Request, RequestState, Vault,
 };
+use borsh::BorshSerialize;
 use litesvm::LiteSVM;
 use solana_sdk::{
     account::ReadableAccount, signature::Keypair, signer::Signer, transaction::Transaction,
@@ -77,13 +78,8 @@ fn test_approve_request_success() {
         .expect("update_vault_nav should succeed");
 
     // Approve the request
-    approve_request(
-        &mut svm,
-        &authority,
-        vault_pubkey,
-        request_keypair.pubkey(),
-    )
-    .expect("approve_request should succeed");
+    approve_request(&mut svm, &authority, vault_pubkey, request_keypair.pubkey())
+        .expect("approve_request should succeed");
 
     // Assert all state changes
     let vault_after = Vault::from_bytes(
@@ -104,9 +100,15 @@ fn test_approve_request_success() {
     assert_eq!(request_after.price, new_nav);
 }
 
-#[test_case(false, true, 6001 ; "unauthorized signer")]
-#[test_case(true, false, 6003 ; "paused vault")]
-fn test_approve_request_fails(pause_vault: bool, use_wrong_signer: bool, expected_error_code: u32) {
+#[test_case(false, true, false, 6001 ; "unauthorized signer")]
+#[test_case(true, false, false, 6003 ; "paused vault")]
+#[test_case(false, false, true, 6020 ; "request not in pending state")]
+fn test_approve_request_fails(
+    pause_vault: bool,
+    use_wrong_signer: bool,
+    override_to_claimable: bool,
+    expected_error_code: u32,
+) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
@@ -159,6 +161,16 @@ fn test_approve_request_fails(pause_vault: bool, use_wrong_signer: bool, expecte
     );
     svm.send_transaction(tx)
         .expect("create deposit request should succeed");
+
+    if override_to_claimable {
+        let mut account = svm.get_account(&request_keypair.pubkey()).unwrap();
+        let mut request = Request::from_bytes(account.data()).unwrap();
+        request.request_state = RequestState::Claimable;
+        let mut buf = Vec::new();
+        request.serialize(&mut buf).unwrap();
+        account.data = buf;
+        svm.set_account(request_keypair.pubkey(), account).unwrap();
+    }
 
     if pause_vault {
         update_async_vault(

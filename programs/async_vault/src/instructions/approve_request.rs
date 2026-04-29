@@ -28,6 +28,11 @@ pub fn handler<'info>(ctx: Context<ApproveRequest>) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
     let request = &mut ctx.accounts.request;
 
+    require!(
+        matches!(request.request_state, RequestState::Pending),
+        AsyncVaultError::RequestNotPending
+    );
+
     // Update Request state to be Claimable and pin price to Vault's current NAV
     request.price = vault.nav;
     request.request_state = RequestState::Claimable;
