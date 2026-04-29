@@ -100,6 +100,7 @@ pub mod async_vault {
     pub fn update_vault(ctx: Context<UpdateVault>, paused: bool) -> Result<()> {
         instructions::update_vault::handler(ctx, paused)
     }
+
     /// Updates the vault nav and increases nav version by 1
     /// Requires authority signature.
     pub fn update_vault_nav(ctx: Context<UpdateVaultNav>, updated_nav: u128) -> Result<()> {
@@ -118,5 +119,13 @@ pub mod async_vault {
         args: RequestArgs,
     ) -> Result<()> {
         instructions::create_redeem_request::handler(ctx, args)
+    }
+
+    /// Cancels a pending request. For deposits, refunds the full amount
+    /// back to the user. For redemptions, mints the shares back.
+    pub fn cancel_request<'info>(
+        ctx: Context<'_, '_, '_, 'info, CancelRequest<'info>>,
+    ) -> Result<()> {
+        instructions::cancel_request::handler(ctx)
     }
 }

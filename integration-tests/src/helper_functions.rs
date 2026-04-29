@@ -20,7 +20,7 @@ use vault_client::{
 };
 
 use async_vault_client::{
-    sdk::program_id, AcceptAuthorityInvitationBuilder, ApproveRequestBuilder,
+    sdk::program_id, AcceptAuthorityInvitationBuilder, ApproveRequestBuilder, CancelRequestBuilder,
     CreateDepositRequestBuilder, CreateRedeemRequestBuilder,
     CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
@@ -1366,4 +1366,51 @@ pub fn create_redeem_request_ix(
         }
     }
     ix
+}
+
+pub fn cancel_request_ix(
+    user: Pubkey,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    request: Pubkey,
+    vault: Pubkey,
+    user_token_account: Option<Pubkey>,
+    asset_pending_vault: Option<Pubkey>,
+    asset_token_program: Option<Pubkey>,
+    user_share_account: Option<Pubkey>,
+    share_token_program: Option<Pubkey>,
+) -> solana_sdk::instruction::Instruction {
+    let mut builder = CancelRequestBuilder::new();
+    builder
+        .user(user)
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .request(request)
+        .vault(vault)
+        .user_token_account(user_token_account)
+        .asset_pending_vault(asset_pending_vault)
+        .asset_token_program(asset_token_program)
+        .user_share_account(user_share_account)
+        .share_token_program(share_token_program);
+
+    builder.instruction().into_sdk_instruction()
+}
+
+pub fn set_share_balance(
+    svm: &mut LiteSVM,
+    user_share_account: &Pubkey,
+    share_mint: &Pubkey,
+    amount: u64,
+) {
+    let mut acct = svm.get_account(user_share_account).unwrap();
+    let mut token_state = spl_token::state::Account::unpack(&acct.data).unwrap();
+    token_state.amount = amount;
+    spl_token::state::Account::pack(token_state, &mut acct.data).unwrap();
+    svm.set_account(*user_share_account, acct).unwrap();
+
+    let mut mint_acct = svm.get_account(share_mint).unwrap();
+    let mut mint_state = spl_token::state::Mint::unpack(&mint_acct.data).unwrap();
+    mint_state.supply = amount;
+    spl_token::state::Mint::pack(mint_state, &mut mint_acct.data).unwrap();
+    svm.set_account(*share_mint, mint_acct).unwrap();
 }

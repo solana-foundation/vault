@@ -38,6 +38,12 @@ pub enum AsyncVaultError {
     InvalidFeeRecipient,
     #[msg("Request current state is not valid.")]
     RequestInvalidState,
+    #[msg("Request is not pending.")]
+    RequestIsNotPending,
+    #[msg("Invalid request type for this instruction.")]
+    InvalidRequestType,
+    #[msg("A required optional account was not provided.")]
+    MissingRequiredAccount,
     #[msg("Asset mint has invalid extensions.")]
     InvalidAssetMintExtensions,
     #[msg("Asset mint is not valid.")]

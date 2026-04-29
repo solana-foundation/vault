@@ -12,7 +12,7 @@ pub enum RequestState {
 /// The request types:
 /// Deposit: the user wants to add assets to the vault
 /// Redeem: the user wants to withdraw assets from the vault
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, InitSpace, PartialEq)]
 pub enum RequestType {
     Deposit,
     Redeem,
