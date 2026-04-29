@@ -88,6 +88,8 @@ pub fn handler<'info>(
         .vault
         .calculate_assets(ctx.accounts.share_mint.decimals, args.amount)?;
 
+    require!(gross_assets > 0, VaultProgramError::ZeroAssets);
+
     let vault_info = ctx.accounts.vault.to_account_info();
     let vault_data = vault_info.try_borrow_data()?;
     let (fee, net_assets) =

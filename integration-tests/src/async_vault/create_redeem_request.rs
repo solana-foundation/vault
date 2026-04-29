@@ -8,10 +8,11 @@ use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
     signer::Signer, transaction::Transaction,
 };
+use test_case::test_case;
 
 use crate::helper_functions::{
-    assert_error_code, create_redeem_request_ix, get_token_account_amount, initialize_async_vault,
-    set_up_async_vault, update_vault_nav,
+    assert_error_code, get_token_account_amount, initialize_async_vault, set_up_async_vault,
+    update_vault_nav,
 };
 
 fn set_share_balance(
@@ -33,115 +34,19 @@ fn set_share_balance(
     svm.set_account(*share_mint, mint_acct).unwrap();
 }
 
-#[test]
-fn test_create_redeem_request() {
+#[test_case(1_000_000_000, false, None ; "redeem request succeeds")]
+#[test_case(1_000_000_000, true, None ; "redeem with operator succeeds")]
+#[test_case(0, false, Some((6011, "InsufficientRedeemAmount")) ; "zero amount fails")]
+#[test_case(1_000, false, Some((6031, "ZeroAssets")) ; "zero assets fails")]
+fn test_create_redeem_request(
+    share_amount: u64,
+    with_operator: bool,
+    expected_error: Option<(u32, &str)>,
+) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
 
-    let share_amount = 1_000_000;
-    let (
-        authority,
-        _payer,
-        _mint_authority,
-        asset_mint,
-        share_mint,
-        user,
-        _operator,
-        _fee_recipient,
-        _reserve_pubkey,
-        vault_pubkey,
-        _pending_vault_pubkey,
-        pending_shares_vault_pubkey,
-        _fee_recipient_ata,
-        user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
-
-    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
-        .expect("initialize vault should succeed");
-    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
-
-    set_share_balance(
-        &mut svm,
-        &user_share_account,
-        &share_mint.pubkey(),
-        share_amount,
-    );
-
-    assert_eq!(
-        get_token_account_amount(&svm.get_account(&user_share_account).unwrap()),
-        share_amount
-    );
-    assert_eq!(
-        get_token_account_amount(&svm.get_account(&pending_shares_vault_pubkey).unwrap()),
-        0
-    );
-
-    let request_keypair = Keypair::new();
-
-    let mut builder = CreateRedeemRequestBuilder::new();
-    builder
-        .user(user.pubkey())
-        .asset_mint(asset_mint.pubkey())
-        .share_mint(share_mint.pubkey())
-        .request(request_keypair.pubkey())
-        .vault(vault_pubkey)
-        .user_share_account(user_share_account)
-        .pending_shares_vault(pending_shares_vault_pubkey)
-        .share_token_program(spl_token::ID)
-        .args(RequestArgs {
-            amount: share_amount,
-            operator: None,
-        });
-
-    let mut ix = builder.instruction().into_sdk_instruction();
-    for meta in &mut ix.accounts {
-        if meta.pubkey == request_keypair.pubkey() {
-            meta.is_signer = true;
-        }
-    }
-    let tx = Transaction::new_signed_with_payer(
-        &[ix],
-        Some(&user.pubkey()),
-        &[&user, &request_keypair],
-        svm.latest_blockhash(),
-    );
-    svm.send_transaction(tx)
-        .expect("create redeem request should succeed");
-
-    let request_account = svm
-        .get_account(&request_keypair.pubkey())
-        .expect("Request account should exist");
-    let request_data = Request::from_bytes(request_account.data()).unwrap();
-
-    assert_eq!(request_data.vault, vault_pubkey);
-    assert_eq!(request_data.request_type, RequestType::Redeem);
-    assert_eq!(request_data.request_state, RequestState::Pending);
-    assert_eq!(request_data.owner, user.pubkey());
-    assert_eq!(request_data.amount, share_amount);
-    assert_eq!(request_data.price, 100);
-    assert_eq!(request_data.asset_mint_address, asset_mint.pubkey());
-    assert_eq!(request_data.nav_update_version, 1);
-    assert_eq!(request_data.fee, 0);
-    assert_eq!(request_data.operator, None);
-
-    assert_eq!(
-        get_token_account_amount(&svm.get_account(&user_share_account).unwrap()),
-        0
-    );
-    assert_eq!(
-        get_token_account_amount(&svm.get_account(&pending_shares_vault_pubkey).unwrap()),
-        share_amount
-    );
-}
-
-#[test]
-fn test_create_redeem_request_with_operator() {
-    let mut svm = LiteSVM::new();
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-
-    let share_amount = 500_000;
     let (
         authority,
         _payer,
@@ -163,14 +68,22 @@ fn test_create_redeem_request_with_operator() {
         .expect("initialize vault should succeed");
     update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
 
-    set_share_balance(
-        &mut svm,
-        &user_share_account,
-        &share_mint.pubkey(),
-        share_amount,
-    );
+    if share_amount > 0 {
+        set_share_balance(
+            &mut svm,
+            &user_share_account,
+            &share_mint.pubkey(),
+            share_amount,
+        );
+    }
 
     let request_keypair = Keypair::new();
+
+    let operator_pubkey = if with_operator {
+        Some(operator.pubkey())
+    } else {
+        None
+    };
 
     let mut builder = CreateRedeemRequestBuilder::new();
     builder
@@ -184,7 +97,7 @@ fn test_create_redeem_request_with_operator() {
         .share_token_program(spl_token::ID)
         .args(RequestArgs {
             amount: share_amount,
-            operator: Some(operator.pubkey()),
+            operator: operator_pubkey,
         });
 
     let mut ix = builder.instruction().into_sdk_instruction();
@@ -199,66 +112,39 @@ fn test_create_redeem_request_with_operator() {
         &[&user, &request_keypair],
         svm.latest_blockhash(),
     );
-    svm.send_transaction(tx)
-        .expect("create redeem request with operator should succeed");
+    let result = svm.send_transaction(tx);
+
+    if let Some((error_code, error_name)) = expected_error {
+        assert!(result.is_err(), "redeem request should fail");
+        assert_error_code(&result.unwrap_err(), error_code, error_name);
+        return;
+    }
+
+    result.expect("create redeem request should succeed");
 
     let request_account = svm
         .get_account(&request_keypair.pubkey())
         .expect("Request account should exist");
     let request_data = Request::from_bytes(request_account.data()).unwrap();
 
+    assert_eq!(request_data.vault, vault_pubkey);
     assert_eq!(request_data.request_type, RequestType::Redeem);
+    assert_eq!(request_data.request_state, RequestState::Pending);
+    assert_eq!(request_data.owner, user.pubkey());
     assert_eq!(request_data.amount, share_amount);
-    assert_eq!(request_data.operator, Some(operator.pubkey()));
-}
+    assert_eq!(request_data.price, 100);
+    assert_eq!(request_data.asset_mint_address, asset_mint.pubkey());
+    assert_eq!(request_data.nav_update_version, 1);
+    assert_eq!(request_data.fee, 0);
+    assert_eq!(request_data.remaining_amount, 100);
+    assert_eq!(request_data.operator, operator_pubkey);
 
-#[test]
-fn test_create_redeem_request_zero_amount() {
-    let mut svm = LiteSVM::new();
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-
-    let (
-        authority,
-        _payer,
-        _mint_authority,
-        asset_mint,
-        share_mint,
-        user,
-        _operator,
-        _fee_recipient,
-        _reserve_pubkey,
-        vault_pubkey,
-        _pending_vault_pubkey,
-        pending_shares_vault_pubkey,
-        _fee_recipient_ata,
-        user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 0, 100_000_000);
-
-    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
-        .expect("initialize vault should succeed");
-    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
-
-    let request_keypair = Keypair::new();
-
-    let ix = create_redeem_request_ix(
-        &user,
-        &request_keypair,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        user_share_account,
-        pending_shares_vault_pubkey,
-        0,
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&user_share_account).unwrap()),
+        0
     );
-
-    let tx = Transaction::new_signed_with_payer(
-        &[ix],
-        Some(&user.pubkey()),
-        &[&user, &request_keypair],
-        svm.latest_blockhash(),
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&pending_shares_vault_pubkey).unwrap()),
+        share_amount
     );
-    let result = svm.send_transaction(tx);
-    assert!(result.is_err(), "zero amount redeem request should fail");
-    assert_error_code(&result.unwrap_err(), 6011, "InsufficientRedeemAmount");
 }

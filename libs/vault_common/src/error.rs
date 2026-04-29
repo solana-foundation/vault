@@ -94,4 +94,7 @@ pub enum VaultProgramError {
 
     #[msg("Transfer Fees are not allowed.")]
     TransferFeesAreNotAllowed,
+
+    #[msg("Redemption yields zero assets.")]
+    ZeroAssets,
 }
