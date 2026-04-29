@@ -159,7 +159,7 @@ fn test_create_vault(
             assert_error_code(err_result, 6010, "Mints should be different.");
         }
         if asset_transfer_fee > 0 {
-            assert_error_code(err_result, 6016, "Nonzero transfer fee should fail");
+            assert_error_code(err_result, 6016, "Asset mint has invalid extensions.");
         }
     }
 }
