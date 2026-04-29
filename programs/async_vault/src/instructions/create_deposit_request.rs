@@ -29,7 +29,11 @@ pub struct CreateDepositRequest<'info> {
     )]
     pub request: Account<'info, Request>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
+        has_one = share_mint @ AsyncVaultError::InvalidShareMint,
+    )]
     pub vault: Account<'info, Vault>,
 
     #[account(
