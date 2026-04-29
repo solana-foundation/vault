@@ -30,10 +30,22 @@ pub enum AsyncVaultError {
     NoPendingAuthority,
     #[msg("Pending Vault is not valid.")]
     InvalidPendingVault,
+    #[msg("Pending Shares Vault is not valid.")]
+    InvalidPendingSharesVault,
     #[msg("Fee recipient account must be provided as a remaining account when fee > 0.")]
     MissingFeeRecipient,
     #[msg("Fee recipient account is invalid.")]
     InvalidFeeRecipient,
     #[msg("Request current state is not valid.")]
     RequestInvalidState,
+    #[msg("Asset mint has invalid extensions.")]
+    InvalidAssetMintExtensions,
+    #[msg("Asset mint is not valid.")]
+    InvalidAssetMint,
+    #[msg("Share mint is not valid.")]
+    InvalidShareMint,
+    #[msg("Request address is not valid.")]
+    InvalidRequest,
+    #[msg("Request is not in a Pending state.")]
+    RequestNotPending,
 }

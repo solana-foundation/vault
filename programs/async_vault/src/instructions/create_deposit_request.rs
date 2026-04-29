@@ -1,12 +1,6 @@
-use crate::{error::AsyncVaultError, extensions::get_deposit_fee};
+use crate::{error::AsyncVaultError, utils::validate_asset_mint_extensions_from_acct_info};
 use anchor_lang::prelude::*;
-use anchor_spl::{
-    token_2022::spl_token_2022::{
-        self,
-        extension::{BaseStateWithExtensions, StateWithExtensions},
-    },
-    token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked},
-};
+use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
 use vault_common::VaultProgramError;
 
 use crate::state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED};
@@ -34,8 +28,10 @@ pub struct CreateDepositRequest<'info> {
 
     #[account(
         mut,
+        has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
+        has_one = share_mint @ AsyncVaultError::InvalidShareMint,
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
-        bump
+        bump = vault.bump
     )]
     pub vault: Account<'info, Vault>,
 
@@ -90,22 +86,6 @@ impl<'info> CreateDepositRequest<'info> {
             token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
         }
     }
-
-    pub fn assert_no_transfer_fees(&mut self) -> Result<()> {
-        let binding = self.asset_mint.to_account_info();
-        let mint_data = binding
-            .data
-            .try_borrow()
-            .map_err(|_| ProgramError::AccountBorrowFailed)?;
-        let mint = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_data)?;
-
-        let result =
-            mint.get_extension::<spl_token_2022::extension::transfer_fee::TransferFeeConfig>();
-        if result.is_err() {
-            return Ok(());
-        }
-        return Err(VaultProgramError::TransferFeesAreNotAllowed.into());
-    }
 }
 pub fn handler<'info>(
     ctx: Context<'_, '_, '_, 'info, CreateDepositRequest<'info>>,
@@ -116,9 +96,10 @@ pub fn handler<'info>(
         ctx.accounts.vault.async_inflows,
         VaultProgramError::AsyncInflowsDisabled
     );
-    require!(ctx.accounts.vault.nav > 0, VaultProgramError::NavIsNotSet);
-    ctx.accounts.assert_no_transfer_fees()?;
 
+    validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
+
+    // SAFETY: TransferFees are required to be 0, therefore using args.amount is safe.
     ctx.accounts.transfer_asset_token(
         ctx.accounts.user_token_account.to_account_info(),
         ctx.accounts.pending_vault.to_account_info(),
@@ -126,32 +107,17 @@ pub fn handler<'info>(
         args.amount,
     )?;
 
-    let vault_info = ctx.accounts.vault.to_account_info();
-    let fee = get_deposit_fee(&vault_info.try_borrow_data()?, args.amount)?;
-
-    let net_amount = args
-        .amount
-        .checked_sub(fee)
-        .ok_or(VaultProgramError::ArithmeticError)?;
-
-    let shares = ctx
-        .accounts
-        .vault
-        .calculate_shares(ctx.accounts.share_mint.decimals, net_amount)?;
-
     let current_timestamp = Clock::get()?.unix_timestamp;
     ctx.accounts.request.set_inner(Request {
         vault: ctx.accounts.vault.key(),
         request_type: RequestType::Deposit,
         request_state: RequestState::Pending,
         owner: ctx.accounts.user.key(),
-        amount: net_amount,
+        amount: args.amount,
         price: ctx.accounts.vault.nav,
-        remaining_amount: shares,
         asset_mint_address: ctx.accounts.asset_mint.key(),
         created_at: current_timestamp,
         nav_update_version: ctx.accounts.vault.nav_version,
-        fee,
         operator: args.operator,
     });
 

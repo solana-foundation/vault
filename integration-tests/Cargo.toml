@@ -8,6 +8,7 @@ vault-client = { path = "../clients/rust/vault", features = ["solana-sdk"] }
 async-vault-client = { path = "../clients/rust/async_vault", features = ["solana-sdk"] }
 hook-client = { path = "../clients/rust/hook", features = ["solana-sdk"] }
 dummy-client = { path = "../clients/rust/dummy", features = ["solana-sdk"] }
+borsh.workspace = true
 litesvm.workspace = true
 solana-sdk.workspace = true
 anchor-spl.workspace = true

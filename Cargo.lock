@@ -1735,6 +1735,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-spl",
  "async-vault-client",
+ "borsh 1.6.0",
  "dummy-client",
  "hook-client",
  "litesvm",

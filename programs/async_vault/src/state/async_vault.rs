@@ -1,17 +1,14 @@
 use anchor_lang::prelude::*;
-use vault_common::{FeeType, VaultProgramError};
+use vault_common::VaultProgramError;
 
-use crate::{
-    error::AsyncVaultError,
-    extensions::{self, ExtensionType},
-};
+use crate::error::AsyncVaultError;
 
 #[account]
 #[derive(InitSpace)]
 pub struct Vault {
-    pub asset_mint_address: Pubkey,
+    pub asset_mint: Pubkey,
     /// share mint address
-    pub share_mint_address: Pubkey,
+    pub share_mint: Pubkey,
     /// token account holding confirmed vault assets
     pub vault_token_account: Pubkey,
     /// authority that can sign permissioned instructions
@@ -72,6 +69,24 @@ impl Vault {
             .ok_or(VaultProgramError::ArithmeticError)?;
         Ok(u64::try_from(shares).map_err(|_| VaultProgramError::ArithmeticError)?)
     }
+
+    /// Converts a share amount into assets using the current NAV.
+    ///
+    /// `assets = share_amount * nav / 10^decimals`
+    pub fn calculate_assets(&self, decimals: u8, share_amount: u64) -> Result<u64> {
+        let precision = 10u128
+            .checked_pow(decimals as u32)
+            .ok_or(VaultProgramError::ArithmeticError)?;
+        let assets = u128::from(share_amount)
+            .checked_mul(self.nav)
+            .ok_or(VaultProgramError::ArithmeticError)?
+            .checked_div(precision)
+            .ok_or(VaultProgramError::ArithmeticError)?;
+        if assets.eq(&0u128) {
+            return Err(VaultProgramError::ArithmeticError.into());
+        }
+        Ok(u64::try_from(assets).map_err(|_| VaultProgramError::ArithmeticError)?)
+    }
 }
 
 #[cfg(test)]
@@ -80,8 +95,8 @@ mod tests {
 
     fn vault_with_nav(nav: u128) -> Vault {
         Vault {
-            asset_mint_address: Pubkey::default(),
-            share_mint_address: Pubkey::default(),
+            asset_mint: Pubkey::default(),
+            share_mint: Pubkey::default(),
             vault_token_account: Pubkey::default(),
             authority: Pubkey::default(),
             fee_recipient: Pubkey::default(),
@@ -89,6 +104,7 @@ mod tests {
             paused: false,
             initialized: true,
             pending_vault: Pubkey::default(),
+
             nav,
             nav_version: 1,
             async_inflows: true,
@@ -97,6 +113,7 @@ mod tests {
             total_asset_balance: 0,
             reserve_bump: 0,
             pending_vault_bump: 0,
+
             bump: 0,
             pending_authority: None,
         }

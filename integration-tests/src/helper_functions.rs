@@ -20,10 +20,11 @@ use vault_client::{
 };
 
 use async_vault_client::{
-    sdk::program_id, AcceptAuthorityInvitationBuilder, CreateDepositRequestBuilder,
+    sdk::program_id, AcceptAuthorityInvitationBuilder, ApproveRequestBuilder,
+    CreateDepositRequestBuilder, CreateRedeemRequestBuilder,
     CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, SetOperatorBuilder,
+    InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, RequestArgs, SetOperatorBuilder,
     UpdateDepositFeeBuilder, UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder,
     UpdateWithdrawalFeeBuilder,
 };
@@ -33,7 +34,7 @@ use anchor_spl::{
         get_associated_token_address_with_program_id,
         spl_associated_token_account::instruction::create_associated_token_account,
     },
-    token::{self, spl_token},
+    token::spl_token,
     token_2022::{
         self,
         spl_token_2022::{
@@ -53,6 +54,7 @@ use spl_token_2022::state::{Account as TokenAccount2022, Mint as Token2022Mint};
 pub const VAULT_CONFIG_SEED: &[u8] = b"vault";
 pub const RESERVE_CONFIG_SEED: &[u8] = b"reserve";
 pub const PENDING_VAULT_SEED: &[u8] = b"pending";
+pub const PENDING_SHARES_VAULT_SEED: &[u8] = b"pending_shares";
 pub const REQUEST_SEED: &[u8] = b"request";
 
 pub fn create_vault(
@@ -1068,68 +1070,6 @@ pub fn update_withdrawal_fee(
     svm.send_transaction(tx)
 }
 
-pub fn setup_async_vault(
-    svm: &mut LiteSVM,
-) -> (Keypair, Keypair, Keypair, Keypair, Pubkey, Pubkey, Pubkey) {
-    let authority = Keypair::new();
-    let payer = Keypair::new();
-    let mint_authority = Keypair::new();
-    let asset_mint = Keypair::new();
-    let share_mint = Keypair::new();
-    let fee_recipient = Keypair::new();
-
-    svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
-    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
-    svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
-    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
-        .unwrap();
-
-    create_mint(svm, &mint_authority, &asset_mint, &token::ID);
-    create_mint(svm, &mint_authority, &share_mint, &token::ID);
-
-    let (reserve_pubkey, _) = Pubkey::find_program_address(
-        &[RESERVE_CONFIG_SEED, share_mint.pubkey().as_ref()],
-        &program_id(),
-    );
-    let (pending_vault_pubkey, _) = Pubkey::find_program_address(
-        &[PENDING_VAULT_SEED, share_mint.pubkey().as_ref()],
-        &program_id(),
-    );
-    let (vault_pubkey, _) = Pubkey::find_program_address(
-        &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
-        &program_id(),
-    );
-
-    create_async_vault(
-        svm,
-        &authority,
-        &payer,
-        &mint_authority,
-        fee_recipient.pubkey(),
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        reserve_pubkey,
-        pending_vault_pubkey,
-        vault_pubkey,
-        100_000_000,
-        true,
-        true,
-        token::ID,
-        token::ID,
-    )
-    .expect("vault creation should succeed");
-
-    (
-        authority,
-        payer,
-        mint_authority,
-        share_mint,
-        reserve_pubkey,
-        pending_vault_pubkey,
-        vault_pubkey,
-    )
-}
-
 pub fn set_operator(
     svm: &mut LiteSVM,
     user: &Keypair,
@@ -1164,7 +1104,6 @@ pub fn invite_new_authority(
         .new_authority(new_authority)
         .instruction()
         .into_sdk_instruction();
-    let blockhash = svm.latest_blockhash();
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&authority.pubkey()),
@@ -1187,7 +1126,28 @@ pub fn update_vault_nav(
         .instruction()
         .into_sdk_instruction();
 
-    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(tx)
+}
+
+pub fn approve_request(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    vault: Pubkey,
+    request: Pubkey,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = ApproveRequestBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault)
+        .request(request)
+        .instruction()
+        .into_sdk_instruction();
+
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&authority.pubkey()),
@@ -1221,6 +1181,7 @@ pub fn accept_authority_invitation(
 pub fn set_up_async_vault(
     svm: &mut LiteSVM,
     asset_token_program: Pubkey,
+    asset_mint_transfer_fee_bps: Option<u16>,
     share_token_program: Pubkey,
     user_amount: u64,
     initial_price: u64,
@@ -1233,6 +1194,7 @@ pub fn set_up_async_vault(
     Keypair,
     Keypair,
     Keypair,
+    Pubkey,
     Pubkey,
     Pubkey,
     Pubkey,
@@ -1255,7 +1217,18 @@ pub fn set_up_async_vault(
     svm.airdrop(&user.pubkey(), 1_000_000_000).unwrap();
     svm.airdrop(&operator.pubkey(), 1_000_000_000).unwrap();
 
-    create_mint(svm, &mint_authority, &asset_mint, &asset_token_program);
+    if asset_token_program == token_2022::ID && asset_mint_transfer_fee_bps.is_some() {
+        // Initialize with TransferFee extension enabled
+        create_mint_with_transfer_fee(
+            svm,
+            &mint_authority,
+            &asset_mint,
+            asset_mint_transfer_fee_bps.unwrap(),
+            u64::MAX,
+        );
+    } else {
+        create_mint(svm, &mint_authority, &asset_mint, &asset_token_program);
+    }
     create_mint(svm, &mint_authority, &share_mint, &share_token_program);
 
     let (reserve_pubkey, _) = Pubkey::find_program_address(
@@ -1266,6 +1239,7 @@ pub fn set_up_async_vault(
         &[PENDING_VAULT_SEED, share_mint.pubkey().as_ref()],
         &program_id(),
     );
+
     let (vault_pubkey, _) = Pubkey::find_program_address(
         &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
         &program_id(),
@@ -1289,7 +1263,6 @@ pub fn set_up_async_vault(
         share_token_program,
     )
     .expect("vault creation should succeed");
-    let _ = initialize_async_vault(svm, &authority, share_mint.pubkey(), vault_pubkey);
 
     let user_token_account = create_ata(svm, &user, &asset_mint.pubkey(), &asset_token_program);
     let fee_recipient_ata = create_ata(
@@ -1308,7 +1281,7 @@ pub fn set_up_async_vault(
         &asset_token_program,
     );
 
-    let _ = update_vault_nav(svm, &authority, vault_pubkey, 100);
+    let user_share_account = create_ata(svm, &user, &share_mint.pubkey(), &share_token_program);
 
     return (
         authority,
@@ -1323,6 +1296,7 @@ pub fn set_up_async_vault(
         vault_pubkey,
         pending_vault_pubkey,
         fee_recipient_ata,
+        user_share_account,
     );
 }
 
@@ -1346,7 +1320,43 @@ pub fn create_deposit_request_ix(
         .user_token_account(user_token_account)
         .pending_vault(pending_vault)
         .asset_token_program(spl_token::ID)
-        .amount(amount);
+        .args(RequestArgs {
+            amount,
+            operator: None,
+        });
+
+    let mut ix = builder.instruction().into_sdk_instruction();
+
+    for meta in &mut ix.accounts {
+        if meta.pubkey == request_keypair.pubkey() {
+            meta.is_signer = true;
+        }
+    }
+    ix
+}
+
+pub fn create_redeem_request_ix(
+    user: &Keypair,
+    request_keypair: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    user_share_account: Pubkey,
+    amount: u64,
+) -> solana_sdk::instruction::Instruction {
+    let mut builder = CreateRedeemRequestBuilder::new();
+    builder
+        .user(user.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .request(request_keypair.pubkey())
+        .vault(vault)
+        .user_share_account(user_share_account)
+        .share_token_program(spl_token::ID)
+        .args(RequestArgs {
+            amount,
+            operator: None,
+        });
 
     let mut ix = builder.instruction().into_sdk_instruction();
 

@@ -15,13 +15,13 @@ pub struct Vault {
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
-    pub asset_mint_address: Pubkey,
+    pub asset_mint: Pubkey,
     /// share mint address
     #[cfg_attr(
         feature = "serde",
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
-    pub share_mint_address: Pubkey,
+    pub share_mint: Pubkey,
     /// token account holding confirmed vault assets
     #[cfg_attr(
         feature = "serde",
