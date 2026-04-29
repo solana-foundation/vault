@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Burn, Mint, TokenAccount, TokenInterface};
 use vault_common::VaultProgramError;
 
-use crate::state::{Request, RequestState, RequestType, Vault};
+use crate::state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED};
 
 use super::create_deposit_request::RequestArgs;
 
@@ -27,6 +27,8 @@ pub struct CreateRedeemRequest<'info> {
         mut,
         has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
         has_one = share_mint @ AsyncVaultError::InvalidShareMint,
+        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
+        bump = vault.bump
     )]
     pub vault: Account<'info, Vault>,
 
