@@ -18,7 +18,7 @@ use crate::helper_functions::{
 #[test_case(100_000_000, true, true, true, false, token::ID,token::ID, 0 ; "both async inflows and outflows")]
 #[test_case(100_000_000, true, true, true, false, token_2022::ID,token_2022::ID, 0 ; "Token 2022 program for both mints")]
 #[test_case(100_000_000, true, true, true, false, token::ID,token_2022::ID, 0 ; "Token program for asset, Token program 2022 for share")]
-#[test_case(100_000_000, true, true, true, false, token::ID,token_2022::ID, 0 ; "Token 2022 program for asset, Token program for share")]
+#[test_case(100_000_000, true, true, true, false, token_2022::ID,token::ID, 0 ; "Token 2022 program for asset, Token program for share")]
 #[test_case(100_000_000, true, false, true, false,token_2022::ID,token_2022::ID, 0 ; "async inflows only")]
 #[test_case(100_000_000, false, true, true, false,token_2022::ID,token_2022::ID, 0 ; "async outflows only")]
 #[test_case(100_000_000, false, false, true, false,token_2022::ID,token_2022::ID, 0 ; "no async flows")]
