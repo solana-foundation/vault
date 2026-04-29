@@ -1,10 +1,7 @@
 use anchor_lang::prelude::*;
-use vault_common::{FeeType, VaultProgramError};
+use vault_common::VaultProgramError;
 
-use crate::{
-    error::AsyncVaultError,
-    extensions::{self, ExtensionType},
-};
+use crate::error::AsyncVaultError;
 
 #[account]
 #[derive(InitSpace)]

@@ -5,3 +5,6 @@ target
 node_modules
 test-ledger
 .yarn
+.agents
+.claude
+skills-lock.json

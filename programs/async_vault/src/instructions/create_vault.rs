@@ -6,10 +6,8 @@ use anchor_spl::{
 
 use crate::{
     error::AsyncVaultError,
-    state::{
-        Vault, PENDING_SHARES_VAULT_SEED, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED,
-        VAULT_CONFIG_SEED,
-    },
+    state::{Vault, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
+    utils::validate_asset_mint_extensions_from_acct_info,
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -60,17 +58,6 @@ pub struct CreateVault<'info> {
 
     #[account(
         init,
-        token::authority = vault,
-        token::mint = share_mint,
-        token::token_program = share_token_program,
-        payer = payer,
-        seeds = [PENDING_SHARES_VAULT_SEED, share_mint.key().as_ref()],
-        bump,
-    )]
-    pub pending_shares_vault: InterfaceAccount<'info, TokenAccount>,
-
-    #[account(
-        init,
         space = 8 + Vault::INIT_SPACE,
         payer = payer,
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
@@ -104,7 +91,7 @@ impl<'info> CreateVault<'info> {
 /// Transfers the share mint authority to the vault PDA so only the
 /// program can mint/burn share tokens.
 ///
-/// The vault starts `paused = true` and `initialized = false`; call
+/// The vault starts `initialized = false`; call
 /// `initialize_vault` after configuring extensions to activate it.
 /// Freeze authority is not transferred since is up to the implementator to manage it.
 pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
@@ -116,6 +103,8 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         ctx.accounts.share_mint.supply == 0,
         AsyncVaultError::ShareMintSupplyShouldBeZero
     );
+
+    validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
     ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
 
@@ -129,7 +118,6 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         paused: false,
         initialized: false,
         pending_vault: ctx.accounts.pending_vault.key(),
-        pending_shares_vault: ctx.accounts.pending_shares_vault.key(),
         nav: 0,
         nav_version: 0,
         async_inflows: args.async_inflows,
@@ -139,7 +127,6 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         pending_authority: None,
         reserve_bump: ctx.bumps.reserve,
         pending_vault_bump: ctx.bumps.pending_vault,
-        pending_shares_vault_bump: ctx.bumps.pending_shares_vault,
         bump: ctx.bumps.vault,
     });
 

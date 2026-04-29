@@ -29,8 +29,14 @@ fn test_set_operator_succeeds() {
         pending_vault_pubkey,
         _pending_shares_vault_pubkey,
         _fee_recipient_ata,
-        _user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, token::ID, 1_000_000_000, 100_000_000);
+    ) = set_up_async_vault(
+        &mut svm,
+        token::ID,
+        None,
+        token::ID,
+        1_000_000_000,
+        100_000_000,
+    );
 
     initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
         .expect("initialize vault should succeed");
