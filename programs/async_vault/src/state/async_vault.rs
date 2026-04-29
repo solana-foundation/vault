@@ -6,9 +6,9 @@ use crate::error::AsyncVaultError;
 #[account]
 #[derive(InitSpace)]
 pub struct Vault {
-    pub asset_mint_address: Pubkey,
+    pub asset_mint: Pubkey,
     /// share mint address
-    pub share_mint_address: Pubkey,
+    pub share_mint: Pubkey,
     /// token account holding confirmed vault assets
     pub vault_token_account: Pubkey,
     /// authority that can sign permissioned instructions
@@ -77,8 +77,8 @@ mod tests {
 
     fn vault_with_nav(nav: u128) -> Vault {
         Vault {
-            asset_mint_address: Pubkey::default(),
-            share_mint_address: Pubkey::default(),
+            asset_mint: Pubkey::default(),
+            share_mint: Pubkey::default(),
             vault_token_account: Pubkey::default(),
             authority: Pubkey::default(),
             fee_recipient: Pubkey::default(),

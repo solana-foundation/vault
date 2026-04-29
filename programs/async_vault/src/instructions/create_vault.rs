@@ -109,8 +109,8 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
     ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
 
     ctx.accounts.vault.set_inner(Vault {
-        asset_mint_address: ctx.accounts.asset_mint.key(),
-        share_mint_address: ctx.accounts.share_mint.key(),
+        asset_mint: ctx.accounts.asset_mint.key(),
+        share_mint: ctx.accounts.share_mint.key(),
         vault_token_account: ctx.accounts.reserve.key(),
         authority: args.authority,
         fee_recipient: args.fee_recipient,
