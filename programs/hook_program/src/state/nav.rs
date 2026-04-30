@@ -60,7 +60,7 @@ pub fn get_total_assets<'info>(
 
         total = total
             .checked_add(amount)
-            .ok_or_else(|| ErrorCode::AccountDidNotDeserialize)?;
+            .ok_or_else(|| ProgramError::ArithmeticOverflow)?;
     }
     Ok(total)
 }

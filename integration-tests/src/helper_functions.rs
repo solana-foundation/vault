@@ -1404,7 +1404,7 @@ pub fn set_share_balance(
     svm.set_account(*share_mint, mint_acct).unwrap();
 }
 
-/// Update Vault's `total_asset_balanace`
+/// Update Vault's `total_asset_balance`
 pub fn set_vault_total_asset_balance(svm: &mut LiteSVM, vault: Pubkey, amount: u64) {
     let mut account = svm.get_account(&vault).unwrap();
     let mut vault_state = AsyncVault::from_bytes(account.data()).unwrap();
