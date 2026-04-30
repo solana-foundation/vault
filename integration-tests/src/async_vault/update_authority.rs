@@ -1,12 +1,13 @@
 use anchor_spl::token;
-use async_vault_client::{sdk::program_id, Vault};
+use async_vault_client::{
+    sdk::program_id, AcceptAuthorityInvitationBuilder, InviteNewAuthorityBuilder, Vault,
+    lite::SendTransaction,
+};
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{
-    accept_authority_invitation, assert_error_code, invite_new_authority, set_up_async_vault,
-};
+use crate::helper_functions::{assert_error_code, set_up_async_vault};
 
 #[test_case(true ; "succeeds")]
 #[test_case(false ; "unauthorized signer fails")]
@@ -42,12 +43,12 @@ fn test_invite_new_authority(use_valid_authority: bool) {
         &unauthorized
     };
 
-    let result = invite_new_authority(
-        &mut svm,
-        effective_authority,
-        new_authority.pubkey(),
-        vault_pubkey,
-    );
+    let result = InviteNewAuthorityBuilder::new()
+        .authority(effective_authority.pubkey())
+        .vault(vault_pubkey)
+        .new_authority(new_authority.pubkey())
+        .instruction()
+        .send_transaction(&mut svm, &effective_authority.pubkey(), &[effective_authority]);
 
     if use_valid_authority {
         result.expect("invite new authority should succeed");
@@ -83,19 +84,24 @@ fn test_invite_new_authority_overwrites_pending() {
     ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
 
     let first_candidate = Keypair::new();
-    invite_new_authority(&mut svm, &authority, first_candidate.pubkey(), vault_pubkey)
+    InviteNewAuthorityBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .new_authority(first_candidate.pubkey())
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("first invite should succeed");
 
     svm.expire_blockhash();
 
     let second_candidate = Keypair::new();
-    invite_new_authority(
-        &mut svm,
-        &authority,
-        second_candidate.pubkey(),
-        vault_pubkey,
-    )
-    .expect("second invite should succeed");
+    InviteNewAuthorityBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .new_authority(second_candidate.pubkey())
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("second invite should succeed");
 
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_data = Vault::from_bytes(vault_account.data()).unwrap();
@@ -133,7 +139,12 @@ fn test_accept_authority_invitation(invite_first: bool, use_correct_new_authorit
     svm.airdrop(&new_authority.pubkey(), 1_000_000_000).unwrap();
 
     if invite_first {
-        invite_new_authority(&mut svm, &authority, new_authority.pubkey(), vault_pubkey)
+        InviteNewAuthorityBuilder::new()
+            .authority(authority.pubkey())
+            .vault(vault_pubkey)
+            .new_authority(new_authority.pubkey())
+            .instruction()
+            .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
             .expect("invite should succeed");
         svm.expire_blockhash();
     }
@@ -148,7 +159,11 @@ fn test_accept_authority_invitation(invite_first: bool, use_correct_new_authorit
         &wrong_new_authority
     };
 
-    let result = accept_authority_invitation(&mut svm, effective_new_authority, vault_pubkey);
+    let result = AcceptAuthorityInvitationBuilder::new()
+        .new_authority(effective_new_authority.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &effective_new_authority.pubkey(), &[effective_new_authority]);
 
     let should_succeed = invite_first && use_correct_new_authority;
 
@@ -194,22 +209,41 @@ fn test_full_authority_transfer_old_authority_loses_access() {
     let new_authority = Keypair::new();
     svm.airdrop(&new_authority.pubkey(), 1_000_000_000).unwrap();
 
-    invite_new_authority(&mut svm, &authority, new_authority.pubkey(), vault_pubkey)
+    InviteNewAuthorityBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .new_authority(new_authority.pubkey())
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("invite should succeed");
 
     svm.expire_blockhash();
 
-    accept_authority_invitation(&mut svm, &new_authority, vault_pubkey)
+    AcceptAuthorityInvitationBuilder::new()
+        .new_authority(new_authority.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &new_authority.pubkey(), &[&new_authority])
         .expect("accept should succeed");
 
     svm.expire_blockhash();
 
     let another = Keypair::new();
-    let result = invite_new_authority(&mut svm, &authority, another.pubkey(), vault_pubkey);
+    let result = InviteNewAuthorityBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .new_authority(another.pubkey())
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority]);
     assert_error_code(&result.unwrap_err(), 6001, "UnauthorizedSigner");
 
     svm.expire_blockhash();
 
-    invite_new_authority(&mut svm, &new_authority, another.pubkey(), vault_pubkey)
+    InviteNewAuthorityBuilder::new()
+        .authority(new_authority.pubkey())
+        .vault(vault_pubkey)
+        .new_authority(another.pubkey())
+        .instruction()
+        .send_transaction(&mut svm, &new_authority.pubkey(), &[&new_authority])
         .expect("new authority should be able to invite");
 }

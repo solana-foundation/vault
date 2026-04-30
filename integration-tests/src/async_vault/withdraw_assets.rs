@@ -1,13 +1,15 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
-use async_vault_client::sdk::program_id;
+use async_vault_client::{
+    sdk::program_id, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
+    UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder, WithdrawAssetsBuilder,
+    lite::SendTransaction,
+};
 use litesvm::LiteSVM;
 use solana_sdk::{signature::Keypair, signer::Signer};
 use test_case::test_case;
 
 use crate::helper_functions::{
-    assert_error_code, create_ata, get_token_account_amount, helper_mint_to,
-    initialize_async_vault, set_up_async_vault, update_async_vault, update_vault_nav,
-    withdraw_assets,
+    assert_error_code, create_ata, get_token_account_amount, helper_mint_to, set_up_async_vault,
 };
 
 #[test_case(1_000_000, 500_000 ; "withdraw partial amount")]
@@ -42,9 +44,20 @@ fn test_withdraw_assets_success(deposit_amount: u64, withdraw_amount: u64) {
         100_000_000,
     );
 
-    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+    InitializeAsyncVaultBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("initialize vault should succeed");
-    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
+    UpdateVaultNavBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .updated_nav(100)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("update nav should succeed");
 
     helper_mint_to(
         &mut svm,
@@ -62,18 +75,18 @@ fn test_withdraw_assets_success(deposit_amount: u64, withdraw_amount: u64) {
     let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
     assert_eq!(reserve_before, deposit_amount);
 
-    withdraw_assets(
-        &mut svm,
-        &authority,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        reserve_pubkey,
-        recipient_ata,
-        token::ID,
-        withdraw_amount,
-    )
-    .expect("withdraw assets should succeed");
+    WithdrawAssetsBuilder::new()
+        .authority(authority.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .vault_token_account(reserve_pubkey)
+        .recipient_token_account(recipient_ata)
+        .asset_token_program(token::ID)
+        .amount(withdraw_amount)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("withdraw assets should succeed");
 
     let reserve_after = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
     assert_eq!(reserve_after, deposit_amount - withdraw_amount);
@@ -112,9 +125,20 @@ fn test_withdraw_assets_fails(use_wrong_signer: bool, pause_vault: bool) {
         100_000_000,
     );
 
-    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+    InitializeAsyncVaultBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("initialize vault should succeed");
-    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
+    UpdateVaultNavBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .updated_nav(100)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("update nav should succeed");
 
     helper_mint_to(
         &mut svm,
@@ -130,32 +154,32 @@ fn test_withdraw_assets_fails(use_wrong_signer: bool, pause_vault: bool) {
     let recipient_ata = create_ata(&mut svm, &recipient, &asset_mint.pubkey(), &token::ID);
 
     if pause_vault {
-        update_async_vault(
-            &mut svm,
-            &authority,
-            share_mint.pubkey(),
-            vault_pubkey,
-            true,
-        )
-        .expect("pause vault should succeed");
+        UpdateVaultAsyncBuilder::new()
+            .authority(authority.pubkey())
+            .share_mint(share_mint.pubkey())
+            .paused(true)
+            .vault(vault_pubkey)
+            .instruction()
+            .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+            .expect("pause vault should succeed");
     }
 
     let signer = if use_wrong_signer { &user } else { &authority };
 
     let expected_error_code = if use_wrong_signer { 6001 } else { 6003 };
 
-    let err = withdraw_assets(
-        &mut svm,
-        signer,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        reserve_pubkey,
-        recipient_ata,
-        token::ID,
-        500_000,
-    )
-    .unwrap_err();
+    let err = WithdrawAssetsBuilder::new()
+        .authority(signer.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .vault_token_account(reserve_pubkey)
+        .recipient_token_account(recipient_ata)
+        .asset_token_program(token::ID)
+        .amount(500_000)
+        .instruction()
+        .send_transaction(&mut svm, &signer.pubkey(), &[signer])
+        .unwrap_err();
 
     assert_error_code(&err, expected_error_code, "");
 }

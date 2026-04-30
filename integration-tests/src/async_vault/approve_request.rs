@@ -1,5 +1,9 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
-use async_vault_client::{sdk::program_id, ApproveRequestBuilder, Request, RequestState, Vault};
+use async_vault_client::{
+    sdk::program_id, ApproveRequestBuilder, CreateDepositRequestBuilder, CreateRedeemRequestBuilder,
+    InitializeVaultBuilder as InitializeAsyncVaultBuilder, Request, RequestArgs, RequestState,
+    UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder, Vault, lite::SendTransaction,
+};
 use borsh::BorshSerialize;
 use litesvm::LiteSVM;
 use solana_sdk::{
@@ -9,9 +13,8 @@ use solana_sdk::{
 use test_case::test_case;
 
 use crate::helper_functions::{
-    approve_request, assert_error_code, create_deposit_request, create_redeem_request,
-    get_token_account_amount, helper_mint_to, initialize_async_vault, set_share_balance,
-    set_up_async_vault, set_vault_total_asset_balance, update_async_vault, update_vault_nav,
+    assert_error_code, get_token_account_amount, helper_mint_to, set_share_balance,
+    set_up_async_vault, set_vault_total_asset_balance,
 };
 
 fn setup(
@@ -45,10 +48,21 @@ fn setup(
         user_share_account,
     ) = set_up_async_vault(svm, token::ID, None, token::ID, 1_000_000_000, 100_000_000);
 
-    initialize_async_vault(svm, &authority, share_mint.pubkey(), vault_pubkey)
+    InitializeAsyncVaultBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(svm, &authority.pubkey(), &[&authority])
         .expect("initialize vault should succeed");
 
-    update_vault_nav(svm, &authority, vault_pubkey, nav).expect("update nav should succeed");
+    UpdateVaultNavBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .updated_nav(nav)
+        .instruction()
+        .send_transaction(svm, &authority.pubkey(), &[&authority])
+        .expect("update nav should succeed");
 
     let user_asset_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
@@ -95,34 +109,35 @@ fn test_approve_deposit_request_success(
     ) = setup(&mut svm, nav);
 
     let request_keypair = Keypair::new();
-    create_deposit_request(
-        &mut svm,
-        &user,
-        &request_keypair,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        user_asset_account,
-        pending_vault_pubkey,
-        deposit_amount,
-    )
-    .expect("create deposit request should succeed");
+    CreateDepositRequestBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .request(request_keypair.pubkey())
+        .vault(vault_pubkey)
+        .user_token_account(user_asset_account)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(spl_token::ID)
+        .args(RequestArgs { amount: deposit_amount, operator: None })
+        .instruction()
+        .send_transaction(&mut svm, &user.pubkey(), &[&user, &request_keypair])
+        .expect("create deposit request should succeed");
 
     let pending_before = get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
     let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
 
-    approve_request(
-        &mut svm,
-        &authority,
-        vault_pubkey,
-        request_keypair.pubkey(),
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        reserve_pubkey,
-        pending_vault_pubkey,
-        token::ID,
-    )
-    .expect("approve_request should succeed");
+    ApproveRequestBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .request(request_keypair.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault_token_account(reserve_pubkey)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(token::ID)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("approve_request should succeed");
 
     let vault_after = Vault::from_bytes(
         svm.get_account(&vault_pubkey)
@@ -202,33 +217,34 @@ fn test_approve_redeem_request_success(nav: u128, redeem_amount: u64, expected_r
     );
 
     let request_keypair = Keypair::new();
-    create_redeem_request(
-        &mut svm,
-        &user,
-        &request_keypair,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        user_share_account,
-        redeem_amount,
-    )
-    .expect("create redeem request should succeed");
+    CreateRedeemRequestBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .request(request_keypair.pubkey())
+        .vault(vault_pubkey)
+        .user_share_account(user_share_account)
+        .share_token_program(spl_token::ID)
+        .args(RequestArgs { amount: redeem_amount, operator: None })
+        .instruction()
+        .send_transaction(&mut svm, &user.pubkey(), &[&user, &request_keypair])
+        .expect("create redeem request should succeed");
 
     let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
     let pending_before = get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
 
-    approve_request(
-        &mut svm,
-        &authority,
-        vault_pubkey,
-        request_keypair.pubkey(),
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        reserve_pubkey,
-        pending_vault_pubkey,
-        token::ID,
-    )
-    .expect("approve_request should succeed");
+    ApproveRequestBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .request(request_keypair.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault_token_account(reserve_pubkey)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(token::ID)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("approve_request should succeed");
 
     let vault_after = Vault::from_bytes(
         svm.get_account(&vault_pubkey)
@@ -305,7 +321,12 @@ fn test_approve_request_fails(
         user_amount,
         100_000_000,
     );
-    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+    InitializeAsyncVaultBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("initialize vault should succeed");
 
     let user_token_account = get_associated_token_address_with_program_id(
@@ -315,18 +336,19 @@ fn test_approve_request_fails(
     );
 
     let request_keypair = Keypair::new();
-    create_deposit_request(
-        &mut svm,
-        &user,
-        &request_keypair,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        user_token_account,
-        pending_vault_pubkey,
-        deposit_amount,
-    )
-    .expect("create deposit request should succeed");
+    CreateDepositRequestBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .request(request_keypair.pubkey())
+        .vault(vault_pubkey)
+        .user_token_account(user_token_account)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(spl_token::ID)
+        .args(RequestArgs { amount: deposit_amount, operator: None })
+        .instruction()
+        .send_transaction(&mut svm, &user.pubkey(), &[&user, &request_keypair])
+        .expect("create deposit request should succeed");
 
     if override_to_claimable {
         let mut account = svm.get_account(&request_keypair.pubkey()).unwrap();
@@ -339,14 +361,14 @@ fn test_approve_request_fails(
     }
 
     if pause_vault {
-        update_async_vault(
-            &mut svm,
-            &authority,
-            share_mint.pubkey(),
-            vault_pubkey,
-            true,
-        )
-        .expect("pause vault should succeed");
+        UpdateVaultAsyncBuilder::new()
+            .authority(authority.pubkey())
+            .share_mint(share_mint.pubkey())
+            .paused(true)
+            .vault(vault_pubkey)
+            .instruction()
+            .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+            .expect("pause vault should succeed");
     }
 
     let (signer, authority_key) = if use_wrong_signer {

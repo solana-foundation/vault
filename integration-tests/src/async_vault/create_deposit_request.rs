@@ -2,7 +2,8 @@ use anchor_spl::{
     associated_token::get_associated_token_address_with_program_id, token, token_2022,
 };
 use async_vault_client::{
-    sdk::program_id, CreateDepositRequestBuilder, Request, RequestArgs, RequestState, RequestType,
+    sdk::program_id, CreateDepositRequestBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
+    Request, RequestArgs, RequestState, RequestType, UpdateVaultNavBuilder, lite::SendTransaction,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
@@ -11,10 +12,7 @@ use solana_sdk::{
 };
 use test_case::test_case;
 
-use crate::helper_functions::{
-    assert_error_code, get_token_account_amount, initialize_async_vault, set_up_async_vault,
-    update_vault_nav,
-};
+use crate::helper_functions::{assert_error_code, get_token_account_amount, set_up_async_vault};
 
 #[test_case(1_000_000, false ; "deposit request succeeds")]
 #[test_case(1_000_000, true ; "deposit with operator succeeds")]
@@ -48,9 +46,20 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
         100_000_000,
     );
 
-    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+    InitializeAsyncVaultBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("initialize vault should succeed");
-    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
+    UpdateVaultNavBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .updated_nav(100)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("update nav should succeed");
 
     let user_token_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
@@ -186,9 +195,20 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
         100_000_000,
     );
 
-    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+    InitializeAsyncVaultBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("initialize vault should succeed");
-    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
+    UpdateVaultNavBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .updated_nav(100)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("update nav should succeed");
 
     // Update TransferFee to nonzero after vault creation
     if let Some(fee_bps) = asset_transfer_fee {

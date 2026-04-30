@@ -1,5 +1,8 @@
 use anchor_spl::token;
-use async_vault_client::{sdk::program_id, FeeType, Vault};
+use async_vault_client::{
+    sdk::program_id, FeeType, InitializeDepositFeeBuilder, InitializeWithdrawalFeeBuilder,
+    UpdateDepositFeeBuilder, UpdateWithdrawalFeeBuilder, Vault, lite::SendTransaction,
+};
 use litesvm::{
     types::{FailedTransactionMetadata, TransactionMetadata},
     LiteSVM,
@@ -7,10 +10,7 @@ use litesvm::{
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{
-    assert_error_code, init_deposit_fee, init_withdrawal_fee, set_up_async_vault,
-    update_deposit_fee, update_withdrawal_fee,
-};
+use crate::helper_functions::{assert_error_code, set_up_async_vault};
 
 #[derive(Clone, Copy)]
 enum FeeKind {
@@ -27,8 +27,22 @@ fn init_fee(
     kind: FeeKind,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     match kind {
-        FeeKind::Deposit => init_deposit_fee(svm, authority, share_mint, vault, fee),
-        FeeKind::Withdrawal => init_withdrawal_fee(svm, authority, share_mint, vault, fee),
+        FeeKind::Deposit => InitializeDepositFeeBuilder::new()
+            .payer(authority.pubkey())
+            .authority(authority.pubkey())
+            .share_mint(share_mint)
+            .vault(vault)
+            .deposit_fee(fee)
+            .instruction()
+            .send_transaction(svm, &authority.pubkey(), &[authority]),
+        FeeKind::Withdrawal => InitializeWithdrawalFeeBuilder::new()
+            .payer(authority.pubkey())
+            .authority(authority.pubkey())
+            .share_mint(share_mint)
+            .vault(vault)
+            .withdrawal_fee(fee)
+            .instruction()
+            .send_transaction(svm, &authority.pubkey(), &[authority]),
     }
 }
 
@@ -41,8 +55,20 @@ fn update_fee(
     kind: FeeKind,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     match kind {
-        FeeKind::Deposit => update_deposit_fee(svm, authority, share_mint, vault, fee),
-        FeeKind::Withdrawal => update_withdrawal_fee(svm, authority, share_mint, vault, fee),
+        FeeKind::Deposit => UpdateDepositFeeBuilder::new()
+            .authority(authority.pubkey())
+            .share_mint(share_mint)
+            .vault(vault)
+            .new_deposit_fee(fee)
+            .instruction()
+            .send_transaction(svm, &authority.pubkey(), &[authority]),
+        FeeKind::Withdrawal => UpdateWithdrawalFeeBuilder::new()
+            .authority(authority.pubkey())
+            .share_mint(share_mint)
+            .vault(vault)
+            .new_withdrawal_fee(fee)
+            .instruction()
+            .send_transaction(svm, &authority.pubkey(), &[authority]),
     }
 }
 
@@ -103,24 +129,26 @@ fn test_initialize_both_fees() {
     let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
-    init_deposit_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        deposit_fee,
-    )
-    .expect("init deposit fee should succeed");
+    InitializeDepositFeeBuilder::new()
+        .payer(authority.pubkey())
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .deposit_fee(deposit_fee)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("init deposit fee should succeed");
 
     let withdrawal_fee = FeeType::Percentage { bps: 300 };
-    init_withdrawal_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        withdrawal_fee,
-    )
-    .expect("init withdrawal fee should succeed");
+    InitializeWithdrawalFeeBuilder::new()
+        .payer(authority.pubkey())
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .withdrawal_fee(withdrawal_fee)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("init withdrawal fee should succeed");
 }
 
 #[test_case(FeeKind::Deposit, FeeType::FixedAmount { amount: 100 } ; "deposit")]
@@ -192,13 +220,14 @@ fn test_initialize_fee_unauthorized_signer_fails() {
     svm.airdrop(&unauthorized.pubkey(), 1_000_000_000).unwrap();
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
-    let result = init_deposit_fee(
-        &mut svm,
-        &unauthorized,
-        share_mint.pubkey(),
-        vault_pubkey,
-        deposit_fee,
-    );
+    let result = InitializeDepositFeeBuilder::new()
+        .payer(unauthorized.pubkey())
+        .authority(unauthorized.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .deposit_fee(deposit_fee)
+        .instruction()
+        .send_transaction(&mut svm, &unauthorized.pubkey(), &[&unauthorized]);
     assert_error_code(&result.unwrap_err(), 6001, "UnauthorizedSigner");
 }
 
@@ -207,25 +236,26 @@ fn test_update_fee_unauthorized_signer_fails() {
     let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
-    init_deposit_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        deposit_fee,
-    )
-    .expect("init should succeed");
+    InitializeDepositFeeBuilder::new()
+        .payer(authority.pubkey())
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .deposit_fee(deposit_fee)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("init should succeed");
 
     let unauthorized = Keypair::new();
     svm.airdrop(&unauthorized.pubkey(), 1_000_000_000).unwrap();
 
     let new_fee = FeeType::FixedAmount { amount: 200 };
-    let result = update_deposit_fee(
-        &mut svm,
-        &unauthorized,
-        share_mint.pubkey(),
-        vault_pubkey,
-        new_fee,
-    );
+    let result = UpdateDepositFeeBuilder::new()
+        .authority(unauthorized.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .new_deposit_fee(new_fee)
+        .instruction()
+        .send_transaction(&mut svm, &unauthorized.pubkey(), &[&unauthorized]);
     assert_error_code(&result.unwrap_err(), 6001, "UnauthorizedSigner");
 }

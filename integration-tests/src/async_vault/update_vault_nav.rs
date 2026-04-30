@@ -1,10 +1,10 @@
 use anchor_spl::token;
-use async_vault_client::{sdk::program_id, Vault};
+use async_vault_client::{sdk::program_id, UpdateVaultNavBuilder, Vault, lite::SendTransaction};
 use litesvm::LiteSVM;
-use solana_sdk::account::ReadableAccount;
+use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{set_up_async_vault, update_vault_nav};
+use crate::helper_functions::set_up_async_vault;
 
 #[test_case(200 ; "update nav succeeds")]
 #[test_case(0 ; "update nav to zero succeeds")]
@@ -46,7 +46,12 @@ fn test_update_vault_nav(updated_nav: u128) {
     .unwrap();
     let nav_version_before = vault_before.nav_version;
 
-    let result = update_vault_nav(&mut svm, &authority, vault_pubkey, updated_nav);
+    let result = UpdateVaultNavBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .updated_nav(updated_nav)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority]);
 
     result.expect("update_vault_nav should succeed");
 

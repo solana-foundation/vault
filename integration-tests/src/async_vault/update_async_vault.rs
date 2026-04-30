@@ -1,10 +1,10 @@
 use anchor_spl::token;
-use async_vault_client::{sdk::program_id, Vault};
+use async_vault_client::{sdk::program_id, UpdateVaultBuilder as UpdateVaultAsyncBuilder, Vault, lite::SendTransaction};
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, set_up_async_vault, update_async_vault};
+use crate::helper_functions::{assert_error_code, set_up_async_vault};
 
 #[test_case(true; "pause vault")]
 #[test_case(false ; "unpause vault")]
@@ -32,14 +32,14 @@ fn test_update_async_vault(paused: bool) {
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_before = Vault::from_bytes(vault_account.data()).unwrap();
 
-    update_async_vault(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        paused,
-    )
-    .expect("update vault should succeed");
+    UpdateVaultAsyncBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .paused(paused)
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("update vault should succeed");
 
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_after = Vault::from_bytes(vault_account.data()).unwrap();
@@ -79,13 +79,13 @@ fn test_update_async_vault_unauthorized_signer_fails() {
     let unauthorized = Keypair::new();
     svm.airdrop(&unauthorized.pubkey(), 1_000_000_000).unwrap();
 
-    let result = update_async_vault(
-        &mut svm,
-        &unauthorized,
-        share_mint.pubkey(),
-        vault_pubkey,
-        true,
-    );
+    let result = UpdateVaultAsyncBuilder::new()
+        .authority(unauthorized.pubkey())
+        .share_mint(share_mint.pubkey())
+        .paused(true)
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &unauthorized.pubkey(), &[&unauthorized]);
 
     assert_error_code(&result.unwrap_err(), 6001, "UnauthorizedSigner");
 }

@@ -2,7 +2,7 @@ use anchor_spl::{
     token::{self, spl_token},
     token_2022::{self, spl_token_2022},
 };
-use async_vault_client::{sdk::program_id, Vault};
+use async_vault_client::{sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder, Vault, lite::SendTransaction};
 use litesvm::LiteSVM;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
@@ -11,7 +11,7 @@ use solana_sdk::{
 use test_case::test_case;
 
 use crate::helper_functions::{
-    assert_error_code, create_async_vault, create_mint, create_mint_with_transfer_fee,
+    assert_error_code, create_mint, create_mint_with_transfer_fee,
     PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
 };
 
@@ -101,23 +101,23 @@ fn test_create_vault(
         &fake_mint_authority
     };
 
-    let result = create_async_vault(
-        &mut svm,
-        &authority,
-        &payer,
-        effective_mint_authority,
-        fee_recipient.pubkey(),
-        asset_mint.pubkey(),
-        effective_share_mint,
-        reserve_pubkey,
-        pending_vault_pubkey,
-        vault_pubkey,
-        initial_price,
-        async_inflows,
-        async_outflows,
-        asset_program,
-        share_program,
-    );
+    let result = CreateAsyncVaultBuilder::new()
+        .payer(payer.pubkey())
+        .mint_authority(effective_mint_authority.pubkey())
+        .fee_recipient(fee_recipient.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(effective_share_mint)
+        .reserve(reserve_pubkey)
+        .pending_vault(pending_vault_pubkey)
+        .vault(vault_pubkey)
+        .asset_token_program(asset_program)
+        .share_token_program(share_program)
+        .authority(authority.pubkey())
+        .initial_price(initial_price)
+        .async_inflows(async_inflows)
+        .async_outflows(async_outflows)
+        .instruction()
+        .send_transaction(&mut svm, &payer.pubkey(), &[&payer, effective_mint_authority]);
 
     let should_succeed = initial_price != 0
         && use_valid_mint_authority
@@ -237,23 +237,23 @@ fn test_create_vault_nonzero_share_mint_supply_fails() {
         &program_id(),
     );
 
-    let result = create_async_vault(
-        &mut svm,
-        &authority,
-        &payer,
-        &mint_authority,
-        fee_recipient.pubkey(),
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        reserve_pubkey,
-        pending_vault_pubkey,
-        vault_pubkey,
-        100_000_000,
-        true,
-        true,
-        token::ID,
-        token::ID,
-    );
+    let result = CreateAsyncVaultBuilder::new()
+        .payer(payer.pubkey())
+        .mint_authority(mint_authority.pubkey())
+        .fee_recipient(fee_recipient.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .reserve(reserve_pubkey)
+        .pending_vault(pending_vault_pubkey)
+        .vault(vault_pubkey)
+        .asset_token_program(token::ID)
+        .share_token_program(token::ID)
+        .authority(authority.pubkey())
+        .initial_price(100_000_000)
+        .async_inflows(true)
+        .async_outflows(true)
+        .instruction()
+        .send_transaction(&mut svm, &payer.pubkey(), &[&payer, &mint_authority]);
 
     let err_result = &result.unwrap_err();
     assert_error_code(err_result, 6011, "Share mint supply should be zero.");

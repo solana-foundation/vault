@@ -4,6 +4,39 @@ pub use generated::{accounts::*, errors::*, instructions::*, programs::*, shared
 
 pub use solana_pubkey::Pubkey;
 
+#[cfg(feature = "litesvm")]
+pub mod lite {
+    use super::*;
+    use litesvm;
+    use solana_sdk::{signers::Signers, transaction::Transaction};
+
+    pub trait SendTransaction {
+        fn send_transaction<T: Signers + ?Sized>(
+            self,
+            svm: &mut litesvm::LiteSVM,
+            payer: &Pubkey,
+            signers: &T,
+        ) -> litesvm::types::TransactionResult;
+    }
+
+    impl SendTransaction for solana_instruction::Instruction {
+        fn send_transaction<T: Signers + ?Sized>(
+            self,
+            svm: &mut litesvm::LiteSVM,
+            payer: &Pubkey,
+            signers: &T,
+        ) -> litesvm::types::TransactionResult {
+            let tx = Transaction::new_signed_with_payer(
+                &[self],
+                Some(payer),
+                signers,
+                svm.latest_blockhash(),
+            );
+            svm.send_transaction(tx)
+        }
+    }
+}
+
 #[cfg(feature = "solana-sdk")]
 pub mod sdk {
     use super::*;

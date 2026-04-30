@@ -495,6 +495,7 @@ name = "async-vault-client"
 version = "0.1.0"
 dependencies = [
  "borsh 1.6.0",
+ "litesvm",
  "num-derive",
  "num-traits",
  "serde",

@@ -1,10 +1,10 @@
 use anchor_spl::token;
-use async_vault_client::{sdk::program_id, Vault};
+use async_vault_client::{sdk::program_id, InitializeVaultBuilder as InitializeAsyncVaultBuilder, Vault, lite::SendTransaction};
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, initialize_async_vault, set_up_async_vault};
+use crate::helper_functions::{assert_error_code, set_up_async_vault};
 
 #[test_case(true, false ; "succeeds and preserves other fields")]
 #[test_case(true, true ; "already initialized fails")]
@@ -35,7 +35,12 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
     assert!(!vault_before.initialized);
 
     if pre_initialize {
-        initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+        InitializeAsyncVaultBuilder::new()
+            .authority(authority.pubkey())
+            .share_mint(share_mint.pubkey())
+            .vault(vault_pubkey)
+            .instruction()
+            .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
             .expect("pre-initialize should succeed");
         svm.expire_blockhash();
     }
@@ -49,12 +54,12 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
         &unauthorized
     };
 
-    let result = initialize_async_vault(
-        &mut svm,
-        effective_authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-    );
+    let result = InitializeAsyncVaultBuilder::new()
+        .authority(effective_authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &effective_authority.pubkey(), &[effective_authority]);
 
     let should_succeed = use_valid_authority && !pre_initialize;
 

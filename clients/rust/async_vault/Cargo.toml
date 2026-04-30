@@ -8,9 +8,11 @@ description = "Generated Rust client for the async vault program"
 default = []
 serde = ["dep:serde"]
 solana-sdk = ["dep:solana-sdk"]
+litesvm = ["dep:litesvm"]
 
 [dependencies]
 borsh = { workspace = true, features = ["derive"] }
+litesvm = { workspace = true, optional = true }
 solana-account-info = "2.0"
 solana-cpi = "2.0"
 solana-instruction = "2.0"

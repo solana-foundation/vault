@@ -1,12 +1,12 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
-use async_vault_client::{sdk::program_id, Request};
+use async_vault_client::{
+    sdk::program_id, CreateDepositRequestBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
+    Request, RequestArgs, SetOperatorBuilder, UpdateVaultNavBuilder, lite::SendTransaction,
+};
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 
-use crate::helper_functions::{
-    create_deposit_request, initialize_async_vault, set_operator, set_up_async_vault,
-    update_vault_nav,
-};
+use crate::helper_functions::set_up_async_vault;
 
 #[test]
 fn test_set_operator_succeeds() {
@@ -38,9 +38,20 @@ fn test_set_operator_succeeds() {
         100_000_000,
     );
 
-    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+    InitializeAsyncVaultBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("initialize vault should succeed");
-    update_vault_nav(&mut svm, &authority, vault_pubkey, 100).expect("update nav should succeed");
+    UpdateVaultNavBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .updated_nav(100)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("update nav should succeed");
 
     let user_token_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
@@ -49,20 +60,26 @@ fn test_set_operator_succeeds() {
     );
 
     let request_keypair = Keypair::new();
-    create_deposit_request(
-        &mut svm,
-        &user,
-        &request_keypair,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        user_token_account,
-        pending_vault_pubkey,
-        1_000_000,
-    )
-    .expect("create deposit request should succeed");
+    CreateDepositRequestBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .request(request_keypair.pubkey())
+        .vault(vault_pubkey)
+        .user_token_account(user_token_account)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(spl_token::ID)
+        .args(RequestArgs { amount: 1_000_000, operator: None })
+        .instruction()
+        .send_transaction(&mut svm, &user.pubkey(), &[&user, &request_keypair])
+        .expect("create deposit request should succeed");
 
-    set_operator(&mut svm, &user, &operator, request_keypair.pubkey())
+    SetOperatorBuilder::new()
+        .user(user.pubkey())
+        .operator(operator.pubkey())
+        .request(request_keypair.pubkey())
+        .instruction()
+        .send_transaction(&mut svm, &user.pubkey(), &[&user, &operator])
         .expect("set operator should succeed");
 
     let request_account = svm

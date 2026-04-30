@@ -1,6 +1,8 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
 use async_vault_client::{
-    sdk::program_id, CreateDepositRequestBuilder, CreateRedeemRequestBuilder, RequestArgs, Vault,
+    sdk::program_id, ApproveRequestBuilder, ClaimBuilder, CreateDepositRequestBuilder,
+    CreateRedeemRequestBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder, RequestArgs,
+    UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder, Vault, lite::SendTransaction,
 };
 use borsh::BorshSerialize;
 use litesvm::LiteSVM;
@@ -11,9 +13,8 @@ use solana_sdk::{
 use test_case::test_case;
 
 use crate::helper_functions::{
-    approve_request, assert_error_code, claim_request, get_mint_supply, get_token_account_amount,
-    helper_mint_to, initialize_async_vault, set_share_balance, set_up_async_vault,
-    update_async_vault, update_vault_nav,
+    assert_error_code, get_mint_supply, get_token_account_amount, helper_mint_to,
+    set_share_balance, set_up_async_vault,
 };
 
 fn setup(
@@ -48,10 +49,21 @@ fn setup(
         user_share_account,
     ) = set_up_async_vault(svm, token::ID, None, token::ID, 1_000_000_000, 100_000_000);
 
-    initialize_async_vault(svm, &authority, share_mint.pubkey(), vault_pubkey)
+    InitializeAsyncVaultBuilder::new()
+        .authority(authority.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(svm, &authority.pubkey(), &[&authority])
         .expect("initialize vault should succeed");
 
-    update_vault_nav(svm, &authority, vault_pubkey, nav).expect("update nav should succeed");
+    UpdateVaultNavBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .updated_nav(nav)
+        .instruction()
+        .send_transaction(svm, &authority.pubkey(), &[&authority])
+        .expect("update nav should succeed");
 
     let user_asset_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
@@ -127,18 +139,18 @@ fn test_claim_deposit_success(
         .expect("create deposit request should succeed");
 
     // Approve: assets move pending → reserve, request.amount set to shares
-    approve_request(
-        &mut svm,
-        &authority,
-        vault_pubkey,
-        request_keypair.pubkey(),
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        reserve_pubkey,
-        pending_vault_pubkey,
-        token::ID,
-    )
-    .expect("approve_request should succeed");
+    ApproveRequestBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .request(request_keypair.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault_token_account(reserve_pubkey)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(token::ID)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("approve_request should succeed");
 
     // Snapshot balances after approve (before claim)
     let user_shares_before =
@@ -146,20 +158,20 @@ fn test_claim_deposit_success(
     let share_supply_before = get_mint_supply(&svm.get_account(&share_mint.pubkey()).unwrap());
 
     let claimer = if use_operator { &operator } else { &user };
-    claim_request(
-        &mut svm,
-        claimer,
-        vault_pubkey,
-        request_keypair.pubkey(),
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        None,
-        Some(user_share_account),
-        None,
-        spl_token::ID,
-        Some(spl_token::ID),
-    )
-    .expect("claim_request should succeed");
+    ClaimBuilder::new()
+        .user(claimer.pubkey())
+        .vault(vault_pubkey)
+        .request(request_keypair.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .pending_vault(None)
+        .user_share_account(Some(user_share_account))
+        .user_asset_account(None)
+        .asset_token_program(spl_token::ID)
+        .share_token_program(Some(spl_token::ID))
+        .instruction()
+        .send_transaction(&mut svm, &claimer.pubkey(), &[claimer])
+        .expect("claim_request should succeed");
 
     assert!(
         svm.get_account(&request_keypair.pubkey()).is_none(),
@@ -258,18 +270,18 @@ fn test_claim_redeem_success(
         .expect("create redeem request should succeed");
 
     // Approve: assets move reserve → pending_vault, request.amount set to assets
-    approve_request(
-        &mut svm,
-        &authority,
-        vault_pubkey,
-        request_keypair.pubkey(),
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        reserve_pubkey,
-        pending_vault_pubkey,
-        token::ID,
-    )
-    .expect("approve_request should succeed");
+    ApproveRequestBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .request(request_keypair.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault_token_account(reserve_pubkey)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(token::ID)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("approve_request should succeed");
 
     // Snapshot balances after approve (before claim)
     let pending_vault_before =
@@ -278,20 +290,20 @@ fn test_claim_redeem_success(
         get_token_account_amount(&svm.get_account(&user_asset_account).unwrap());
 
     let claimer = if use_operator { &operator } else { &user };
-    claim_request(
-        &mut svm,
-        claimer,
-        vault_pubkey,
-        request_keypair.pubkey(),
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        Some(pending_vault_pubkey),
-        None,
-        Some(user_asset_account),
-        spl_token::ID,
-        None,
-    )
-    .expect("claim_request should succeed");
+    ClaimBuilder::new()
+        .user(claimer.pubkey())
+        .vault(vault_pubkey)
+        .request(request_keypair.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .pending_vault(Some(pending_vault_pubkey))
+        .user_share_account(None)
+        .user_asset_account(Some(user_asset_account))
+        .asset_token_program(spl_token::ID)
+        .share_token_program(None)
+        .instruction()
+        .send_transaction(&mut svm, &claimer.pubkey(), &[claimer])
+        .expect("claim_request should succeed");
 
     assert!(
         svm.get_account(&request_keypair.pubkey()).is_none(),
@@ -363,29 +375,29 @@ fn test_claim_fails(
         .expect("create deposit request should succeed");
 
     if !skip_approve {
-        approve_request(
-            &mut svm,
-            &authority,
-            vault_pubkey,
-            request_keypair.pubkey(),
-            asset_mint.pubkey(),
-            share_mint.pubkey(),
-            reserve_pubkey,
-            pending_vault_pubkey,
-            token::ID,
-        )
-        .expect("approve_request should succeed");
+        ApproveRequestBuilder::new()
+            .authority(authority.pubkey())
+            .vault(vault_pubkey)
+            .request(request_keypair.pubkey())
+            .asset_mint(asset_mint.pubkey())
+            .share_mint(share_mint.pubkey())
+            .vault_token_account(reserve_pubkey)
+            .pending_vault(pending_vault_pubkey)
+            .asset_token_program(token::ID)
+            .instruction()
+            .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+            .expect("approve_request should succeed");
     }
 
     if pause_vault {
-        update_async_vault(
-            &mut svm,
-            &authority,
-            share_mint.pubkey(),
-            vault_pubkey,
-            true,
-        )
-        .expect("pause vault should succeed");
+        UpdateVaultAsyncBuilder::new()
+            .authority(authority.pubkey())
+            .share_mint(share_mint.pubkey())
+            .paused(true)
+            .vault(vault_pubkey)
+            .instruction()
+            .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+            .expect("pause vault should succeed");
     }
 
     let wrong_signer = Keypair::new();
@@ -396,19 +408,19 @@ fn test_claim_fails(
         &user
     };
 
-    let result = claim_request(
-        &mut svm,
-        claimer,
-        vault_pubkey,
-        request_keypair.pubkey(),
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        None,
-        Some(user_share_account),
-        None,
-        spl_token::ID,
-        Some(spl_token::ID),
-    );
+    let result = ClaimBuilder::new()
+        .user(claimer.pubkey())
+        .vault(vault_pubkey)
+        .request(request_keypair.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .pending_vault(None)
+        .user_share_account(Some(user_share_account))
+        .user_asset_account(None)
+        .asset_token_program(spl_token::ID)
+        .share_token_program(Some(spl_token::ID))
+        .instruction()
+        .send_transaction(&mut svm, &claimer.pubkey(), &[claimer]);
 
     assert!(result.is_err(), "claim should fail");
     assert_error_code(&result.unwrap_err(), expected_error_code, "");
