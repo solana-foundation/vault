@@ -10,9 +10,8 @@ use crate::{
 };
 
 #[derive(Accounts)]
-pub struct CancelRequest<'info> {
-    #[account(mut)]
-    pub user: Signer<'info>,
+pub struct RejectRequest<'info> {
+    pub authority: Signer<'info>,
 
     pub asset_mint: InterfaceAccount<'info, Mint>,
 
@@ -32,9 +31,17 @@ pub struct CancelRequest<'info> {
         has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
         has_one = share_mint @ AsyncVaultError::InvalidShareMint,
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
-        bump = vault.bump
+        bump = vault.bump,
+        constraint = vault.authority == authority.key() @ AsyncVaultError::UnauthorizedSigner,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
+
+    /// CHECK: Validated against request.owner. Receives rent on account close.
+    #[account(
+        mut,
+        constraint = user.key() == request.owner @ AsyncVaultError::UnauthorizedSigner,
+    )]
+    pub user: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -65,11 +72,9 @@ pub struct CancelRequest<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> CancelRequest<'info> {
-    /// Transfers deposited assets from the pending vault back to the user's token account,
-    /// using the vault's PDA authority to sign the CPI transfer.
+impl<'info> RejectRequest<'info> {
     pub fn transfer_assets_to_user(&self, amount: u64) -> Result<()> {
-        let asset_pending_vault = self
+        let pending_vault = self
             .asset_pending_vault
             .as_ref()
             .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
@@ -83,7 +88,7 @@ impl<'info> CancelRequest<'info> {
             .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
 
         let cpi_accounts = TransferChecked {
-            from: asset_pending_vault.to_account_info(),
+            from: pending_vault.to_account_info(),
             mint: self.asset_mint.to_account_info(),
             to: user_token_account.to_account_info(),
             authority: self.vault.to_account_info(),
@@ -96,8 +101,6 @@ impl<'info> CancelRequest<'info> {
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
 
-    /// Mints share tokens back to the user's share account to reverse a pending redeem request,
-    /// using the vault's PDA authority to sign the CPI mint.
     pub fn mint_shares(&self, amount: u64) -> Result<()> {
         let user_share_account = self
             .user_share_account
@@ -122,12 +125,15 @@ impl<'info> CancelRequest<'info> {
     }
 }
 
-pub fn handler(ctx: Context<CancelRequest>) -> Result<()> {
-    ctx.accounts.vault.assert_unpaused_and_initialized()?;
+pub fn handler(ctx: Context<RejectRequest>) -> Result<()> {
     require!(
-        ctx.accounts.request.request_state == RequestState::Pending,
-        AsyncVaultError::RequestIsNotPending,
+        ctx.accounts
+            .request
+            .request_state
+            .eq(&RequestState::Pending),
+        AsyncVaultError::RequestInvalidState
     );
+
     match ctx.accounts.request.request_type {
         RequestType::Deposit => {
             let refund_amount = ctx.accounts.request.amount;
@@ -138,6 +144,7 @@ pub fn handler(ctx: Context<CancelRequest>) -> Result<()> {
             ctx.accounts.mint_shares(shares)?;
         }
     }
+
     ctx.accounts.vault.pending_async_requests = ctx
         .accounts
         .vault

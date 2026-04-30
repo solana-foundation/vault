@@ -24,9 +24,9 @@ use async_vault_client::{
     CreateDepositRequestBuilder, CreateRedeemRequestBuilder,
     CreateVaultBuilder as CreateAsyncVaultBuilder, FeeType as AsyncFeeType,
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, RequestArgs, SetOperatorBuilder,
-    UpdateDepositFeeBuilder, UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder,
-    UpdateWithdrawalFeeBuilder,
+    InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, RejectRequestBuilder, RequestArgs,
+    SetOperatorBuilder, UpdateDepositFeeBuilder, UpdateVaultBuilder as UpdateVaultAsyncBuilder,
+    UpdateVaultNavBuilder, UpdateWithdrawalFeeBuilder,
 };
 
 use anchor_spl::{
@@ -1391,4 +1391,41 @@ pub fn set_share_balance(
     mint_state.supply = amount;
     spl_token::state::Mint::pack(mint_state, &mut mint_acct.data).unwrap();
     svm.set_account(*share_mint, mint_acct).unwrap();
+}
+
+pub fn reject_request(
+    svm: &mut LiteSVM,
+    authority: Keypair,
+    user: Pubkey,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    request: Pubkey,
+    vault: Pubkey,
+    user_token_account: Option<Pubkey>,
+    asset_pending_vault: Option<Pubkey>,
+    asset_token_program: Option<Pubkey>,
+    user_share_account: Option<Pubkey>,
+    share_token_program: Option<Pubkey>,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = RejectRequestBuilder::new()
+        .authority(authority.pubkey())
+        .user(user)
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .request(request)
+        .vault(vault)
+        .user_token_account(user_token_account)
+        .asset_pending_vault(asset_pending_vault)
+        .asset_token_program(asset_token_program)
+        .user_share_account(user_share_account)
+        .share_token_program(share_token_program)
+        .instruction();
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        blockhash,
+    );
+    return svm.send_transaction(tx);
 }
