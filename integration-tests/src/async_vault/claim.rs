@@ -3,16 +3,13 @@ use async_vault_client::{
     sdk::program_id, CreateDepositRequestBuilder, CreateRedeemRequestBuilder, RequestArgs,
 };
 use litesvm::LiteSVM;
-use solana_sdk::{
-    program_pack::Pack, pubkey::Pubkey, signature::Keypair, signer::Signer,
-    transaction::Transaction,
-};
+use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction};
 use test_case::test_case;
 
 use crate::helper_functions::{
     approve_request, assert_error_code, claim_request, get_mint_supply, get_token_account_amount,
-    helper_mint_to, initialize_async_vault, set_up_async_vault, update_async_vault,
-    update_vault_nav,
+    helper_mint_to, initialize_async_vault, set_share_balance, set_up_async_vault,
+    update_async_vault, update_vault_nav,
 };
 
 const NAV: u128 = 1_000_000;
@@ -22,25 +19,6 @@ const EXPECTED_DEPOSIT_SHARES: u64 = 1_000_000_000;
 const REDEEM_AMOUNT: u64 = 1_000_000_000;
 // assets = REDEEM_AMOUNT * NAV / 10^9 = 1_000_000_000 * 1_000_000 / 1_000_000_000 = 1_000_000
 const EXPECTED_REDEEM_ASSETS: u64 = 1_000_000;
-
-fn set_share_balance(
-    svm: &mut LiteSVM,
-    user_share_account: &Pubkey,
-    share_mint: &Pubkey,
-    amount: u64,
-) {
-    let mut acct = svm.get_account(user_share_account).unwrap();
-    let mut token_state = spl_token::state::Account::unpack(&acct.data).unwrap();
-    token_state.amount = amount;
-    spl_token::state::Account::pack(token_state, &mut acct.data).unwrap();
-    svm.set_account(*user_share_account, acct).unwrap();
-
-    let mut mint_acct = svm.get_account(share_mint).unwrap();
-    let mut mint_state = spl_token::state::Mint::unpack(&mint_acct.data).unwrap();
-    mint_state.supply = amount;
-    spl_token::state::Mint::pack(mint_state, &mut mint_acct.data).unwrap();
-    svm.set_account(*share_mint, mint_acct).unwrap();
-}
 
 fn setup(
     svm: &mut LiteSVM,
