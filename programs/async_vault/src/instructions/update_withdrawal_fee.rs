@@ -39,7 +39,7 @@ pub fn handler(ctx: Context<UpdateWithdrawalFee>, args: UpdateWithdrawalFeeArgs)
     let serialized = args
         .new_withdrawal_fee
         .try_to_vec()
-        .map_err(|_| error!(AsyncVaultError::InvalidExtensionData))?;
+        .map_err(|_| AsyncVaultError::InvalidExtensionData)?;
 
     extensions::update_extension(tlv_data, ExtensionType::WithdrawalFee, &serialized)?;
 

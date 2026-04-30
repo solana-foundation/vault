@@ -20,20 +20,18 @@ pub struct Claim {
     pub vault: solana_pubkey::Pubkey,
 
     pub request: solana_pubkey::Pubkey,
-    /// Reserve — destination for Deposit assets; source for Redeem assets
-    pub vault_token_account: solana_pubkey::Pubkey,
-    /// Pending deposit vault — source for Deposit claims
-    pub pending_vault: solana_pubkey::Pubkey,
+    /// Pending deposit vault — source for Redeem claims
+    pub pending_vault: Option<solana_pubkey::Pubkey>,
     /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
     /// request.owner)
-    pub user_share_account: solana_pubkey::Pubkey,
+    pub user_share_account: Option<solana_pubkey::Pubkey>,
     /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
     /// request.owner)
-    pub user_asset_account: solana_pubkey::Pubkey,
+    pub user_asset_account: Option<solana_pubkey::Pubkey>,
 
     pub asset_token_program: solana_pubkey::Pubkey,
-
-    pub share_token_program: solana_pubkey::Pubkey,
+    /// Token program for share mint operations — only required for Deposit
+    pub share_token_program: Option<solana_pubkey::Pubkey>,
 }
 
 impl Claim {
@@ -47,7 +45,7 @@ impl Claim {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.user, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
@@ -56,30 +54,51 @@ impl Claim {
         accounts.push(solana_instruction::AccountMeta::new(self.share_mint, false));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new(self.request, false));
-        accounts.push(solana_instruction::AccountMeta::new(
-            self.vault_token_account,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new(
-            self.pending_vault,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new(
-            self.user_share_account,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new(
-            self.user_asset_account,
-            false,
-        ));
+        if let Some(pending_vault) = self.pending_vault {
+            accounts.push(solana_instruction::AccountMeta::new(pending_vault, false));
+        } else {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                crate::ASYNC_VAULT_ID,
+                false,
+            ));
+        }
+        if let Some(user_share_account) = self.user_share_account {
+            accounts.push(solana_instruction::AccountMeta::new(
+                user_share_account,
+                false,
+            ));
+        } else {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                crate::ASYNC_VAULT_ID,
+                false,
+            ));
+        }
+        if let Some(user_asset_account) = self.user_asset_account {
+            accounts.push(solana_instruction::AccountMeta::new(
+                user_asset_account,
+                false,
+            ));
+        } else {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                crate::ASYNC_VAULT_ID,
+                false,
+            ));
+        }
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_token_program,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.share_token_program,
-            false,
-        ));
+        if let Some(share_token_program) = self.share_token_program {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                share_token_program,
+                false,
+            ));
+        } else {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                crate::ASYNC_VAULT_ID,
+                false,
+            ));
+        }
         accounts.extend_from_slice(remaining_accounts);
         let data = ClaimInstructionData::new().try_to_vec().unwrap();
 
@@ -124,12 +143,11 @@ impl Default for ClaimInstructionData {
 ///   2. `[writable]` share_mint
 ///   3. `[writable]` vault
 ///   4. `[writable]` request
-///   5. `[writable]` vault_token_account
-///   6. `[writable]` pending_vault
-///   7. `[writable]` user_share_account
-///   8. `[writable]` user_asset_account
-///   9. `[]` asset_token_program
-///   10. `[]` share_token_program
+///   5. `[writable, optional]` pending_vault
+///   6. `[writable, optional]` user_share_account
+///   7. `[writable, optional]` user_asset_account
+///   8. `[]` asset_token_program
+///   9. `[optional]` share_token_program
 #[derive(Clone, Debug, Default)]
 pub struct ClaimBuilder {
     user: Option<solana_pubkey::Pubkey>,
@@ -137,7 +155,6 @@ pub struct ClaimBuilder {
     share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     request: Option<solana_pubkey::Pubkey>,
-    vault_token_account: Option<solana_pubkey::Pubkey>,
     pending_vault: Option<solana_pubkey::Pubkey>,
     user_share_account: Option<solana_pubkey::Pubkey>,
     user_asset_account: Option<solana_pubkey::Pubkey>,
@@ -181,33 +198,35 @@ impl ClaimBuilder {
         self
     }
 
-    /// Reserve — destination for Deposit assets; source for Redeem assets
+    /// `[optional account]`
+    /// Pending deposit vault — source for Redeem claims
     #[inline(always)]
-    pub fn vault_token_account(&mut self, vault_token_account: solana_pubkey::Pubkey) -> &mut Self {
-        self.vault_token_account = Some(vault_token_account);
+    pub fn pending_vault(&mut self, pending_vault: Option<solana_pubkey::Pubkey>) -> &mut Self {
+        self.pending_vault = pending_vault;
         self
     }
 
-    /// Pending deposit vault — source for Deposit claims
-    #[inline(always)]
-    pub fn pending_vault(&mut self, pending_vault: solana_pubkey::Pubkey) -> &mut Self {
-        self.pending_vault = Some(pending_vault);
-        self
-    }
-
+    /// `[optional account]`
     /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
     /// request.owner)
     #[inline(always)]
-    pub fn user_share_account(&mut self, user_share_account: solana_pubkey::Pubkey) -> &mut Self {
-        self.user_share_account = Some(user_share_account);
+    pub fn user_share_account(
+        &mut self,
+        user_share_account: Option<solana_pubkey::Pubkey>,
+    ) -> &mut Self {
+        self.user_share_account = user_share_account;
         self
     }
 
+    /// `[optional account]`
     /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
     /// request.owner)
     #[inline(always)]
-    pub fn user_asset_account(&mut self, user_asset_account: solana_pubkey::Pubkey) -> &mut Self {
-        self.user_asset_account = Some(user_asset_account);
+    pub fn user_asset_account(
+        &mut self,
+        user_asset_account: Option<solana_pubkey::Pubkey>,
+    ) -> &mut Self {
+        self.user_asset_account = user_asset_account;
         self
     }
 
@@ -217,9 +236,14 @@ impl ClaimBuilder {
         self
     }
 
+    /// `[optional account]`
+    /// Token program for share mint operations — only required for Deposit
     #[inline(always)]
-    pub fn share_token_program(&mut self, share_token_program: solana_pubkey::Pubkey) -> &mut Self {
-        self.share_token_program = Some(share_token_program);
+    pub fn share_token_program(
+        &mut self,
+        share_token_program: Option<solana_pubkey::Pubkey>,
+    ) -> &mut Self {
+        self.share_token_program = share_token_program;
         self
     }
 
@@ -248,22 +272,13 @@ impl ClaimBuilder {
             share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
             request: self.request.expect("request is not set"),
-            vault_token_account: self
-                .vault_token_account
-                .expect("vault_token_account is not set"),
-            pending_vault: self.pending_vault.expect("pending_vault is not set"),
-            user_share_account: self
-                .user_share_account
-                .expect("user_share_account is not set"),
-            user_asset_account: self
-                .user_asset_account
-                .expect("user_asset_account is not set"),
+            pending_vault: self.pending_vault,
+            user_share_account: self.user_share_account,
+            user_asset_account: self.user_asset_account,
             asset_token_program: self
                 .asset_token_program
                 .expect("asset_token_program is not set"),
-            share_token_program: self
-                .share_token_program
-                .expect("share_token_program is not set"),
+            share_token_program: self.share_token_program,
         };
 
         accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
@@ -281,20 +296,18 @@ pub struct ClaimCpiAccounts<'a, 'b> {
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub request: &'b solana_account_info::AccountInfo<'a>,
-    /// Reserve — destination for Deposit assets; source for Redeem assets
-    pub vault_token_account: &'b solana_account_info::AccountInfo<'a>,
-    /// Pending deposit vault — source for Deposit claims
-    pub pending_vault: &'b solana_account_info::AccountInfo<'a>,
+    /// Pending deposit vault — source for Redeem claims
+    pub pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
     /// request.owner)
-    pub user_share_account: &'b solana_account_info::AccountInfo<'a>,
+    pub user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
     /// request.owner)
-    pub user_asset_account: &'b solana_account_info::AccountInfo<'a>,
+    pub user_asset_account: Option<&'b solana_account_info::AccountInfo<'a>>,
 
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
-
-    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
+    /// Token program for share mint operations — only required for Deposit
+    pub share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
 }
 
 /// `claim` CPI instruction.
@@ -311,20 +324,18 @@ pub struct ClaimCpi<'a, 'b> {
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub request: &'b solana_account_info::AccountInfo<'a>,
-    /// Reserve — destination for Deposit assets; source for Redeem assets
-    pub vault_token_account: &'b solana_account_info::AccountInfo<'a>,
-    /// Pending deposit vault — source for Deposit claims
-    pub pending_vault: &'b solana_account_info::AccountInfo<'a>,
+    /// Pending deposit vault — source for Redeem claims
+    pub pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
     /// request.owner)
-    pub user_share_account: &'b solana_account_info::AccountInfo<'a>,
+    pub user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
     /// request.owner)
-    pub user_asset_account: &'b solana_account_info::AccountInfo<'a>,
+    pub user_asset_account: Option<&'b solana_account_info::AccountInfo<'a>>,
 
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
-
-    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
+    /// Token program for share mint operations — only required for Deposit
+    pub share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
 }
 
 impl<'a, 'b> ClaimCpi<'a, 'b> {
@@ -339,7 +350,6 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
             share_mint: accounts.share_mint,
             vault: accounts.vault,
             request: accounts.request,
-            vault_token_account: accounts.vault_token_account,
             pending_vault: accounts.pending_vault,
             user_share_account: accounts.user_share_account,
             user_asset_account: accounts.user_asset_account,
@@ -374,7 +384,7 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.user.key, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
@@ -389,30 +399,54 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
             *self.request.key,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(
-            *self.vault_token_account.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new(
-            *self.pending_vault.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new(
-            *self.user_share_account.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new(
-            *self.user_asset_account.key,
-            false,
-        ));
+        if let Some(pending_vault) = self.pending_vault {
+            accounts.push(solana_instruction::AccountMeta::new(
+                *pending_vault.key,
+                false,
+            ));
+        } else {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                crate::ASYNC_VAULT_ID,
+                false,
+            ));
+        }
+        if let Some(user_share_account) = self.user_share_account {
+            accounts.push(solana_instruction::AccountMeta::new(
+                *user_share_account.key,
+                false,
+            ));
+        } else {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                crate::ASYNC_VAULT_ID,
+                false,
+            ));
+        }
+        if let Some(user_asset_account) = self.user_asset_account {
+            accounts.push(solana_instruction::AccountMeta::new(
+                *user_asset_account.key,
+                false,
+            ));
+        } else {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                crate::ASYNC_VAULT_ID,
+                false,
+            ));
+        }
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_token_program.key,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.share_token_program.key,
-            false,
-        ));
+        if let Some(share_token_program) = self.share_token_program {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                *share_token_program.key,
+                false,
+            ));
+        } else {
+            accounts.push(solana_instruction::AccountMeta::new_readonly(
+                crate::ASYNC_VAULT_ID,
+                false,
+            ));
+        }
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -427,19 +461,26 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(12 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(11 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.user.clone());
         account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.request.clone());
-        account_infos.push(self.vault_token_account.clone());
-        account_infos.push(self.pending_vault.clone());
-        account_infos.push(self.user_share_account.clone());
-        account_infos.push(self.user_asset_account.clone());
+        if let Some(pending_vault) = self.pending_vault {
+            account_infos.push(pending_vault.clone());
+        }
+        if let Some(user_share_account) = self.user_share_account {
+            account_infos.push(user_share_account.clone());
+        }
+        if let Some(user_asset_account) = self.user_asset_account {
+            account_infos.push(user_asset_account.clone());
+        }
         account_infos.push(self.asset_token_program.clone());
-        account_infos.push(self.share_token_program.clone());
+        if let Some(share_token_program) = self.share_token_program {
+            account_infos.push(share_token_program.clone());
+        }
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -461,12 +502,11 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
 ///   2. `[writable]` share_mint
 ///   3. `[writable]` vault
 ///   4. `[writable]` request
-///   5. `[writable]` vault_token_account
-///   6. `[writable]` pending_vault
-///   7. `[writable]` user_share_account
-///   8. `[writable]` user_asset_account
-///   9. `[]` asset_token_program
-///   10. `[]` share_token_program
+///   5. `[writable, optional]` pending_vault
+///   6. `[writable, optional]` user_share_account
+///   7. `[writable, optional]` user_asset_account
+///   8. `[]` asset_token_program
+///   9. `[optional]` share_token_program
 #[derive(Clone, Debug)]
 pub struct ClaimCpiBuilder<'a, 'b> {
     instruction: Box<ClaimCpiBuilderInstruction<'a, 'b>>,
@@ -481,7 +521,6 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
             share_mint: None,
             vault: None,
             request: None,
-            vault_token_account: None,
             pending_vault: None,
             user_share_account: None,
             user_asset_account: None,
@@ -528,45 +567,38 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
         self
     }
 
-    /// Reserve — destination for Deposit assets; source for Redeem assets
-    #[inline(always)]
-    pub fn vault_token_account(
-        &mut self,
-        vault_token_account: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.vault_token_account = Some(vault_token_account);
-        self
-    }
-
-    /// Pending deposit vault — source for Deposit claims
+    /// `[optional account]`
+    /// Pending deposit vault — source for Redeem claims
     #[inline(always)]
     pub fn pending_vault(
         &mut self,
-        pending_vault: &'b solana_account_info::AccountInfo<'a>,
+        pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     ) -> &mut Self {
-        self.instruction.pending_vault = Some(pending_vault);
+        self.instruction.pending_vault = pending_vault;
         self
     }
 
+    /// `[optional account]`
     /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
     /// request.owner)
     #[inline(always)]
     pub fn user_share_account(
         &mut self,
-        user_share_account: &'b solana_account_info::AccountInfo<'a>,
+        user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     ) -> &mut Self {
-        self.instruction.user_share_account = Some(user_share_account);
+        self.instruction.user_share_account = user_share_account;
         self
     }
 
+    /// `[optional account]`
     /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
     /// request.owner)
     #[inline(always)]
     pub fn user_asset_account(
         &mut self,
-        user_asset_account: &'b solana_account_info::AccountInfo<'a>,
+        user_asset_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     ) -> &mut Self {
-        self.instruction.user_asset_account = Some(user_asset_account);
+        self.instruction.user_asset_account = user_asset_account;
         self
     }
 
@@ -579,12 +611,14 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
         self
     }
 
+    /// `[optional account]`
+    /// Token program for share mint operations — only required for Deposit
     #[inline(always)]
     pub fn share_token_program(
         &mut self,
-        share_token_program: &'b solana_account_info::AccountInfo<'a>,
+        share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     ) -> &mut Self {
-        self.instruction.share_token_program = Some(share_token_program);
+        self.instruction.share_token_program = share_token_program;
         self
     }
 
@@ -639,35 +673,18 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
 
             request: self.instruction.request.expect("request is not set"),
 
-            vault_token_account: self
-                .instruction
-                .vault_token_account
-                .expect("vault_token_account is not set"),
+            pending_vault: self.instruction.pending_vault,
 
-            pending_vault: self
-                .instruction
-                .pending_vault
-                .expect("pending_vault is not set"),
+            user_share_account: self.instruction.user_share_account,
 
-            user_share_account: self
-                .instruction
-                .user_share_account
-                .expect("user_share_account is not set"),
-
-            user_asset_account: self
-                .instruction
-                .user_asset_account
-                .expect("user_asset_account is not set"),
+            user_asset_account: self.instruction.user_asset_account,
 
             asset_token_program: self
                 .instruction
                 .asset_token_program
                 .expect("asset_token_program is not set"),
 
-            share_token_program: self
-                .instruction
-                .share_token_program
-                .expect("share_token_program is not set"),
+            share_token_program: self.instruction.share_token_program,
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -684,7 +701,6 @@ struct ClaimCpiBuilderInstruction<'a, 'b> {
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     request: Option<&'b solana_account_info::AccountInfo<'a>>,
-    vault_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_asset_account: Option<&'b solana_account_info::AccountInfo<'a>>,

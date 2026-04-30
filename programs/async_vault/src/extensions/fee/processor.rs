@@ -18,7 +18,7 @@ pub fn get_fee_extension(account_data: &[u8], ext_type: ExtensionType) -> Result
         Some(bytes) => {
             let mut slice = bytes;
             let fee = FeeType::deserialize(&mut slice)
-                .map_err(|_| error!(AsyncVaultError::InvalidExtensionData))?;
+                .map_err(|_| AsyncVaultError::InvalidExtensionData)?;
             Ok(Some(fee))
         }
         None => Ok(None),

@@ -39,7 +39,7 @@ impl<'info> ExecuteWithdrawHook<'info> {
     ) -> Result<()> {
         let downstream_vault = additional_accounts
             .first()
-            .ok_or(error!(HookProgramError::InvalidAccountData))?;
+            .ok_or(HookProgramError::InvalidAccountData)?;
 
         let instruction = protocol_withdraw(
             &self.protocol.key(),

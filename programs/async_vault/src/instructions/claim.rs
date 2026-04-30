@@ -27,6 +27,7 @@ pub struct Claim<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
+    // Owner|Operator check in handler.
     #[account(
         mut,
         close = user,
@@ -34,17 +35,7 @@ pub struct Claim<'info> {
     )]
     pub request: Account<'info, Request>,
 
-    /// Reserve — destination for Deposit assets; source for Redeem assets
-    #[account(
-        mut,
-        constraint = vault.vault_token_account == vault_token_account.key(),
-        token::mint = asset_mint,
-        token::authority = vault,
-        token::token_program = asset_token_program,
-    )]
-    pub vault_token_account: InterfaceAccount<'info, TokenAccount>,
-
-    /// Pending deposit vault — source for Deposit claims
+    /// Pending deposit vault — source for Redeem claims
     #[account(
         mut,
         constraint = vault.pending_vault == pending_vault.key() @ AsyncVaultError::InvalidPendingVault,
@@ -80,32 +71,16 @@ pub struct Claim<'info> {
 }
 
 impl<'info> Claim<'info> {
-    /// Transfers `amount` assets from the pending vault into the reserve, then mints
-    /// `shares` to the user's share account.
-    pub fn deposit(
-        &self,
-        seeds: &[&[&[u8]]],
-        amount: u64,
-        shares: u64,
-    ) -> Result<()> {
-        let pending_vault = self.pending_vault.as_ref().unwrap();
-        let user_share_account = self.user_share_account.as_ref().unwrap();
-        let share_token_program = self.share_token_program.as_ref().unwrap();
-
-        token_interface::transfer_checked(
-            CpiContext::new_with_signer(
-                self.asset_token_program.to_account_info(),
-                TransferChecked {
-                    from: pending_vault.to_account_info(),
-                    mint: self.asset_mint.to_account_info(),
-                    to: self.vault_token_account.to_account_info(),
-                    authority: self.vault.to_account_info(),
-                },
-                seeds,
-            ),
-            amount,
-            self.asset_mint.decimals,
-        )?;
+    /// Mints pre-computed `shares` to the user's share account.
+    pub fn deposit(&self, seeds: &[&[&[u8]]], shares: u64) -> Result<()> {
+        let user_share_account = self
+            .user_share_account
+            .as_ref()
+            .ok_or(AsyncVaultError::MissingRequiredAccount)?;
+        let share_token_program = self
+            .share_token_program
+            .as_ref()
+            .ok_or(AsyncVaultError::MissingRequiredAccount)?;
 
         token_interface::mint_to(
             CpiContext::new_with_signer(
@@ -121,15 +96,22 @@ impl<'info> Claim<'info> {
         )
     }
 
-    /// Transfers `assets` from the vault reserve to the user's asset account.
+    /// Transfers pre-computed `assets` from the pending vault to the user's asset account.
     pub fn redeem(&self, seeds: &[&[&[u8]]], assets: u64) -> Result<()> {
-        let user_asset_account = self.user_asset_account.as_ref().unwrap();
+        let pending_vault = self
+            .pending_vault
+            .as_ref()
+            .ok_or(AsyncVaultError::MissingRequiredAccount)?;
+        let user_asset_account = self
+            .user_asset_account
+            .as_ref()
+            .ok_or(AsyncVaultError::MissingRequiredAccount)?;
 
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 self.asset_token_program.to_account_info(),
                 TransferChecked {
-                    from: self.vault_token_account.to_account_info(),
+                    from: pending_vault.to_account_info(),
                     mint: self.asset_mint.to_account_info(),
                     to: user_asset_account.to_account_info(),
                     authority: self.vault.to_account_info(),
@@ -159,34 +141,17 @@ pub fn handler(ctx: Context<Claim>) -> Result<()> {
     );
 
     let amount = request.amount;
-    let decimals = ctx.accounts.share_mint.decimals;
     let share_mint_key = ctx.accounts.share_mint.key();
     let vault_bump = ctx.accounts.vault.bump;
     let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint_key.as_ref(), &[vault_bump]]];
 
+    // Mint/Transfer shares/assets to user
     match request.request_type {
         RequestType::Deposit => {
-            require!(ctx.accounts.pending_vault.is_some(), AsyncVaultError::MissingRequiredAccount);
-            require!(
-                ctx.accounts.user_share_account.is_some(),
-                AsyncVaultError::MissingRequiredAccount
-            );
-            require!(
-                ctx.accounts.share_token_program.is_some(),
-                AsyncVaultError::MissingRequiredAccount
-            );
-            // TODO calculate fees before shares, if DepositFee extension is enabled
-            let shares = ctx.accounts.request.calculate_shares(decimals, amount)?;
-            ctx.accounts.deposit(seeds, amount, shares)?;
+            ctx.accounts.deposit(seeds, amount)?;
         }
         RequestType::Redeem => {
-            require!(
-                ctx.accounts.user_asset_account.is_some(),
-                AsyncVaultError::MissingRequiredAccount
-            );
-            let assets = ctx.accounts.request.calculate_assets(decimals, amount)?;
-            // TODO calculate fees and transfer if WithdrawFees are enabled
-            ctx.accounts.redeem(seeds, assets)?;
+            ctx.accounts.redeem(seeds, amount)?;
         }
     }
 

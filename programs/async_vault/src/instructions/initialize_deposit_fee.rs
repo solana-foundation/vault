@@ -54,7 +54,7 @@ pub fn handler(ctx: Context<InitDepositFee>, args: InitDepositFeeArgs) -> Result
     let serialized = args
         .deposit_fee
         .try_to_vec()
-        .map_err(|_| error!(AsyncVaultError::InvalidExtensionData))?;
+        .map_err(|_| AsyncVaultError::InvalidExtensionData)?;
 
     extensions::write_extension(
         tlv_data,

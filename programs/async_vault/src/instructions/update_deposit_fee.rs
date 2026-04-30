@@ -39,7 +39,7 @@ pub fn handler(ctx: Context<UpdateDepositFee>, args: UpdateDepositFeeArgs) -> Re
     let serialized = args
         .new_deposit_fee
         .try_to_vec()
-        .map_err(|_| error!(AsyncVaultError::InvalidExtensionData))?;
+        .map_err(|_| AsyncVaultError::InvalidExtensionData)?;
 
     extensions::update_extension(tlv_data, ExtensionType::DepositFee, &serialized)?;
 

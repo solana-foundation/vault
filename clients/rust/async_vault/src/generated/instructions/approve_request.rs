@@ -16,6 +16,16 @@ pub struct ApproveRequest {
     pub vault: solana_pubkey::Pubkey,
 
     pub request: solana_pubkey::Pubkey,
+
+    pub asset_mint: solana_pubkey::Pubkey,
+
+    pub share_mint: solana_pubkey::Pubkey,
+
+    pub vault_token_account: solana_pubkey::Pubkey,
+
+    pub pending_vault: solana_pubkey::Pubkey,
+
+    pub asset_token_program: solana_pubkey::Pubkey,
 }
 
 impl ApproveRequest {
@@ -29,13 +39,33 @@ impl ApproveRequest {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.authority,
             true,
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new(self.request, false));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.asset_mint,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.share_mint,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.vault_token_account,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.pending_vault,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.asset_token_program,
+            false,
+        ));
         accounts.extend_from_slice(remaining_accounts);
         let data = ApproveRequestInstructionData::new().try_to_vec().unwrap();
 
@@ -78,11 +108,21 @@ impl Default for ApproveRequestInstructionData {
 ///   0. `[signer]` authority
 ///   1. `[writable]` vault
 ///   2. `[writable]` request
+///   3. `[]` asset_mint
+///   4. `[]` share_mint
+///   5. `[writable]` vault_token_account
+///   6. `[writable]` pending_vault
+///   7. `[]` asset_token_program
 #[derive(Clone, Debug, Default)]
 pub struct ApproveRequestBuilder {
     authority: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     request: Option<solana_pubkey::Pubkey>,
+    asset_mint: Option<solana_pubkey::Pubkey>,
+    share_mint: Option<solana_pubkey::Pubkey>,
+    vault_token_account: Option<solana_pubkey::Pubkey>,
+    pending_vault: Option<solana_pubkey::Pubkey>,
+    asset_token_program: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -109,6 +149,36 @@ impl ApproveRequestBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn asset_mint(&mut self, asset_mint: solana_pubkey::Pubkey) -> &mut Self {
+        self.asset_mint = Some(asset_mint);
+        self
+    }
+
+    #[inline(always)]
+    pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
+        self.share_mint = Some(share_mint);
+        self
+    }
+
+    #[inline(always)]
+    pub fn vault_token_account(&mut self, vault_token_account: solana_pubkey::Pubkey) -> &mut Self {
+        self.vault_token_account = Some(vault_token_account);
+        self
+    }
+
+    #[inline(always)]
+    pub fn pending_vault(&mut self, pending_vault: solana_pubkey::Pubkey) -> &mut Self {
+        self.pending_vault = Some(pending_vault);
+        self
+    }
+
+    #[inline(always)]
+    pub fn asset_token_program(&mut self, asset_token_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.asset_token_program = Some(asset_token_program);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -132,6 +202,15 @@ impl ApproveRequestBuilder {
             authority: self.authority.expect("authority is not set"),
             vault: self.vault.expect("vault is not set"),
             request: self.request.expect("request is not set"),
+            asset_mint: self.asset_mint.expect("asset_mint is not set"),
+            share_mint: self.share_mint.expect("share_mint is not set"),
+            vault_token_account: self
+                .vault_token_account
+                .expect("vault_token_account is not set"),
+            pending_vault: self.pending_vault.expect("pending_vault is not set"),
+            asset_token_program: self
+                .asset_token_program
+                .expect("asset_token_program is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(&self.__remaining_accounts)
@@ -145,6 +224,16 @@ pub struct ApproveRequestCpiAccounts<'a, 'b> {
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub request: &'b solana_account_info::AccountInfo<'a>,
+
+    pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
+
+    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
+
+    pub vault_token_account: &'b solana_account_info::AccountInfo<'a>,
+
+    pub pending_vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
 /// `approve_request` CPI instruction.
@@ -157,6 +246,16 @@ pub struct ApproveRequestCpi<'a, 'b> {
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub request: &'b solana_account_info::AccountInfo<'a>,
+
+    pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
+
+    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
+
+    pub vault_token_account: &'b solana_account_info::AccountInfo<'a>,
+
+    pub pending_vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
 impl<'a, 'b> ApproveRequestCpi<'a, 'b> {
@@ -169,6 +268,11 @@ impl<'a, 'b> ApproveRequestCpi<'a, 'b> {
             authority: accounts.authority,
             vault: accounts.vault,
             request: accounts.request,
+            asset_mint: accounts.asset_mint,
+            share_mint: accounts.share_mint,
+            vault_token_account: accounts.vault_token_account,
+            pending_vault: accounts.pending_vault,
+            asset_token_program: accounts.asset_token_program,
         }
     }
 
@@ -198,7 +302,7 @@ impl<'a, 'b> ApproveRequestCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.authority.key,
             true,
@@ -206,6 +310,26 @@ impl<'a, 'b> ApproveRequestCpi<'a, 'b> {
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.request.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.asset_mint.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.share_mint.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.vault_token_account.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.pending_vault.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.asset_token_program.key,
             false,
         ));
         remaining_accounts.iter().for_each(|remaining_account| {
@@ -222,11 +346,16 @@ impl<'a, 'b> ApproveRequestCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(9 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.authority.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.request.clone());
+        account_infos.push(self.asset_mint.clone());
+        account_infos.push(self.share_mint.clone());
+        account_infos.push(self.vault_token_account.clone());
+        account_infos.push(self.pending_vault.clone());
+        account_infos.push(self.asset_token_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -246,6 +375,11 @@ impl<'a, 'b> ApproveRequestCpi<'a, 'b> {
 ///   0. `[signer]` authority
 ///   1. `[writable]` vault
 ///   2. `[writable]` request
+///   3. `[]` asset_mint
+///   4. `[]` share_mint
+///   5. `[writable]` vault_token_account
+///   6. `[writable]` pending_vault
+///   7. `[]` asset_token_program
 #[derive(Clone, Debug)]
 pub struct ApproveRequestCpiBuilder<'a, 'b> {
     instruction: Box<ApproveRequestCpiBuilderInstruction<'a, 'b>>,
@@ -258,6 +392,11 @@ impl<'a, 'b> ApproveRequestCpiBuilder<'a, 'b> {
             authority: None,
             vault: None,
             request: None,
+            asset_mint: None,
+            share_mint: None,
+            vault_token_account: None,
+            pending_vault: None,
+            asset_token_program: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -278,6 +417,51 @@ impl<'a, 'b> ApproveRequestCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.request = Some(request);
+        self
+    }
+
+    #[inline(always)]
+    pub fn asset_mint(
+        &mut self,
+        asset_mint: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.asset_mint = Some(asset_mint);
+        self
+    }
+
+    #[inline(always)]
+    pub fn share_mint(
+        &mut self,
+        share_mint: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.share_mint = Some(share_mint);
+        self
+    }
+
+    #[inline(always)]
+    pub fn vault_token_account(
+        &mut self,
+        vault_token_account: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.vault_token_account = Some(vault_token_account);
+        self
+    }
+
+    #[inline(always)]
+    pub fn pending_vault(
+        &mut self,
+        pending_vault: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.pending_vault = Some(pending_vault);
+        self
+    }
+
+    #[inline(always)]
+    pub fn asset_token_program(
+        &mut self,
+        asset_token_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.asset_token_program = Some(asset_token_program);
         self
     }
 
@@ -327,6 +511,25 @@ impl<'a, 'b> ApproveRequestCpiBuilder<'a, 'b> {
             vault: self.instruction.vault.expect("vault is not set"),
 
             request: self.instruction.request.expect("request is not set"),
+
+            asset_mint: self.instruction.asset_mint.expect("asset_mint is not set"),
+
+            share_mint: self.instruction.share_mint.expect("share_mint is not set"),
+
+            vault_token_account: self
+                .instruction
+                .vault_token_account
+                .expect("vault_token_account is not set"),
+
+            pending_vault: self
+                .instruction
+                .pending_vault
+                .expect("pending_vault is not set"),
+
+            asset_token_program: self
+                .instruction
+                .asset_token_program
+                .expect("asset_token_program is not set"),
         };
         instruction.invoke_signed_with_remaining_accounts(
             signers_seeds,
@@ -341,6 +544,11 @@ struct ApproveRequestCpiBuilderInstruction<'a, 'b> {
     authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     request: Option<&'b solana_account_info::AccountInfo<'a>>,
+    asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
+    share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
+    vault_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
+    pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

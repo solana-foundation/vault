@@ -1113,11 +1113,21 @@ pub fn approve_request(
     authority: &Keypair,
     vault: Pubkey,
     request: Pubkey,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    vault_token_account: Pubkey,
+    pending_vault: Pubkey,
+    asset_token_program: Pubkey,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
     let ix = ApproveRequestBuilder::new()
         .authority(authority.pubkey())
         .vault(vault)
         .request(request)
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .vault_token_account(vault_token_account)
+        .pending_vault(pending_vault)
+        .asset_token_program(asset_token_program)
         .instruction();
 
     let tx = Transaction::new_signed_with_payer(
@@ -1401,26 +1411,23 @@ pub fn claim_request(
     request: Pubkey,
     asset_mint: Pubkey,
     share_mint: Pubkey,
-    vault_token_account: Pubkey,
     pending_vault: Option<Pubkey>,
     user_share_account: Option<Pubkey>,
     user_asset_account: Option<Pubkey>,
     asset_token_program: Pubkey,
     share_token_program: Option<Pubkey>,
 ) -> Result<TransactionMetadata, FailedTransactionMetadata> {
-    let sentinel = program_id();
     let ix = ClaimBuilder::new()
         .user(user.pubkey())
         .vault(vault)
         .request(request)
         .asset_mint(asset_mint)
         .share_mint(share_mint)
-        .vault_token_account(vault_token_account)
-        .pending_vault(pending_vault.unwrap_or(sentinel))
-        .user_share_account(user_share_account.unwrap_or(sentinel))
-        .user_asset_account(user_asset_account.unwrap_or(sentinel))
+        .pending_vault(pending_vault)
+        .user_share_account(user_share_account)
+        .user_asset_account(user_asset_account)
         .asset_token_program(asset_token_program)
-        .share_token_program(share_token_program.unwrap_or(sentinel))
+        .share_token_program(share_token_program)
         .instruction();
 
     let tx = Transaction::new_signed_with_payer(

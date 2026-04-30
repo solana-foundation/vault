@@ -46,7 +46,7 @@ pub fn get_total_assets<'info>(
                 let data = deposit_account.try_borrow_data().ok()?;
                 AssociatedProtocol::try_deserialize(&mut data.as_ref()).ok()
             })
-            .ok_or_else(|| error!(ErrorCode::AccountDidNotDeserialize))?;
+            .ok_or_else(|| ErrorCode::AccountDidNotDeserialize)?;
 
         let amount = remaining_accounts
             .iter()
@@ -60,7 +60,7 @@ pub fn get_total_assets<'info>(
 
         total = total
             .checked_add(amount)
-            .ok_or_else(|| error!(ErrorCode::AccountDidNotDeserialize))?;
+            .ok_or_else(|| ErrorCode::AccountDidNotDeserialize)?;
     }
     Ok(total)
 }

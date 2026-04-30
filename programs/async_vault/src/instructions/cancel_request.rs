@@ -72,15 +72,15 @@ impl<'info> CancelRequest<'info> {
         let asset_pending_vault = self
             .asset_pending_vault
             .as_ref()
-            .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
+            .ok_or(AsyncVaultError::MissingRequiredAccount)?;
         let user_token_account = self
             .user_token_account
             .as_ref()
-            .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
+            .ok_or(AsyncVaultError::MissingRequiredAccount)?;
         let asset_token_program = self
             .asset_token_program
             .as_ref()
-            .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
+            .ok_or(AsyncVaultError::MissingRequiredAccount)?;
 
         let cpi_accounts = TransferChecked {
             from: asset_pending_vault.to_account_info(),
@@ -102,11 +102,11 @@ impl<'info> CancelRequest<'info> {
         let user_share_account = self
             .user_share_account
             .as_ref()
-            .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
+            .ok_or(AsyncVaultError::MissingRequiredAccount)?;
         let share_token_program = self
             .share_token_program
             .as_ref()
-            .ok_or(error!(AsyncVaultError::MissingRequiredAccount))?;
+            .ok_or(AsyncVaultError::MissingRequiredAccount)?;
 
         let cpi_accounts = MintTo {
             mint: self.share_mint.to_account_info(),

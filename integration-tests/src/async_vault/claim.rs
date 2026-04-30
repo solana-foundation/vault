@@ -1,9 +1,13 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
 use async_vault_client::{
-    sdk::program_id, CreateDepositRequestBuilder, CreateRedeemRequestBuilder, RequestArgs,
+    sdk::program_id, CreateDepositRequestBuilder, CreateRedeemRequestBuilder, RequestArgs, Vault,
 };
+use borsh::BorshSerialize;
 use litesvm::LiteSVM;
-use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction};
+use solana_sdk::{
+    account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer,
+    transaction::Transaction,
+};
 use test_case::test_case;
 
 use crate::helper_functions::{
@@ -94,7 +98,7 @@ fn test_claim_deposit_success(use_operator: bool) {
         reserve_pubkey,
         vault_pubkey,
         pending_vault_pubkey,
-        user_asset_account,
+        _user_asset_account,
         user_share_account,
     ) = setup(&mut svm);
 
@@ -107,7 +111,7 @@ fn test_claim_deposit_success(use_operator: bool) {
         .share_mint(share_mint.pubkey())
         .request(request_keypair.pubkey())
         .vault(vault_pubkey)
-        .user_token_account(user_asset_account)
+        .user_token_account(_user_asset_account)
         .pending_vault(pending_vault_pubkey)
         .asset_token_program(spl_token::ID)
         .args(RequestArgs {
@@ -124,13 +128,21 @@ fn test_claim_deposit_success(use_operator: bool) {
     svm.send_transaction(tx)
         .expect("create deposit request should succeed");
 
-    approve_request(&mut svm, &authority, vault_pubkey, request_keypair.pubkey())
-        .expect("approve_request should succeed");
+    // Approve: assets move pending → reserve, request.amount set to shares
+    approve_request(
+        &mut svm,
+        &authority,
+        vault_pubkey,
+        request_keypair.pubkey(),
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        pending_vault_pubkey,
+        token::ID,
+    )
+    .expect("approve_request should succeed");
 
-    // Snapshot balances before claim
-    let pending_vault_before =
-        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
-    let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
+    // Snapshot balances after approve (before claim)
     let user_shares_before =
         get_token_account_amount(&svm.get_account(&user_share_account).unwrap());
     let share_supply_before = get_mint_supply(&svm.get_account(&share_mint.pubkey()).unwrap());
@@ -143,8 +155,7 @@ fn test_claim_deposit_success(use_operator: bool) {
         request_keypair.pubkey(),
         asset_mint.pubkey(),
         share_mint.pubkey(),
-        reserve_pubkey,
-        Some(pending_vault_pubkey),
+        None,
         Some(user_share_account),
         None,
         spl_token::ID,
@@ -160,16 +171,6 @@ fn test_claim_deposit_success(use_operator: bool) {
         get_token_account_amount(&svm.get_account(&user_share_account).unwrap()),
         user_shares_before + EXPECTED_DEPOSIT_SHARES,
         "user should receive minted shares"
-    );
-    assert_eq!(
-        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
-        pending_vault_before - DEPOSIT_AMOUNT,
-        "pending_vault should be drained of deposited assets"
-    );
-    assert_eq!(
-        get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap()),
-        reserve_before + DEPOSIT_AMOUNT,
-        "vault reserve should receive the deposited assets"
     );
     assert_eq!(
         get_mint_supply(&svm.get_account(&share_mint.pubkey()).unwrap()),
@@ -194,12 +195,12 @@ fn test_claim_redeem_success(use_operator: bool) {
         operator,
         reserve_pubkey,
         vault_pubkey,
-        _pending_vault_pubkey,
+        pending_vault_pubkey,
         user_asset_account,
         user_share_account,
     ) = setup(&mut svm);
 
-    // Fund the reserve so the vault can pay out on claim
+    // Fund the reserve so approve can transfer out
     helper_mint_to(
         &mut svm,
         &asset_mint.pubkey(),
@@ -208,6 +209,18 @@ fn test_claim_redeem_success(use_operator: bool) {
         EXPECTED_REDEEM_ASSETS,
         &token::ID,
     );
+
+    // Set vault.total_asset_balance to match the funded reserve
+    {
+        let mut account = svm.get_account(&vault_pubkey).unwrap();
+        let mut vault = Vault::from_bytes(account.data()).unwrap();
+        vault.total_asset_balance = EXPECTED_REDEEM_ASSETS;
+        let mut buf = Vec::new();
+        vault.serialize(&mut buf).unwrap();
+        account.data = buf;
+        svm.set_account(vault_pubkey, account).unwrap();
+    }
+
     // Give the user shares to redeem
     set_share_balance(
         &mut svm,
@@ -241,11 +254,23 @@ fn test_claim_redeem_success(use_operator: bool) {
     svm.send_transaction(tx)
         .expect("create redeem request should succeed");
 
-    approve_request(&mut svm, &authority, vault_pubkey, request_keypair.pubkey())
-        .expect("approve_request should succeed");
+    // Approve: assets move reserve → pending_vault, request.amount set to assets
+    approve_request(
+        &mut svm,
+        &authority,
+        vault_pubkey,
+        request_keypair.pubkey(),
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        pending_vault_pubkey,
+        token::ID,
+    )
+    .expect("approve_request should succeed");
 
-    // Snapshot balances before claim
-    let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
+    // Snapshot balances after approve (before claim)
+    let pending_vault_before =
+        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
     let user_assets_before =
         get_token_account_amount(&svm.get_account(&user_asset_account).unwrap());
 
@@ -257,8 +282,7 @@ fn test_claim_redeem_success(use_operator: bool) {
         request_keypair.pubkey(),
         asset_mint.pubkey(),
         share_mint.pubkey(),
-        reserve_pubkey,
-        None,
+        Some(pending_vault_pubkey),
         None,
         Some(user_asset_account),
         spl_token::ID,
@@ -276,9 +300,9 @@ fn test_claim_redeem_success(use_operator: bool) {
         "user should receive assets"
     );
     assert_eq!(
-        get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap()),
-        reserve_before - EXPECTED_REDEEM_ASSETS,
-        "vault reserve should decrease by transferred assets"
+        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
+        pending_vault_before - EXPECTED_REDEEM_ASSETS,
+        "pending_vault should be drained by claim"
     );
 }
 
@@ -335,8 +359,18 @@ fn test_claim_fails(
         .expect("create deposit request should succeed");
 
     if !skip_approve {
-        approve_request(&mut svm, &authority, vault_pubkey, request_keypair.pubkey())
-            .expect("approve_request should succeed");
+        approve_request(
+            &mut svm,
+            &authority,
+            vault_pubkey,
+            request_keypair.pubkey(),
+            asset_mint.pubkey(),
+            share_mint.pubkey(),
+            reserve_pubkey,
+            pending_vault_pubkey,
+            token::ID,
+        )
+        .expect("approve_request should succeed");
     }
 
     if pause_vault {
@@ -365,8 +399,7 @@ fn test_claim_fails(
         request_keypair.pubkey(),
         asset_mint.pubkey(),
         share_mint.pubkey(),
-        reserve_pubkey,
-        Some(pending_vault_pubkey),
+        None,
         Some(user_share_account),
         None,
         spl_token::ID,
