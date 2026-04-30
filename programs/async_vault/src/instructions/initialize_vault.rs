@@ -21,7 +21,7 @@ pub struct InitializeVault<'info> {
     pub vault: Account<'info, Vault>,
 }
 
-pub fn handler<'info>(ctx: Context<InitializeVault>) -> Result<()> {
+pub fn handler(ctx: Context<InitializeVault>) -> Result<()> {
     ctx.accounts.vault.assert_uninitialized()?;
 
     ctx.accounts.vault.initialized = true;

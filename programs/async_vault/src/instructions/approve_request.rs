@@ -93,7 +93,8 @@ impl<'info> ApproveRequest<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<ApproveRequest>) -> Result<()> {
+// TODO add fee handling
+pub fn handler(ctx: Context<ApproveRequest>) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
     require!(

@@ -14,7 +14,7 @@ pub struct UpdateVaultNav<'info> {
     pub vault: Account<'info, Vault>,
 }
 
-pub fn handler<'info>(ctx: Context<UpdateVaultNav>, updated_nav: u128) -> Result<()> {
+pub fn handler(ctx: Context<UpdateVaultNav>, updated_nav: u128) -> Result<()> {
     ctx.accounts.vault.nav = updated_nav;
     ctx.accounts.vault.nav_version = ctx
         .accounts
