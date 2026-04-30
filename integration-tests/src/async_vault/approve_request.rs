@@ -14,16 +14,9 @@ use crate::helper_functions::{
     set_up_async_vault, set_vault_total_asset_balance, update_async_vault, update_vault_nav,
 };
 
-const NAV: u128 = 200;
-const DEPOSIT_AMOUNT: u64 = 1_000_000;
-// shares = DEPOSIT_AMOUNT * 10^9 / NAV = 1_000_000 * 1_000_000_000 / 200 = 5_000_000_000
-const EXPECTED_DEPOSIT_SHARES: u64 = 5_000_000_000;
-const REDEEM_AMOUNT: u64 = 5_000_000_000_000;
-// assets = REDEEM_AMOUNT * NAV / 10^9 = 5_000_000_000_000 * 200 / 1_000_000_000 = 1_000_000
-const EXPECTED_REDEEM_ASSETS: u64 = 1_000_000;
-
 fn setup(
     svm: &mut LiteSVM,
+    nav: u128,
 ) -> (
     Keypair, // authority
     Keypair, // mint_authority
@@ -55,7 +48,7 @@ fn setup(
     initialize_async_vault(svm, &authority, share_mint.pubkey(), vault_pubkey)
         .expect("initialize vault should succeed");
 
-    update_vault_nav(svm, &authority, vault_pubkey, NAV).expect("update nav should succeed");
+    update_vault_nav(svm, &authority, vault_pubkey, nav).expect("update nav should succeed");
 
     let user_asset_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
@@ -77,8 +70,12 @@ fn setup(
     )
 }
 
-#[test]
-fn test_approve_deposit_request_success() {
+#[test_case(200, 1_000_000, 5_000_000_000 ; "nav=200")]
+fn test_approve_deposit_request_success(
+    nav: u128,
+    deposit_amount: u64,
+    expected_deposit_shares: u64,
+) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
@@ -94,7 +91,7 @@ fn test_approve_deposit_request_success() {
         pending_vault_pubkey,
         user_asset_account,
         _user_share_account,
-    ) = setup(&mut svm);
+    ) = setup(&mut svm, nav);
 
     let request_keypair = Keypair::new();
     create_deposit_request(
@@ -106,7 +103,7 @@ fn test_approve_deposit_request_success() {
         vault_pubkey,
         user_asset_account,
         pending_vault_pubkey,
-        DEPOSIT_AMOUNT,
+        deposit_amount,
     )
     .expect("create deposit request should succeed");
 
@@ -135,7 +132,7 @@ fn test_approve_deposit_request_success() {
     .unwrap();
     assert_eq!(vault_after.pending_async_requests, 0);
     assert_eq!(
-        vault_after.total_asset_balance, DEPOSIT_AMOUNT,
+        vault_after.total_asset_balance, deposit_amount,
         "total_asset_balance should be incremented by deposit amount"
     );
 
@@ -146,26 +143,30 @@ fn test_approve_deposit_request_success() {
     )
     .unwrap();
     assert_eq!(request_after.request_state, RequestState::Claimable);
-    assert_eq!(request_after.price, NAV);
+    assert_eq!(request_after.price, nav);
     assert_eq!(
-        request_after.amount, EXPECTED_DEPOSIT_SHARES,
+        request_after.amount, expected_deposit_shares,
         "request.amount should be updated to claimable shares"
     );
 
     assert_eq!(
         get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
-        pending_before - DEPOSIT_AMOUNT,
+        pending_before - deposit_amount,
         "pending_vault should be drained"
     );
     assert_eq!(
         get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap()),
-        reserve_before + DEPOSIT_AMOUNT,
+        reserve_before + deposit_amount,
         "reserve should receive the deposited assets"
     );
 }
 
-#[test]
-fn test_approve_redeem_request_success() {
+#[test_case(200, 5_000_000_000_000, 1_000_000 ; "nav=200")]
+fn test_approve_redeem_request_success(
+    nav: u128,
+    redeem_amount: u64,
+    expected_redeem_assets: u64,
+) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
@@ -181,7 +182,7 @@ fn test_approve_redeem_request_success() {
         pending_vault_pubkey,
         _user_asset_account,
         user_share_account,
-    ) = setup(&mut svm);
+    ) = setup(&mut svm, nav);
 
     // Fund reserve with assets to cover the redeem payout
     helper_mint_to(
@@ -189,18 +190,18 @@ fn test_approve_redeem_request_success() {
         &asset_mint.pubkey(),
         &reserve_pubkey,
         &mint_authority,
-        EXPECTED_REDEEM_ASSETS,
+        expected_redeem_assets,
         &token::ID,
     );
 
-    set_vault_total_asset_balance(&mut svm, vault_pubkey, EXPECTED_REDEEM_ASSETS);
+    set_vault_total_asset_balance(&mut svm, vault_pubkey, expected_redeem_assets);
 
     // Give the user shares to redeem
     set_share_balance(
         &mut svm,
         &user_share_account,
         &share_mint.pubkey(),
-        REDEEM_AMOUNT,
+        redeem_amount,
     );
 
     let request_keypair = Keypair::new();
@@ -212,7 +213,7 @@ fn test_approve_redeem_request_success() {
         share_mint.pubkey(),
         vault_pubkey,
         user_share_account,
-        REDEEM_AMOUNT,
+        redeem_amount,
     )
     .expect("create redeem request should succeed");
 
@@ -252,32 +253,33 @@ fn test_approve_redeem_request_success() {
     )
     .unwrap();
     assert_eq!(request_after.request_state, RequestState::Claimable);
-    assert_eq!(request_after.price, NAV);
+    assert_eq!(request_after.price, nav);
     assert_eq!(
-        request_after.amount, EXPECTED_REDEEM_ASSETS,
+        request_after.amount, expected_redeem_assets,
         "request.amount should be updated to claimable assets"
     );
 
     assert_eq!(
         get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap()),
-        reserve_before - EXPECTED_REDEEM_ASSETS,
+        reserve_before - expected_redeem_assets,
         "reserve should be drained by redeemed assets"
     );
     assert_eq!(
         get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
-        pending_before + EXPECTED_REDEEM_ASSETS,
+        pending_before + expected_redeem_assets,
         "pending_vault should receive the redeemed assets"
     );
 }
 
-#[test_case(false, true, false, 6001 ; "unauthorized signer")]
-#[test_case(true, false, false, 6003 ; "paused vault")]
-#[test_case(false, false, true, 6021 ; "request not in pending state")]
-#[test_case(false, false, false, 6029 ; "nav not set")]
+#[test_case(false, true, false, 1_000_000, 6001 ; "unauthorized signer")]
+#[test_case(true, false, false, 1_000_000, 6003 ; "paused vault")]
+#[test_case(false, false, true, 1_000_000, 6021 ; "request not in pending state")]
+#[test_case(false, false, false, 1_000_000, 6029 ; "nav not set")]
 fn test_approve_request_fails(
     pause_vault: bool,
     use_wrong_signer: bool,
     override_to_claimable: bool,
+    deposit_amount: u64,
     expected_error_code: u32,
 ) {
     let mut svm = LiteSVM::new();
@@ -326,7 +328,7 @@ fn test_approve_request_fails(
         vault_pubkey,
         user_token_account,
         pending_vault_pubkey,
-        1_000_000,
+        deposit_amount,
     )
     .expect("create deposit request should succeed");
 

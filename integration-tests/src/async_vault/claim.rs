@@ -16,16 +16,9 @@ use crate::helper_functions::{
     update_async_vault, update_vault_nav,
 };
 
-const NAV: u128 = 1_000_000;
-const DEPOSIT_AMOUNT: u64 = 1_000_000;
-// shares = DEPOSIT_AMOUNT * 10^9 / NAV = 1_000_000 * 1_000_000_000 / 1_000_000 = 1_000_000_000
-const EXPECTED_DEPOSIT_SHARES: u64 = 1_000_000_000;
-const REDEEM_AMOUNT: u64 = 1_000_000_000;
-// assets = REDEEM_AMOUNT * NAV / 10^9 = 1_000_000_000 * 1_000_000 / 1_000_000_000 = 1_000_000
-const EXPECTED_REDEEM_ASSETS: u64 = 1_000_000;
-
 fn setup(
     svm: &mut LiteSVM,
+    nav: u128,
 ) -> (
     Keypair, // authority
     Keypair, // mint_authority
@@ -58,7 +51,7 @@ fn setup(
     initialize_async_vault(svm, &authority, share_mint.pubkey(), vault_pubkey)
         .expect("initialize vault should succeed");
 
-    update_vault_nav(svm, &authority, vault_pubkey, NAV).expect("update nav should succeed");
+    update_vault_nav(svm, &authority, vault_pubkey, nav).expect("update nav should succeed");
 
     let user_asset_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
@@ -81,9 +74,14 @@ fn setup(
     )
 }
 
-#[test_case(false ; "owner claims deposit")]
-#[test_case(true  ; "operator claims deposit")]
-fn test_claim_deposit_success(use_operator: bool) {
+#[test_case(false, 1_000_000, 1_000_000, 1_000_000_000 ; "owner claims deposit")]
+#[test_case(true,  1_000_000, 1_000_000, 1_000_000_000 ; "operator claims deposit")]
+fn test_claim_deposit_success(
+    use_operator: bool,
+    nav: u128,
+    deposit_amount: u64,
+    expected_deposit_shares: u64,
+) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
@@ -100,7 +98,7 @@ fn test_claim_deposit_success(use_operator: bool) {
         pending_vault_pubkey,
         _user_asset_account,
         user_share_account,
-    ) = setup(&mut svm);
+    ) = setup(&mut svm, nav);
 
     let request_keypair = Keypair::new();
     let operator_pubkey = use_operator.then_some(operator.pubkey());
@@ -115,7 +113,7 @@ fn test_claim_deposit_success(use_operator: bool) {
         .pending_vault(pending_vault_pubkey)
         .asset_token_program(spl_token::ID)
         .args(RequestArgs {
-            amount: DEPOSIT_AMOUNT,
+            amount: deposit_amount,
             operator: operator_pubkey,
         })
         .instruction();
@@ -169,19 +167,24 @@ fn test_claim_deposit_success(use_operator: bool) {
     );
     assert_eq!(
         get_token_account_amount(&svm.get_account(&user_share_account).unwrap()),
-        user_shares_before + EXPECTED_DEPOSIT_SHARES,
+        user_shares_before + expected_deposit_shares,
         "user should receive minted shares"
     );
     assert_eq!(
         get_mint_supply(&svm.get_account(&share_mint.pubkey()).unwrap()),
-        share_supply_before + EXPECTED_DEPOSIT_SHARES,
+        share_supply_before + expected_deposit_shares,
         "share mint supply should increase by minted shares"
     );
 }
 
-#[test_case(false ; "owner claims redeem")]
-#[test_case(true  ; "operator claims redeem")]
-fn test_claim_redeem_success(use_operator: bool) {
+#[test_case(false, 1_000_000, 1_000_000_000, 1_000_000 ; "owner claims redeem")]
+#[test_case(true,  1_000_000, 1_000_000_000, 1_000_000 ; "operator claims redeem")]
+fn test_claim_redeem_success(
+    use_operator: bool,
+    nav: u128,
+    redeem_amount: u64,
+    expected_redeem_assets: u64,
+) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
@@ -198,7 +201,7 @@ fn test_claim_redeem_success(use_operator: bool) {
         pending_vault_pubkey,
         user_asset_account,
         user_share_account,
-    ) = setup(&mut svm);
+    ) = setup(&mut svm, nav);
 
     // Fund the reserve so approve can transfer out
     helper_mint_to(
@@ -206,7 +209,7 @@ fn test_claim_redeem_success(use_operator: bool) {
         &asset_mint.pubkey(),
         &reserve_pubkey,
         &mint_authority,
-        EXPECTED_REDEEM_ASSETS,
+        expected_redeem_assets,
         &token::ID,
     );
 
@@ -214,7 +217,7 @@ fn test_claim_redeem_success(use_operator: bool) {
     {
         let mut account = svm.get_account(&vault_pubkey).unwrap();
         let mut vault = Vault::from_bytes(account.data()).unwrap();
-        vault.total_asset_balance = EXPECTED_REDEEM_ASSETS;
+        vault.total_asset_balance = expected_redeem_assets;
         let mut buf = Vec::new();
         vault.serialize(&mut buf).unwrap();
         account.data = buf;
@@ -226,7 +229,7 @@ fn test_claim_redeem_success(use_operator: bool) {
         &mut svm,
         &user_share_account,
         &share_mint.pubkey(),
-        REDEEM_AMOUNT,
+        redeem_amount,
     );
 
     let request_keypair = Keypair::new();
@@ -241,7 +244,7 @@ fn test_claim_redeem_success(use_operator: bool) {
         .user_share_account(user_share_account)
         .share_token_program(spl_token::ID)
         .args(RequestArgs {
-            amount: REDEEM_AMOUNT,
+            amount: redeem_amount,
             operator: operator_pubkey,
         })
         .instruction();
@@ -296,23 +299,24 @@ fn test_claim_redeem_success(use_operator: bool) {
     );
     assert_eq!(
         get_token_account_amount(&svm.get_account(&user_asset_account).unwrap()),
-        user_assets_before + EXPECTED_REDEEM_ASSETS,
+        user_assets_before + expected_redeem_assets,
         "user should receive assets"
     );
     assert_eq!(
         get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
-        pending_vault_before - EXPECTED_REDEEM_ASSETS,
+        pending_vault_before - expected_redeem_assets,
         "pending_vault should be drained by claim"
     );
 }
 
-#[test_case(true,  false, false, 6001 ; "unauthorized signer")]
-#[test_case(false, true,  false, 6003 ; "paused vault")]
-#[test_case(false, false, true,  6022 ; "request not claimable")]
+#[test_case(true,  false, false, 1_000_000, 6001 ; "unauthorized signer")]
+#[test_case(false, true,  false, 1_000_000, 6003 ; "paused vault")]
+#[test_case(false, false, true,  1_000_000, 6022 ; "request not claimable")]
 fn test_claim_fails(
     use_wrong_signer: bool,
     pause_vault: bool,
     skip_approve: bool,
+    deposit_amount: u64,
     expected_error_code: u32,
 ) {
     let mut svm = LiteSVM::new();
@@ -331,7 +335,7 @@ fn test_claim_fails(
         pending_vault_pubkey,
         user_asset_account,
         user_share_account,
-    ) = setup(&mut svm);
+    ) = setup(&mut svm, 1_000_000);
 
     let request_keypair = Keypair::new();
     let ix = CreateDepositRequestBuilder::new()
@@ -344,7 +348,7 @@ fn test_claim_fails(
         .pending_vault(pending_vault_pubkey)
         .asset_token_program(spl_token::ID)
         .args(RequestArgs {
-            amount: DEPOSIT_AMOUNT,
+            amount: deposit_amount,
             operator: None,
         })
         .instruction();
