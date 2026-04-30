@@ -47,6 +47,30 @@ pub mod async_vault {
         instructions::initialize_withdrawal_fee::handler(ctx, args)
     }
 
+    /// Adds a pausable subscriptions TLV extension to the vault. Must be called
+    /// before vault initialization. Requires authority signature.
+    pub fn initialize_pausable_subscription(ctx: Context<InitPausableSubscription>) -> Result<()> {
+        instructions::initialize_pausable_subscription_extension::handler(ctx)
+    }
+
+    /// Adds a pausable redemptions TLV extension to the vault. Must be called
+    /// before vault initialization. Requires authority signature.
+    pub fn initialize_pausable_redemption(ctx: Context<InitPausableRedemption>) -> Result<()> {
+        instructions::initialize_pausable_redemptions_extension::handler(ctx)
+    }
+
+    /// Sets the paused state of the pausable subscriptions extension.
+    /// The extension must have been previously initialized. Requires authority signature.
+    pub fn pause_subscription(ctx: Context<PauseSubscription>, paused: bool) -> Result<()> {
+        instructions::pause_subscription::handler(ctx, paused)
+    }
+
+    /// Sets the paused state of the pausable redemptions extension.
+    /// The extension must have been previously initialized. Requires authority signature.
+    pub fn pause_redemption(ctx: Context<PauseRedemption>, paused: bool) -> Result<()> {
+        instructions::pause_redemption::handler(ctx, paused)
+    }
+
     /// Updates an existing deposit fee extension. The fee must have been
     /// previously initialized. Requires authority signature.
     pub fn update_deposit_fee(

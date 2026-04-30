@@ -1,8 +1,10 @@
 use anchor_lang::prelude::*;
 
-use crate::error::AsyncVaultError;
+use crate::{error::AsyncVaultError, state::Vault};
 
 use super::{ExtensionType, TLV_HEADER_SIZE};
+
+pub const TLV_START: usize = 8 + Vault::INIT_SPACE;
 
 pub fn get_extension_bytes(tlv_data: &[u8], ext_type: ExtensionType) -> Option<&[u8]> {
     let mut offset = 0;
@@ -360,5 +362,200 @@ mod tests {
     #[test]
     fn tlv_used_len_header_too_short() {
         assert_eq!(tlv_used_len(&[1, 0, 5]), 0);
+    }
+
+    // ---- mixed-size extension permutations ----
+
+    const ALL_TYPES: [ExtensionType; 4] = [
+        ExtensionType::DepositFee,
+        ExtensionType::WithdrawalFee,
+        ExtensionType::PausableSubcriptionsExtension,
+        ExtensionType::PausableRedemptionsExtension,
+    ];
+
+    fn sample_value(ext: ExtensionType) -> Vec<u8> {
+        vec![0xAB; ext.data_len()]
+    }
+
+    fn build_multi_tlv(types: &[ExtensionType]) -> Vec<u8> {
+        let total: usize = types.iter().map(|t| TLV_HEADER_SIZE + t.data_len()).sum();
+        let mut buf = vec![0u8; total];
+        let mut offset = 0;
+        for &ext in types {
+            write_extension(&mut buf, offset, ext, &sample_value(ext)).unwrap();
+            offset += TLV_HEADER_SIZE + ext.data_len();
+        }
+        buf
+    }
+
+    #[test]
+    fn all_four_extensions_coexist() {
+        let buf = build_multi_tlv(&ALL_TYPES);
+
+        for &ext in &ALL_TYPES {
+            let bytes = get_extension_bytes(&buf, ext).unwrap();
+            assert_eq!(bytes, &sample_value(ext)[..]);
+        }
+
+        let expected_len: usize = ALL_TYPES
+            .iter()
+            .map(|t| TLV_HEADER_SIZE + t.data_len())
+            .sum();
+        assert_eq!(tlv_used_len(&buf), expected_len);
+    }
+
+    #[test]
+    fn all_four_extensions_reverse_order() {
+        let reversed: Vec<_> = ALL_TYPES.iter().copied().rev().collect();
+        let buf = build_multi_tlv(&reversed);
+
+        for &ext in &ALL_TYPES {
+            let bytes = get_extension_bytes(&buf, ext).unwrap();
+            assert_eq!(bytes, &sample_value(ext)[..]);
+        }
+    }
+
+    #[test]
+    fn fees_only_no_pausable() {
+        let types = [ExtensionType::DepositFee, ExtensionType::WithdrawalFee];
+        let buf = build_multi_tlv(&types);
+
+        assert!(get_extension_bytes(&buf, ExtensionType::DepositFee).is_some());
+        assert!(get_extension_bytes(&buf, ExtensionType::WithdrawalFee).is_some());
+        assert!(get_extension_bytes(&buf, ExtensionType::PausableSubcriptionsExtension).is_none());
+        assert!(get_extension_bytes(&buf, ExtensionType::PausableRedemptionsExtension).is_none());
+    }
+
+    #[test]
+    fn pausable_only_no_fees() {
+        let types = [
+            ExtensionType::PausableSubcriptionsExtension,
+            ExtensionType::PausableRedemptionsExtension,
+        ];
+        let buf = build_multi_tlv(&types);
+
+        assert!(get_extension_bytes(&buf, ExtensionType::DepositFee).is_none());
+        assert!(get_extension_bytes(&buf, ExtensionType::WithdrawalFee).is_none());
+        assert!(get_extension_bytes(&buf, ExtensionType::PausableSubcriptionsExtension).is_some());
+        assert!(get_extension_bytes(&buf, ExtensionType::PausableRedemptionsExtension).is_some());
+    }
+
+    #[test]
+    fn interleaved_fee_pausable_fee_pausable() {
+        let types = [
+            ExtensionType::DepositFee,
+            ExtensionType::PausableSubcriptionsExtension,
+            ExtensionType::WithdrawalFee,
+            ExtensionType::PausableRedemptionsExtension,
+        ];
+        let buf = build_multi_tlv(&types);
+
+        for &ext in &types {
+            assert_eq!(
+                get_extension_bytes(&buf, ext).unwrap(),
+                &sample_value(ext)[..]
+            );
+        }
+    }
+
+    #[test]
+    fn write_then_update_mixed_sizes() {
+        let mut buf = build_multi_tlv(&ALL_TYPES);
+
+        let new_fee = [0xFF; 9];
+        update_extension(&mut buf, ExtensionType::WithdrawalFee, &new_fee).unwrap();
+
+        let new_pausable = [0x01];
+        update_extension(
+            &mut buf,
+            ExtensionType::PausableSubcriptionsExtension,
+            &new_pausable,
+        )
+        .unwrap();
+
+        assert_eq!(
+            get_extension_bytes(&buf, ExtensionType::DepositFee).unwrap(),
+            &sample_value(ExtensionType::DepositFee)[..]
+        );
+        assert_eq!(
+            get_extension_bytes(&buf, ExtensionType::WithdrawalFee).unwrap(),
+            &new_fee
+        );
+        assert_eq!(
+            get_extension_bytes(&buf, ExtensionType::PausableSubcriptionsExtension).unwrap(),
+            &new_pausable
+        );
+        assert_eq!(
+            get_extension_bytes(&buf, ExtensionType::PausableRedemptionsExtension).unwrap(),
+            &sample_value(ExtensionType::PausableRedemptionsExtension)[..]
+        );
+    }
+
+    #[test]
+    fn incremental_write_simulates_init_sequence() {
+        let total_size: usize = ALL_TYPES
+            .iter()
+            .map(|t| TLV_HEADER_SIZE + t.data_len())
+            .sum();
+        let mut buf = vec![0u8; total_size];
+
+        for &ext in &ALL_TYPES {
+            let offset = tlv_used_len(&buf);
+            write_extension(&mut buf, offset, ext, &sample_value(ext)).unwrap();
+        }
+
+        for &ext in &ALL_TYPES {
+            assert!(has_extension(&buf, ext));
+            assert_eq!(
+                get_extension_bytes(&buf, ext).unwrap(),
+                &sample_value(ext)[..]
+            );
+        }
+        assert_eq!(tlv_used_len(&buf), total_size);
+    }
+
+    #[test]
+    fn every_pair_permutation() {
+        for (i, &a) in ALL_TYPES.iter().enumerate() {
+            for &b in &ALL_TYPES[i + 1..] {
+                let buf = build_multi_tlv(&[a, b]);
+                assert_eq!(get_extension_bytes(&buf, a).unwrap(), &sample_value(a)[..]);
+                assert_eq!(get_extension_bytes(&buf, b).unwrap(), &sample_value(b)[..]);
+
+                let buf_rev = build_multi_tlv(&[b, a]);
+                assert_eq!(
+                    get_extension_bytes(&buf_rev, a).unwrap(),
+                    &sample_value(a)[..]
+                );
+                assert_eq!(
+                    get_extension_bytes(&buf_rev, b).unwrap(),
+                    &sample_value(b)[..]
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn every_triple_permutation() {
+        let triples: &[&[ExtensionType]] = &[
+            &ALL_TYPES[0..3],
+            &ALL_TYPES[1..4],
+            &[ALL_TYPES[0], ALL_TYPES[1], ALL_TYPES[3]],
+            &[ALL_TYPES[0], ALL_TYPES[2], ALL_TYPES[3]],
+        ];
+        for triple in triples {
+            let buf = build_multi_tlv(triple);
+            for &ext in *triple {
+                assert_eq!(
+                    get_extension_bytes(&buf, ext).unwrap(),
+                    &sample_value(ext)[..]
+                );
+            }
+            for &ext in &ALL_TYPES {
+                if !triple.contains(&ext) {
+                    assert!(get_extension_bytes(&buf, ext).is_none());
+                }
+            }
+        }
     }
 }
