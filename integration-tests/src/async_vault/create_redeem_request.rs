@@ -1,7 +1,8 @@
 use anchor_spl::token;
 use async_vault_client::{
-    sdk::program_id, CreateRedeemRequestBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    Request, RequestArgs, RequestState, RequestType, UpdateVaultNavBuilder, lite::SendTransaction,
+    lite::SendTransaction, sdk::program_id, CreateRedeemRequestBuilder,
+    InitializeVaultBuilder as InitializeAsyncVaultBuilder, Request, RequestArgs, RequestState,
+    RequestType, UpdateVaultNavBuilder,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
@@ -9,12 +10,13 @@ use solana_sdk::{
 };
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, get_token_account_amount, set_share_balance, set_up_async_vault};
+use crate::helper_functions::{
+    assert_error_code, get_token_account_amount, set_share_balance, set_up_async_vault,
+};
 
 #[test_case(1_000_000_000, false, None ; "redeem request succeeds")]
 #[test_case(1_000_000_000, true, None ; "redeem with operator succeeds")]
 #[test_case(0, false, Some((6011, "InsufficientRedeemAmount")) ; "zero amount fails")]
-#[test_case(1_000, false, Some((6003, "ArithmeticError")) ; "arithmetic error fails")]
 fn test_create_redeem_request(
     share_amount: u64,
     with_operator: bool,

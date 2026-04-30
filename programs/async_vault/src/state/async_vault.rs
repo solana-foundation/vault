@@ -1,9 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{
-    error::AsyncVaultError,
-    utils::{calculate_assets, calculate_shares},
-};
+use crate::error::AsyncVaultError;
 
 #[account]
 #[derive(InitSpace)]
@@ -55,19 +52,5 @@ impl Vault {
     pub fn assert_uninitialized(&self) -> Result<()> {
         require!(!self.initialized, AsyncVaultError::VaultAlreadyInitialized);
         Ok(())
-    }
-
-    /// Converts an asset amount into shares using the current NAV.
-    ///
-    /// `shares = net_amount * 10^decimals / nav`
-    pub fn calculate_shares(&mut self, decimals: u8, net_amount: u64) -> Result<u64> {
-        calculate_shares(self.nav, decimals, net_amount)
-    }
-
-    /// Converts a share amount into assets using the current NAV.
-    ///
-    /// `assets = share_amount * nav / 10^decimals`
-    pub fn calculate_assets(&self, decimals: u8, share_amount: u64) -> Result<u64> {
-        calculate_assets(self.nav, decimals, share_amount)
     }
 }
