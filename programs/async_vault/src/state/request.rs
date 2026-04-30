@@ -4,7 +4,7 @@ use crate::utils::{calculate_assets, calculate_shares};
 
 /// Pending: neither approved nor rejected by the vault authority
 /// Claimable: approved by the vault authority
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, InitSpace, PartialEq)]
 pub enum RequestState {
     Pending,
     Claimable,
@@ -14,7 +14,7 @@ pub enum RequestState {
 /// The request types:
 /// Deposit: the user wants to add assets to the vault
 /// Redeem: the user wants to withdraw assets from the vault
-#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, InitSpace)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, InitSpace, PartialEq)]
 pub enum RequestType {
     Deposit,
     Redeem,

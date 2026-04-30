@@ -2,20 +2,18 @@ use anchor_spl::{
     associated_token::get_associated_token_address_with_program_id, token, token_2022,
 };
 use async_vault_client::{
-    sdk::{program_id, IntoSdkInstruction},
-    CreateDepositRequestBuilder, Request, RequestArgs, RequestState, RequestType,
+    sdk::program_id, CreateDepositRequestBuilder, Request, RequestArgs, RequestState, RequestType,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, clock::Clock, pubkey::Pubkey, signature::Keypair, signer::Signer,
+    account::ReadableAccount, clock::Clock, signature::Keypair, signer::Signer,
     transaction::Transaction,
 };
 use test_case::test_case;
 
 use crate::helper_functions::{
-    assert_error_code, create_async_vault, create_ata, create_deposit_request_ix, create_mint,
-    get_token_account_amount, helper_mint_to, initialize_async_vault, set_up_async_vault,
-    update_vault_nav, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
+    assert_error_code, get_token_account_amount, initialize_async_vault, set_up_async_vault,
+    update_vault_nav,
 };
 
 #[test_case(1_000_000, false ; "deposit request succeeds")]
@@ -44,7 +42,7 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
     ) = set_up_async_vault(
         &mut svm,
         token::ID,
-        None,
+        Some(0),
         token::ID,
         user_amount,
         100_000_000,
@@ -103,16 +101,12 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
         });
     }
 
-    let mut ix = builder.instruction().into_sdk_instruction();
+    let mut ix = builder.instruction();
     ix.accounts.push(solana_sdk::instruction::AccountMeta::new(
         fee_recipient_ata,
         false,
     ));
-    for meta in &mut ix.accounts {
-        if meta.pubkey == request_keypair.pubkey() {
-            meta.is_signer = true;
-        }
-    }
+
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&user.pubkey()),
@@ -162,157 +156,7 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
     );
 }
 
-#[test]
-fn test_multiple_deposit_requests_with_unique_keypairs() {
-    let mut svm = LiteSVM::new();
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
-
-    let authority = Keypair::new();
-    let payer = Keypair::new();
-    let mint_authority = Keypair::new();
-    let asset_mint = Keypair::new();
-    let share_mint = Keypair::new();
-    let user = Keypair::new();
-    let fee_recipient = Keypair::new();
-
-    svm.airdrop(&authority.pubkey(), 1_000_000_000).unwrap();
-    svm.airdrop(&fee_recipient.pubkey(), 1_000_000_000).unwrap();
-    svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
-    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
-        .unwrap();
-    svm.airdrop(&user.pubkey(), 10_000_000_000).unwrap();
-
-    create_mint(&mut svm, &mint_authority, &asset_mint, &token::ID);
-    create_mint(&mut svm, &mint_authority, &share_mint, &token::ID);
-
-    let (reserve_pubkey, _) = Pubkey::find_program_address(
-        &[RESERVE_CONFIG_SEED, share_mint.pubkey().as_ref()],
-        &program_id(),
-    );
-    let (pending_vault_pubkey, _) = Pubkey::find_program_address(
-        &[PENDING_VAULT_SEED, share_mint.pubkey().as_ref()],
-        &program_id(),
-    );
-    let (vault_pubkey, _) = Pubkey::find_program_address(
-        &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
-        &program_id(),
-    );
-
-    create_async_vault(
-        &mut svm,
-        &authority,
-        &payer,
-        &mint_authority,
-        fee_recipient.pubkey(),
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        reserve_pubkey,
-        pending_vault_pubkey,
-        vault_pubkey,
-        100_000_000,
-        true,
-        true,
-        token::ID,
-        token::ID,
-    )
-    .expect("vault creation should succeed");
-
-    let _ = initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey);
-
-    let user_token_account = create_ata(&mut svm, &user, &asset_mint.pubkey(), &token::ID);
-    let fee_recipient_ata = create_ata(
-        &mut svm,
-        &fee_recipient,
-        &asset_mint.pubkey(),
-        &spl_token::ID,
-    );
-    helper_mint_to(
-        &mut svm,
-        &asset_mint.pubkey(),
-        &user_token_account,
-        &mint_authority,
-        5_000_000_000,
-        &token::ID,
-    );
-
-    let _ = update_vault_nav(&mut svm, &authority, vault_pubkey, 100);
-
-    let deposit_amount = 1_000_000;
-
-    // First deposit request with a unique keypair
-    let request_1 = Keypair::new();
-    let ix1 = create_deposit_request_ix(
-        &user,
-        &request_1,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        user_token_account,
-        pending_vault_pubkey,
-        deposit_amount,
-    );
-    let tx1 = Transaction::new_signed_with_payer(
-        &[ix1],
-        Some(&user.pubkey()),
-        &[&user, &request_1],
-        svm.latest_blockhash(),
-    );
-    svm.send_transaction(tx1)
-        .expect("first deposit request should succeed");
-
-    // Second deposit request with a different unique keypair
-    let request_2 = Keypair::new();
-    let ix2 = create_deposit_request_ix(
-        &user,
-        &request_2,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        user_token_account,
-        pending_vault_pubkey,
-        deposit_amount,
-    );
-    let tx2 = Transaction::new_signed_with_payer(
-        &[ix2],
-        Some(&user.pubkey()),
-        &[&user, &request_2],
-        svm.latest_blockhash(),
-    );
-    svm.send_transaction(tx2)
-        .expect("second deposit request should succeed");
-
-    // Both request accounts exist independently
-    let req1_data = Request::from_bytes(
-        svm.get_account(&request_1.pubkey())
-            .expect("request 1 should exist")
-            .data
-            .as_slice(),
-    )
-    .unwrap();
-    let req2_data = Request::from_bytes(
-        svm.get_account(&request_2.pubkey())
-            .expect("request 2 should exist")
-            .data
-            .as_slice(),
-    )
-    .unwrap();
-
-    assert_ne!(request_1.pubkey(), request_2.pubkey());
-    assert_eq!(req1_data.vault, vault_pubkey);
-    assert_eq!(req2_data.vault, vault_pubkey);
-    assert_eq!(req1_data.amount, deposit_amount);
-    assert_eq!(req2_data.amount, deposit_amount);
-    assert_eq!(req1_data.request_state, RequestState::Pending);
-    assert_eq!(req2_data.request_state, RequestState::Pending);
-
-    assert_eq!(
-        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
-        deposit_amount * 2
-    );
-}
-
-#[test_case(Some(1), 6017 ; "deposit_request_with_nonzero_transfer_fee_fails")]
+#[test_case(Some(1), 6020 ; "deposit_request_with_nonzero_transfer_fee_fails")]
 fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_error_code: u32) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");

@@ -14,6 +14,8 @@ declare_id!("2kUpRoU8oGpstygkk3ZE51upGSq9UpkjNoEUiiQ88MMY");
 pub mod async_vault {
     use super::*;
 
+    /* Vault Authority instructions */
+
     /// Creates a new async vault with reserve and pending token accounts,
     /// transfers share mint authority to the vault PDA, and initializes
     /// the vault config in a paused + uninitialized state.
@@ -63,32 +65,10 @@ pub mod async_vault {
         instructions::update_withdrawal_fee::handler(ctx, args)
     }
 
-    /// Creates a deposit request with state pending (Pending vault authority acceptance)
-    pub fn create_deposit_request<'info>(
-        ctx: Context<CreateDepositRequest>,
-        args: RequestArgs,
-    ) -> Result<()> {
-        instructions::create_deposit_request::handler(ctx, args)
-    }
-
-    /// Creates a redeem request with state pending (Pending vault authority acceptance)
-    pub fn create_redeem_request(
-        ctx: Context<CreateRedeemRequest>,
-        args: RequestArgs,
-    ) -> Result<()> {
-        instructions::create_redeem_request::handler(ctx, args)
-    }
-
     /// User claims their shares or assets from an approved Deposit or Redemption request.
     /// Request must be Claimable.
     pub fn claim(ctx: Context<Claim>) -> Result<()> {
         instructions::claim::handler(ctx)
-    }
-
-    /// It sets an operator for the vault.
-    /// Requires Request owner signature.
-    pub fn set_operator(ctx: Context<SetOperator>) -> Result<()> {
-        instructions::set_operator::handler(ctx)
     }
 
     /* Vault Authority instructions */
@@ -114,6 +94,7 @@ pub mod async_vault {
     pub fn update_vault(ctx: Context<UpdateVault>, paused: bool) -> Result<()> {
         instructions::update_vault::handler(ctx, paused)
     }
+
     /// Updates the vault nav and increases nav version by 1
     /// Requires authority signature.
     pub fn update_vault_nav(ctx: Context<UpdateVaultNav>, updated_nav: u128) -> Result<()> {
@@ -124,5 +105,35 @@ pub mod async_vault {
     /// This sets the Request's claimable NAV to the Vault's current NAV.
     pub fn approve_request(ctx: Context<ApproveRequest>) -> Result<()> {
         instructions::approve_request::handler(ctx)
+    }
+
+    /* USER INSTRUCTIONS */
+
+    /// Creates a deposit request with state pending (Pending vault authority acceptance)
+    pub fn create_deposit_request(
+        ctx: Context<CreateDepositRequest>,
+        args: RequestArgs,
+    ) -> Result<()> {
+        instructions::create_deposit_request::handler(ctx, args)
+    }
+
+    /// Creates a redeem request with state pending (Pending vault authority acceptance)
+    pub fn create_redeem_request(
+        ctx: Context<CreateRedeemRequest>,
+        args: RequestArgs,
+    ) -> Result<()> {
+        instructions::create_redeem_request::handler(ctx, args)
+    }
+
+    /// Cancels a pending request. For deposits, refunds the full amount
+    /// back to the user. For redemptions, mints the shares back.
+    pub fn cancel_request(ctx: Context<CancelRequest>) -> Result<()> {
+        instructions::cancel_request::handler(ctx)
+    }
+
+    /// It sets an operator for the vault.
+    /// Requires Request owner signature.
+    pub fn set_operator(ctx: Context<SetOperator>) -> Result<()> {
+        instructions::set_operator::handler(ctx)
     }
 }

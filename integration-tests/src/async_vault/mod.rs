@@ -1,4 +1,5 @@
 mod approve_request;
+mod cancel_request;
 mod claim;
 mod constants;
 mod create_deposit_request;

@@ -10,9 +10,9 @@ use solana_sdk::{
 use test_case::test_case;
 
 use crate::helper_functions::{
-    approve_request, assert_error_code, claim_request, create_deposit_request_ix, get_mint_supply,
-    get_token_account_amount, helper_mint_to, initialize_async_vault, set_up_async_vault,
-    update_async_vault, update_vault_nav,
+    approve_request, assert_error_code, claim_request, get_mint_supply, get_token_account_amount,
+    helper_mint_to, initialize_async_vault, set_up_async_vault, update_async_vault,
+    update_vault_nav,
 };
 
 const NAV: u128 = 1_000_000;
@@ -98,7 +98,6 @@ fn setup(
         user_share_account,
     )
 }
-
 
 #[test_case(false ; "owner claims deposit")]
 #[test_case(true  ; "operator claims deposit")]
@@ -329,16 +328,21 @@ fn test_claim_fails(
     ) = setup(&mut svm);
 
     let request_keypair = Keypair::new();
-    let ix = create_deposit_request_ix(
-        &user,
-        &request_keypair,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        user_asset_account,
-        pending_vault_pubkey,
-        DEPOSIT_AMOUNT,
-    );
+    let ix = CreateDepositRequestBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .request(request_keypair.pubkey())
+        .vault(vault_pubkey)
+        .user_token_account(user_asset_account)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(spl_token::ID)
+        .args(RequestArgs {
+            amount: DEPOSIT_AMOUNT,
+            operator: None,
+        })
+        .instruction();
+
     let tx = Transaction::new_signed_with_payer(
         &[ix],
         Some(&user.pubkey()),

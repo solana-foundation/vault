@@ -4,7 +4,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 
 use crate::helper_functions::{
-    create_deposit_request_ix, initialize_async_vault, set_operator, set_up_async_vault,
+    create_deposit_request, initialize_async_vault, set_operator, set_up_async_vault,
     update_vault_nav,
 };
 
@@ -49,7 +49,8 @@ fn test_set_operator_succeeds() {
     );
 
     let request_keypair = Keypair::new();
-    let ix = create_deposit_request_ix(
+    create_deposit_request(
+        &mut svm,
         &user,
         &request_keypair,
         asset_mint.pubkey(),
@@ -58,15 +59,8 @@ fn test_set_operator_succeeds() {
         user_token_account,
         pending_vault_pubkey,
         1_000_000,
-    );
-    let tx = solana_sdk::transaction::Transaction::new_signed_with_payer(
-        &[ix],
-        Some(&user.pubkey()),
-        &[&user, &request_keypair],
-        svm.latest_blockhash(),
-    );
-    svm.send_transaction(tx)
-        .expect("create deposit request should succeed");
+    )
+    .expect("create deposit request should succeed");
 
     set_operator(&mut svm, &user, &operator, request_keypair.pubkey())
         .expect("set operator should succeed");
