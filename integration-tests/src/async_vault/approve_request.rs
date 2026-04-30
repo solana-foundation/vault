@@ -3,26 +3,43 @@ use async_vault_client::{sdk::program_id, ApproveRequestBuilder, Request, Reques
 use borsh::BorshSerialize;
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, signature::Keypair, signer::Signer, transaction::Transaction,
+    account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer,
+    transaction::Transaction,
 };
 use test_case::test_case;
 
 use crate::helper_functions::{
-    approve_request, assert_error_code, create_deposit_request, get_token_account_amount,
-    initialize_async_vault, set_up_async_vault, update_async_vault, update_vault_nav,
+    approve_request, assert_error_code, create_deposit_request, create_redeem_request,
+    get_token_account_amount, helper_mint_to, initialize_async_vault, set_share_balance,
+    set_up_async_vault, set_vault_total_asset_balance, update_async_vault, update_vault_nav,
 };
 
-#[test]
-fn test_approve_request_success() {
-    let mut svm = LiteSVM::new();
-    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
-    svm.add_program(program_id(), program_bytes).unwrap();
+const NAV: u128 = 200;
+const DEPOSIT_AMOUNT: u64 = 1_000_000;
+// shares = DEPOSIT_AMOUNT * 10^9 / NAV = 1_000_000 * 1_000_000_000 / 200 = 5_000_000_000
+const EXPECTED_DEPOSIT_SHARES: u64 = 5_000_000_000;
+const REDEEM_AMOUNT: u64 = 5_000_000_000_000;
+// assets = REDEEM_AMOUNT * NAV / 10^9 = 5_000_000_000_000 * 200 / 1_000_000_000 = 1_000_000
+const EXPECTED_REDEEM_ASSETS: u64 = 1_000_000;
 
-    let user_amount = 1_000_000_000;
+fn setup(
+    svm: &mut LiteSVM,
+) -> (
+    Keypair, // authority
+    Keypair, // mint_authority
+    Keypair, // asset_mint
+    Keypair, // share_mint
+    Keypair, // user
+    Pubkey,  // reserve_pubkey
+    Pubkey,  // vault_pubkey
+    Pubkey,  // pending_vault_pubkey
+    Pubkey,  // user_asset_account
+    Pubkey,  // user_share_account
+) {
     let (
         authority,
         _payer,
-        _mint_authority,
+        mint_authority,
         asset_mint,
         share_mint,
         user,
@@ -32,27 +49,54 @@ fn test_approve_request_success() {
         vault_pubkey,
         pending_vault_pubkey,
         _fee_recipient_ata,
-        _user_share_account,
-    ) = set_up_async_vault(
-        &mut svm,
-        token::ID,
-        None,
-        token::ID,
-        user_amount,
-        100_000_000,
-    );
-    initialize_async_vault(&mut svm, &authority, share_mint.pubkey(), vault_pubkey)
+        user_share_account,
+    ) = set_up_async_vault(svm, token::ID, None, token::ID, 1_000_000_000, 100_000_000);
+
+    initialize_async_vault(svm, &authority, share_mint.pubkey(), vault_pubkey)
         .expect("initialize vault should succeed");
 
-    let user_token_account = get_associated_token_address_with_program_id(
+    update_vault_nav(svm, &authority, vault_pubkey, NAV).expect("update nav should succeed");
+
+    let user_asset_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
         &asset_mint.pubkey(),
         &token::ID,
     );
 
-    let deposit_amount = 1_000_000;
-    let request_keypair = Keypair::new();
+    (
+        authority,
+        mint_authority,
+        asset_mint,
+        share_mint,
+        user,
+        reserve_pubkey,
+        vault_pubkey,
+        pending_vault_pubkey,
+        user_asset_account,
+        user_share_account,
+    )
+}
 
+#[test]
+fn test_approve_deposit_request_success() {
+    let mut svm = LiteSVM::new();
+    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
+    svm.add_program(program_id(), program_bytes).unwrap();
+
+    let (
+        authority,
+        _mint_authority,
+        asset_mint,
+        share_mint,
+        user,
+        reserve_pubkey,
+        vault_pubkey,
+        pending_vault_pubkey,
+        user_asset_account,
+        _user_share_account,
+    ) = setup(&mut svm);
+
+    let request_keypair = Keypair::new();
     create_deposit_request(
         &mut svm,
         &user,
@@ -60,22 +104,16 @@ fn test_approve_request_success() {
         asset_mint.pubkey(),
         share_mint.pubkey(),
         vault_pubkey,
-        user_token_account,
+        user_asset_account,
         pending_vault_pubkey,
-        deposit_amount,
+        DEPOSIT_AMOUNT,
     )
     .expect("create deposit request should succeed");
 
-    // Update NAV — approve_request should lock in this NAV and use it for conversion
-    let new_nav = 200u128;
-    update_vault_nav(&mut svm, &authority, vault_pubkey, new_nav)
-        .expect("update_vault_nav should succeed");
-
-    // Snapshot balances before approve
-    let pending_before = get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
+    let pending_before =
+        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
     let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
 
-    // Approve the request
     approve_request(
         &mut svm,
         &authority,
@@ -89,7 +127,6 @@ fn test_approve_request_success() {
     )
     .expect("approve_request should succeed");
 
-    // Assert vault state changes
     let vault_after = Vault::from_bytes(
         svm.get_account(&vault_pubkey)
             .expect("vault should exist")
@@ -98,7 +135,7 @@ fn test_approve_request_success() {
     .unwrap();
     assert_eq!(vault_after.pending_async_requests, 0);
     assert_eq!(
-        vault_after.total_asset_balance, deposit_amount,
+        vault_after.total_asset_balance, DEPOSIT_AMOUNT,
         "total_asset_balance should be incremented by deposit amount"
     );
 
@@ -109,24 +146,127 @@ fn test_approve_request_success() {
     )
     .unwrap();
     assert_eq!(request_after.request_state, RequestState::Claimable);
-    assert_eq!(request_after.price, new_nav);
-    // shares = deposit_amount * 10^9 / nav = 1_000_000 * 1_000_000_000 / 200 = 5_000_000_000_000
-    let expected_shares = deposit_amount as u128 * 1_000_000_000 / new_nav;
+    assert_eq!(request_after.price, NAV);
     assert_eq!(
-        request_after.amount, expected_shares as u64,
+        request_after.amount, EXPECTED_DEPOSIT_SHARES,
         "request.amount should be updated to claimable shares"
     );
 
-    // Assets should have moved from pending to reserve
     assert_eq!(
         get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
-        pending_before - deposit_amount,
+        pending_before - DEPOSIT_AMOUNT,
         "pending_vault should be drained"
     );
     assert_eq!(
         get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap()),
-        reserve_before + deposit_amount,
+        reserve_before + DEPOSIT_AMOUNT,
         "reserve should receive the deposited assets"
+    );
+}
+
+#[test]
+fn test_approve_redeem_request_success() {
+    let mut svm = LiteSVM::new();
+    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
+    svm.add_program(program_id(), program_bytes).unwrap();
+
+    let (
+        authority,
+        mint_authority,
+        asset_mint,
+        share_mint,
+        user,
+        reserve_pubkey,
+        vault_pubkey,
+        pending_vault_pubkey,
+        _user_asset_account,
+        user_share_account,
+    ) = setup(&mut svm);
+
+    // Fund reserve with assets to cover the redeem payout
+    helper_mint_to(
+        &mut svm,
+        &asset_mint.pubkey(),
+        &reserve_pubkey,
+        &mint_authority,
+        EXPECTED_REDEEM_ASSETS,
+        &token::ID,
+    );
+
+    set_vault_total_asset_balance(&mut svm, vault_pubkey, EXPECTED_REDEEM_ASSETS);
+
+    // Give the user shares to redeem
+    set_share_balance(
+        &mut svm,
+        &user_share_account,
+        &share_mint.pubkey(),
+        REDEEM_AMOUNT,
+    );
+
+    let request_keypair = Keypair::new();
+    create_redeem_request(
+        &mut svm,
+        &user,
+        &request_keypair,
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        vault_pubkey,
+        user_share_account,
+        REDEEM_AMOUNT,
+    )
+    .expect("create redeem request should succeed");
+
+    let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
+    let pending_before =
+        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
+
+    approve_request(
+        &mut svm,
+        &authority,
+        vault_pubkey,
+        request_keypair.pubkey(),
+        asset_mint.pubkey(),
+        share_mint.pubkey(),
+        reserve_pubkey,
+        pending_vault_pubkey,
+        token::ID,
+    )
+    .expect("approve_request should succeed");
+
+    let vault_after = Vault::from_bytes(
+        svm.get_account(&vault_pubkey)
+            .expect("vault should exist")
+            .data(),
+    )
+    .unwrap();
+    assert_eq!(vault_after.pending_async_requests, 0);
+    assert_eq!(
+        vault_after.total_asset_balance, 0,
+        "total_asset_balance should be decremented by redeemed assets"
+    );
+
+    let request_after = Request::from_bytes(
+        svm.get_account(&request_keypair.pubkey())
+            .expect("request should exist")
+            .data(),
+    )
+    .unwrap();
+    assert_eq!(request_after.request_state, RequestState::Claimable);
+    assert_eq!(request_after.price, NAV);
+    assert_eq!(
+        request_after.amount, EXPECTED_REDEEM_ASSETS,
+        "request.amount should be updated to claimable assets"
+    );
+
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap()),
+        reserve_before - EXPECTED_REDEEM_ASSETS,
+        "reserve should be drained by redeemed assets"
+    );
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
+        pending_before + EXPECTED_REDEEM_ASSETS,
+        "pending_vault should receive the redeemed assets"
     );
 }
 

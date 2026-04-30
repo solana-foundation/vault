@@ -26,8 +26,9 @@ use async_vault_client::{
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
     InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, RequestArgs, SetOperatorBuilder,
     UpdateDepositFeeBuilder, UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder,
-    UpdateWithdrawalFeeBuilder,
+    UpdateWithdrawalFeeBuilder, Vault as AsyncVault,
 };
+use borsh::BorshSerialize;
 
 use anchor_spl::{
     associated_token::{
@@ -1401,6 +1402,17 @@ pub fn set_share_balance(
     mint_state.supply = amount;
     spl_token::state::Mint::pack(mint_state, &mut mint_acct.data).unwrap();
     svm.set_account(*share_mint, mint_acct).unwrap();
+}
+
+/// Update Vault's `total_asset_balanace`
+pub fn set_vault_total_asset_balance(svm: &mut LiteSVM, vault: Pubkey, amount: u64) {
+    let mut account = svm.get_account(&vault).unwrap();
+    let mut vault_state = AsyncVault::from_bytes(account.data()).unwrap();
+    vault_state.total_asset_balance = amount;
+    let mut buf = Vec::new();
+    vault_state.serialize(&mut buf).unwrap();
+    account.data = buf;
+    svm.set_account(vault, account).unwrap();
 }
 
 #[allow(clippy::too_many_arguments)]
