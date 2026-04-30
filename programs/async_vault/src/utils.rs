@@ -70,42 +70,19 @@ pub fn calculate_assets(nav: u128, decimals: u8, share_amount: u64) -> Result<u6
     Ok(u64::try_from(assets).map_err(|_| VaultProgramError::ArithmeticError)?)
 }
 
-// TODO consolidate with test_case
-// TODO add tests for calculate_assets
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
-    #[test]
-    fn calculate_shares_one_to_one() {
-        let shares = calculate_shares(1_000_000, 6, 1_000_000).unwrap();
-        assert_eq!(shares, 1_000_000);
-    }
-
-    #[test]
-    fn calculate_shares_nav_above_one() {
-        let shares = calculate_shares(2_000_000, 6, 2_000_000).unwrap();
-        assert_eq!(shares, 1_000_000);
-    }
-
-    #[test]
-    fn calculate_shares_fractional_result_truncates() {
-        let shares = calculate_shares(3_000_000, 6, 1_000_000).unwrap();
-        // 1_000_000 * 1e6 / 3_000_000 = 333_333.333… → truncated to 333_333
-        assert_eq!(shares, 333_333);
-    }
-
-    #[test]
-    fn calculate_shares_zero_amount() {
-        let shares = calculate_shares(1_000_000, 6, 0).unwrap();
-        assert_eq!(shares, 0);
-    }
-
-    #[test]
-    fn calculate_shares_different_decimals() {
-        // 8 decimals: 1 token = 100_000_000 units
-        let shares = calculate_shares(100_000_000, 8, 100_000_000).unwrap();
-        assert_eq!(shares, 100_000_000);
+    #[test_case(1_000_000u128, 6u8, 1_000_000u64 => 1_000_000u64; "one_to_one")]
+    #[test_case(2_000_000u128, 6u8, 2_000_000u64 => 1_000_000u64; "nav_above_one")]
+    #[test_case(3_000_000u128, 6u8, 1_000_000u64 => 333_333u64; "fractional_truncates")]
+    #[test_case(1_000_000u128, 6u8, 0u64 => 0u64; "zero_amount")]
+    #[test_case(100_000_000u128, 8u8, 100_000_000u64 => 100_000_000u64; "different_decimals")]
+    #[test_case(1_000_000u128, 6u8, u64::MAX => u64::MAX; "large_amount_no_overflow")]
+    fn calculate_shares_success(nav: u128, decimals: u8, amount: u64) -> u64 {
+        calculate_shares(nav, decimals, amount).unwrap()
     }
 
     #[test]
@@ -113,9 +90,21 @@ mod tests {
         assert!(calculate_shares(0, 6, 1_000_000).is_err());
     }
 
+    #[test_case(1_000_000u128, 6u8, 1_000_000u64 => 1_000_000u64; "one_to_one")]
+    #[test_case(2_000_000u128, 6u8, 1_000_000u64 => 2_000_000u64; "nav_above_one")]
+    #[test_case(3_000_000u128, 6u8, 333_333u64 => 999_999u64; "fractional_truncates")]
+    #[test_case(100_000_000u128, 8u8, 100_000_000u64 => 100_000_000u64; "different_decimals")]
+    fn calculate_assets_success(nav: u128, decimals: u8, shares: u64) -> u64 {
+        calculate_assets(nav, decimals, shares).unwrap()
+    }
+
     #[test]
-    fn calculate_shares_large_amount_no_overflow() {
-        let shares = calculate_shares(1_000_000, 6, u64::MAX).unwrap();
-        assert_eq!(shares, u64::MAX);
+    fn calculate_assets_zero_nav_errors() {
+        assert!(calculate_assets(0, 6, 1_000_000).is_err());
+    }
+
+    #[test]
+    fn calculate_assets_zero_shares_errors() {
+        assert!(calculate_assets(1_000_000, 6, 0).is_err());
     }
 }
