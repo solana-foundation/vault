@@ -20,8 +20,8 @@ use vault_client::{
 };
 
 use async_vault_client::{
-    CreateVaultBuilder as CreateAsyncVaultBuilder, Vault as AsyncVault,
-    lite::SendTransaction, sdk::program_id,
+    lite::SendTransaction, sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder,
+    Vault as AsyncVault,
 };
 use borsh::BorshSerialize;
 
@@ -859,7 +859,6 @@ pub fn get_vault_asset_balance(svm: &LiteSVM, vault_pubkey: &Pubkey) -> u64 {
     get_token_account_amount(&reserve_acc)
 }
 
-
 pub fn set_up_async_vault(
     svm: &mut LiteSVM,
     asset_token_program: Pubkey,
@@ -982,7 +981,6 @@ pub fn set_up_async_vault(
     );
 }
 
-
 pub fn set_share_balance(
     svm: &mut LiteSVM,
     user_share_account: &Pubkey,
@@ -1012,4 +1010,3 @@ pub fn set_vault_total_asset_balance(svm: &mut LiteSVM, vault: Pubkey, amount: u
     account.data = buf;
     svm.set_account(vault, account).unwrap();
 }
-

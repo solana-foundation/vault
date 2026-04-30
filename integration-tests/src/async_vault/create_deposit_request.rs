@@ -2,8 +2,9 @@ use anchor_spl::{
     associated_token::get_associated_token_address_with_program_id, token, token_2022,
 };
 use async_vault_client::{
-    sdk::program_id, CreateDepositRequestBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    Request, RequestArgs, RequestState, RequestType, UpdateVaultNavBuilder, lite::SendTransaction,
+    lite::SendTransaction, sdk::program_id, CreateDepositRequestBuilder,
+    InitializeVaultBuilder as InitializeAsyncVaultBuilder, Request, RequestArgs, RequestState,
+    RequestType, UpdateVaultNavBuilder,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{

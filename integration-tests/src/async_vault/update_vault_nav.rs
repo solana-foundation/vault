@@ -1,5 +1,5 @@
 use anchor_spl::token;
-use async_vault_client::{sdk::program_id, UpdateVaultNavBuilder, Vault, lite::SendTransaction};
+use async_vault_client::{lite::SendTransaction, sdk::program_id, UpdateVaultNavBuilder, Vault};
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;

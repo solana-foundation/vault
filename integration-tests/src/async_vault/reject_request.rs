@@ -1,11 +1,11 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
 use async_vault_client::{
-    sdk::program_id, CreateDepositRequestBuilder, CreateRedeemRequestBuilder,
-    InitializeVaultBuilder as InitializeAsyncVaultBuilder, RejectRequestBuilder, RequestArgs,
-    UpdateVaultNavBuilder, Vault, lite::SendTransaction,
+    lite::SendTransaction, sdk::program_id, CreateDepositRequestBuilder,
+    CreateRedeemRequestBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
+    RejectRequestBuilder, RequestArgs, UpdateVaultNavBuilder, Vault,
 };
 use litesvm::LiteSVM;
-use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer, pubkey::Pubkey};
+use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
 use crate::helper_functions::{get_token_account_amount, set_share_balance, set_up_async_vault};
@@ -74,7 +74,10 @@ fn test_reject_deposit_request(deposit_amount: u64) {
         .user_token_account(user_token_account)
         .pending_vault(pending_vault_pubkey)
         .asset_token_program(spl_token::ID)
-        .args(RequestArgs { amount: deposit_amount, operator: None })
+        .args(RequestArgs {
+            amount: deposit_amount,
+            operator: None,
+        })
         .instruction()
         .send_transaction(&mut svm, &user.pubkey(), &[&user, &request_keypair])
         .expect("deposit request should succeed");
@@ -171,7 +174,10 @@ fn test_reject_redeem_request(share_amount: u64) {
         .vault(vault_pubkey)
         .user_share_account(user_share_account)
         .share_token_program(spl_token::ID)
-        .args(RequestArgs { amount: share_amount, operator: None })
+        .args(RequestArgs {
+            amount: share_amount,
+            operator: None,
+        })
         .instruction()
         .send_transaction(&mut svm, &user.pubkey(), &[&user, &request_keypair])
         .expect("redeem request should succeed");

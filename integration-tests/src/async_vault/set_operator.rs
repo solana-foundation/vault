@@ -1,7 +1,8 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
 use async_vault_client::{
-    sdk::program_id, CreateDepositRequestBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    Request, RequestArgs, SetOperatorBuilder, UpdateVaultNavBuilder, lite::SendTransaction,
+    lite::SendTransaction, sdk::program_id, CreateDepositRequestBuilder,
+    InitializeVaultBuilder as InitializeAsyncVaultBuilder, Request, RequestArgs,
+    SetOperatorBuilder, UpdateVaultNavBuilder,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
@@ -69,7 +70,10 @@ fn test_set_operator_succeeds() {
         .user_token_account(user_token_account)
         .pending_vault(pending_vault_pubkey)
         .asset_token_program(spl_token::ID)
-        .args(RequestArgs { amount: 1_000_000, operator: None })
+        .args(RequestArgs {
+            amount: 1_000_000,
+            operator: None,
+        })
         .instruction()
         .send_transaction(&mut svm, &user.pubkey(), &[&user, &request_keypair])
         .expect("create deposit request should succeed");

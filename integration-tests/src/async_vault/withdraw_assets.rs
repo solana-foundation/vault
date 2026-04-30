@@ -1,8 +1,7 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
 use async_vault_client::{
-    sdk::program_id, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
+    lite::SendTransaction, sdk::program_id, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
     UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder, WithdrawAssetsBuilder,
-    lite::SendTransaction,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{signature::Keypair, signer::Signer};

@@ -1,7 +1,7 @@
 use anchor_spl::token;
 use async_vault_client::{
-    sdk::program_id, AcceptAuthorityInvitationBuilder, InviteNewAuthorityBuilder, Vault,
-    lite::SendTransaction,
+    lite::SendTransaction, sdk::program_id, AcceptAuthorityInvitationBuilder,
+    InviteNewAuthorityBuilder, Vault,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
@@ -48,7 +48,11 @@ fn test_invite_new_authority(use_valid_authority: bool) {
         .vault(vault_pubkey)
         .new_authority(new_authority.pubkey())
         .instruction()
-        .send_transaction(&mut svm, &effective_authority.pubkey(), &[effective_authority]);
+        .send_transaction(
+            &mut svm,
+            &effective_authority.pubkey(),
+            &[effective_authority],
+        );
 
     if use_valid_authority {
         result.expect("invite new authority should succeed");
@@ -163,7 +167,11 @@ fn test_accept_authority_invitation(invite_first: bool, use_correct_new_authorit
         .new_authority(effective_new_authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
-        .send_transaction(&mut svm, &effective_new_authority.pubkey(), &[effective_new_authority]);
+        .send_transaction(
+            &mut svm,
+            &effective_new_authority.pubkey(),
+            &[effective_new_authority],
+        );
 
     let should_succeed = invite_first && use_correct_new_authority;
 

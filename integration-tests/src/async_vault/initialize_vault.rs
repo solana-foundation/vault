@@ -1,5 +1,8 @@
 use anchor_spl::token;
-use async_vault_client::{sdk::program_id, InitializeVaultBuilder as InitializeAsyncVaultBuilder, Vault, lite::SendTransaction};
+use async_vault_client::{
+    lite::SendTransaction, sdk::program_id, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
+    Vault,
+};
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;
@@ -59,7 +62,11 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
         .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
-        .send_transaction(&mut svm, &effective_authority.pubkey(), &[effective_authority]);
+        .send_transaction(
+            &mut svm,
+            &effective_authority.pubkey(),
+            &[effective_authority],
+        );
 
     let should_succeed = use_valid_authority && !pre_initialize;
 

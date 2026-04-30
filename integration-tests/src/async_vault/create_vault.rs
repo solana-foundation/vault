@@ -2,7 +2,9 @@ use anchor_spl::{
     token::{self, spl_token},
     token_2022::{self, spl_token_2022},
 };
-use async_vault_client::{sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder, Vault, lite::SendTransaction};
+use async_vault_client::{
+    lite::SendTransaction, sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder, Vault,
+};
 use litesvm::LiteSVM;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
@@ -11,8 +13,8 @@ use solana_sdk::{
 use test_case::test_case;
 
 use crate::helper_functions::{
-    assert_error_code, create_mint, create_mint_with_transfer_fee,
-    PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
+    assert_error_code, create_mint, create_mint_with_transfer_fee, PENDING_VAULT_SEED,
+    RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
 };
 
 #[test_case(100_000_000, true, true, true, false, token::ID,token::ID, 0 ; "both async inflows and outflows")]
@@ -117,7 +119,11 @@ fn test_create_vault(
         .async_inflows(async_inflows)
         .async_outflows(async_outflows)
         .instruction()
-        .send_transaction(&mut svm, &payer.pubkey(), &[&payer, effective_mint_authority]);
+        .send_transaction(
+            &mut svm,
+            &payer.pubkey(),
+            &[&payer, effective_mint_authority],
+        );
 
     let should_succeed = initial_price != 0
         && use_valid_mint_authority
