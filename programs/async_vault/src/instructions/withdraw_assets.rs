@@ -40,30 +40,30 @@ pub struct WithdrawAssets<'info> {
     pub asset_token_program: Interface<'info, TokenInterface>,
 }
 
+impl<'info> WithdrawAssets<'info> {
+    pub fn transfer_assets_to_authority(&mut self, amount: u64) -> Result<()> {
+        let share_mint = self.share_mint.key();
+        let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
+
+        let cpi_accounts = TransferChecked {
+            from: self.vault_token_account.to_account_info(),
+            mint: self.asset_mint.to_account_info(),
+            to: self.recipient_token_account.to_account_info(),
+            authority: self.vault.to_account_info(),
+        };
+
+        let cpi_ctx = CpiContext::new_with_signer(
+            self.asset_token_program.to_account_info(),
+            cpi_accounts,
+            seeds,
+        );
+
+        token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
+    }
+}
+
 pub fn handler(ctx: Context<WithdrawAssets>, amount: u64) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
-
-    let share_mint = ctx.accounts.share_mint.key();
-    let seeds: &[&[&[u8]]] = &[&[
-        VAULT_CONFIG_SEED,
-        share_mint.as_ref(),
-        &[ctx.accounts.vault.bump],
-    ]];
-
-    let cpi_accounts = TransferChecked {
-        from: ctx.accounts.vault_token_account.to_account_info(),
-        mint: ctx.accounts.asset_mint.to_account_info(),
-        to: ctx.accounts.recipient_token_account.to_account_info(),
-        authority: ctx.accounts.vault.to_account_info(),
-    };
-
-    let cpi_ctx = CpiContext::new_with_signer(
-        ctx.accounts.asset_token_program.to_account_info(),
-        cpi_accounts,
-        seeds,
-    );
-
-    token_interface::transfer_checked(cpi_ctx, amount, ctx.accounts.asset_mint.decimals)?;
-
+    ctx.accounts.transfer_assets_to_authority(amount)?;
     Ok(())
 }
