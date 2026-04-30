@@ -108,8 +108,7 @@ fn test_approve_deposit_request_success(
     )
     .expect("create deposit request should succeed");
 
-    let pending_before =
-        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
+    let pending_before = get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
     let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
 
     approve_request(
@@ -164,11 +163,7 @@ fn test_approve_deposit_request_success(
 
 #[test_case(200, 5_000_000_000_000, 1_000_000 ; "nav=200_10-9")]
 #[test_case(200_000_000_000, 5_000, 1_000_000 ; "nav=200")]
-fn test_approve_redeem_request_success(
-    nav: u128,
-    redeem_amount: u64,
-    expected_redeem_assets: u64,
-) {
+fn test_approve_redeem_request_success(nav: u128, redeem_amount: u64, expected_redeem_assets: u64) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
@@ -220,8 +215,7 @@ fn test_approve_redeem_request_success(
     .expect("create redeem request should succeed");
 
     let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
-    let pending_before =
-        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
+    let pending_before = get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
 
     approve_request(
         &mut svm,

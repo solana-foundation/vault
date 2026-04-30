@@ -107,6 +107,13 @@ pub mod async_vault {
         instructions::approve_request::handler(ctx)
     }
 
+    /// Reject a pending request. For deposit requests, the deposited assets are
+    /// refunded to the user. For redeem requests, the shares are minted back to the user.
+    /// The request account is closed and its rent is returned to the user.
+    pub fn reject_request(ctx: Context<RejectRequest>) -> Result<()> {
+        instructions::reject_request::handler(ctx)
+    }
+
     /* USER INSTRUCTIONS */
 
     /// Creates a deposit request with state pending (Pending vault authority acceptance)
@@ -129,6 +136,13 @@ pub mod async_vault {
     /// back to the user. For redemptions, mints the shares back.
     pub fn cancel_request(ctx: Context<CancelRequest>) -> Result<()> {
         instructions::cancel_request::handler(ctx)
+    }
+
+    /// Withdraws assets from the vault reserve to a specified token account.
+    /// Used for async operations such as deploying assets offchain.
+    /// Requires authority signature.
+    pub fn withdraw_assets(ctx: Context<WithdrawAssets>, amount: u64) -> Result<()> {
+        instructions::withdraw_assets::handler(ctx, amount)
     }
 
     /// Sets an operator for the Request.
