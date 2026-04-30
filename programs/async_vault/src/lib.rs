@@ -123,6 +123,13 @@ pub mod async_vault {
         instructions::cancel_request::handler(ctx)
     }
 
+    /// Withdraws assets from the vault reserve to a specified token account.
+    /// Used for async operations such as deploying assets offchain.
+    /// Requires authority signature.
+    pub fn withdraw_assets(ctx: Context<WithdrawAssets>, amount: u64) -> Result<()> {
+        instructions::withdraw_assets::handler(ctx, amount)
+    }
+
     /// It sets an operator for the vault.
     /// Requires Request owner signature.
     pub fn set_operator(ctx: Context<SetOperator>) -> Result<()> {

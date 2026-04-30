@@ -13,6 +13,7 @@ pub mod update_deposit_fee;
 pub mod update_nav;
 pub mod update_vault;
 pub mod update_withdrawal_fee;
+pub mod withdraw_assets;
 
 pub use accept_authority_invitation::*;
 pub use approve_request::*;
@@ -29,3 +30,4 @@ pub use update_deposit_fee::*;
 pub use update_nav::*;
 pub use update_vault::*;
 pub use update_withdrawal_fee::*;
+pub use withdraw_assets::*;
