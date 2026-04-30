@@ -8,9 +8,6 @@ use crate::{
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
 };
 
-// TODO make token accounts optional such that the accounts needed for deposit/redeem
-// branches are only present in the respective branch.
-
 #[derive(Accounts)]
 pub struct Claim<'info> {
     #[account(mut)]
@@ -55,7 +52,7 @@ pub struct Claim<'info> {
         token::authority = vault,
         token::token_program = asset_token_program,
     )]
-    pub pending_vault: InterfaceAccount<'info, TokenAccount>,
+    pub pending_vault: Option<InterfaceAccount<'info, TokenAccount>>,
 
     /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
     /// request.owner)
@@ -63,9 +60,8 @@ pub struct Claim<'info> {
         mut,
         token::mint = share_mint,
         token::authority = request.owner,
-        token::token_program = share_token_program,
     )]
-    pub user_share_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub user_share_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
 
     /// User's asset TokenAccount — receives transferred assets on Redeem (must be owned by
     /// request.owner)
@@ -75,10 +71,12 @@ pub struct Claim<'info> {
         token::authority = request.owner,
         token::token_program = asset_token_program,
     )]
-    pub user_asset_account: Box<InterfaceAccount<'info, TokenAccount>>,
+    pub user_asset_account: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
 
     pub asset_token_program: Interface<'info, TokenInterface>,
-    pub share_token_program: Interface<'info, TokenInterface>,
+
+    /// Token program for share mint operations — only required for Deposit
+    pub share_token_program: Option<Interface<'info, TokenInterface>>,
 }
 
 impl<'info> Claim<'info> {
@@ -90,11 +88,15 @@ impl<'info> Claim<'info> {
         amount: u64,
         shares: u64,
     ) -> Result<()> {
+        let pending_vault = self.pending_vault.as_ref().unwrap();
+        let user_share_account = self.user_share_account.as_ref().unwrap();
+        let share_token_program = self.share_token_program.as_ref().unwrap();
+
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 self.asset_token_program.to_account_info(),
                 TransferChecked {
-                    from: self.pending_vault.to_account_info(),
+                    from: pending_vault.to_account_info(),
                     mint: self.asset_mint.to_account_info(),
                     to: self.vault_token_account.to_account_info(),
                     authority: self.vault.to_account_info(),
@@ -107,10 +109,10 @@ impl<'info> Claim<'info> {
 
         token_interface::mint_to(
             CpiContext::new_with_signer(
-                self.share_token_program.to_account_info(),
+                share_token_program.to_account_info(),
                 MintTo {
                     mint: self.share_mint.to_account_info(),
-                    to: self.user_share_account.to_account_info(),
+                    to: user_share_account.to_account_info(),
                     authority: self.vault.to_account_info(),
                 },
                 seeds,
@@ -121,13 +123,15 @@ impl<'info> Claim<'info> {
 
     /// Transfers `assets` from the vault reserve to the user's asset account.
     pub fn redeem(&self, seeds: &[&[&[u8]]], assets: u64) -> Result<()> {
+        let user_asset_account = self.user_asset_account.as_ref().unwrap();
+
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 self.asset_token_program.to_account_info(),
                 TransferChecked {
                     from: self.vault_token_account.to_account_info(),
                     mint: self.asset_mint.to_account_info(),
-                    to: self.user_asset_account.to_account_info(),
+                    to: user_asset_account.to_account_info(),
                     authority: self.vault.to_account_info(),
                 },
                 seeds,
@@ -162,11 +166,24 @@ pub fn handler(ctx: Context<Claim>) -> Result<()> {
 
     match request.request_type {
         RequestType::Deposit => {
+            require!(ctx.accounts.pending_vault.is_some(), AsyncVaultError::MissingRequiredAccount);
+            require!(
+                ctx.accounts.user_share_account.is_some(),
+                AsyncVaultError::MissingRequiredAccount
+            );
+            require!(
+                ctx.accounts.share_token_program.is_some(),
+                AsyncVaultError::MissingRequiredAccount
+            );
             // TODO calculate fees before shares, if DepositFee extension is enabled
             let shares = ctx.accounts.request.calculate_shares(decimals, amount)?;
             ctx.accounts.deposit(seeds, amount, shares)?;
         }
         RequestType::Redeem => {
+            require!(
+                ctx.accounts.user_asset_account.is_some(),
+                AsyncVaultError::MissingRequiredAccount
+            );
             let assets = ctx.accounts.request.calculate_assets(decimals, amount)?;
             // TODO calculate fees and transfer if WithdrawFees are enabled
             ctx.accounts.redeem(seeds, assets)?;

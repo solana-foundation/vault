@@ -144,9 +144,11 @@ fn test_claim_deposit_success(use_operator: bool) {
         asset_mint.pubkey(),
         share_mint.pubkey(),
         reserve_pubkey,
-        pending_vault_pubkey,
-        user_share_account,
-        user_asset_account,
+        Some(pending_vault_pubkey),
+        Some(user_share_account),
+        None,
+        spl_token::ID,
+        Some(spl_token::ID),
     )
     .expect("claim_request should succeed");
 
@@ -192,7 +194,7 @@ fn test_claim_redeem_success(use_operator: bool) {
         operator,
         reserve_pubkey,
         vault_pubkey,
-        pending_vault_pubkey,
+        _pending_vault_pubkey,
         user_asset_account,
         user_share_account,
     ) = setup(&mut svm);
@@ -256,9 +258,11 @@ fn test_claim_redeem_success(use_operator: bool) {
         asset_mint.pubkey(),
         share_mint.pubkey(),
         reserve_pubkey,
-        pending_vault_pubkey,
-        user_share_account,
-        user_asset_account,
+        None,
+        None,
+        Some(user_asset_account),
+        spl_token::ID,
+        None,
     )
     .expect("claim_request should succeed");
 
@@ -362,9 +366,11 @@ fn test_claim_fails(
         asset_mint.pubkey(),
         share_mint.pubkey(),
         reserve_pubkey,
-        pending_vault_pubkey,
-        user_share_account,
-        user_asset_account,
+        Some(pending_vault_pubkey),
+        Some(user_share_account),
+        None,
+        spl_token::ID,
+        Some(spl_token::ID),
     );
 
     assert!(result.is_err(), "claim should fail");
