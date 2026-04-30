@@ -8,8 +8,6 @@ use crate::{
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
 };
 
-// TODO use the existing calculation methods on the vault
-// TODO consolidate logic into helper methods
 // TODO make token accounts optional such that the accounts needed for deposit/redeem
 // branches are only present in the respective branch.
 
@@ -83,6 +81,63 @@ pub struct Claim<'info> {
     pub share_token_program: Interface<'info, TokenInterface>,
 }
 
+impl<'info> Claim<'info> {
+    /// Transfers `amount` assets from the pending vault into the reserve, then mints
+    /// `shares` to the user's share account.
+    pub fn deposit(
+        &self,
+        seeds: &[&[&[u8]]],
+        amount: u64,
+        shares: u64,
+    ) -> Result<()> {
+        token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                self.asset_token_program.to_account_info(),
+                TransferChecked {
+                    from: self.pending_vault.to_account_info(),
+                    mint: self.asset_mint.to_account_info(),
+                    to: self.vault_token_account.to_account_info(),
+                    authority: self.vault.to_account_info(),
+                },
+                seeds,
+            ),
+            amount,
+            self.asset_mint.decimals,
+        )?;
+
+        token_interface::mint_to(
+            CpiContext::new_with_signer(
+                self.share_token_program.to_account_info(),
+                MintTo {
+                    mint: self.share_mint.to_account_info(),
+                    to: self.user_share_account.to_account_info(),
+                    authority: self.vault.to_account_info(),
+                },
+                seeds,
+            ),
+            shares,
+        )
+    }
+
+    /// Transfers `assets` from the vault reserve to the user's asset account.
+    pub fn redeem(&self, seeds: &[&[&[u8]]], assets: u64) -> Result<()> {
+        token_interface::transfer_checked(
+            CpiContext::new_with_signer(
+                self.asset_token_program.to_account_info(),
+                TransferChecked {
+                    from: self.vault_token_account.to_account_info(),
+                    mint: self.asset_mint.to_account_info(),
+                    to: self.user_asset_account.to_account_info(),
+                    authority: self.vault.to_account_info(),
+                },
+                seeds,
+            ),
+            assets,
+            self.asset_mint.decimals,
+        )
+    }
+}
+
 pub fn handler(ctx: Context<Claim>) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
@@ -109,55 +164,12 @@ pub fn handler(ctx: Context<Claim>) -> Result<()> {
         RequestType::Deposit => {
             // TODO calculate fees before shares, if DepositFee extension is enabled
             let shares = ctx.accounts.request.calculate_shares(decimals, amount)?;
-
-            // Move assets: pending_vault → vault_token_account (reserve)
-            token_interface::transfer_checked(
-                CpiContext::new_with_signer(
-                    ctx.accounts.asset_token_program.to_account_info(),
-                    TransferChecked {
-                        from: ctx.accounts.pending_vault.to_account_info(),
-                        mint: ctx.accounts.asset_mint.to_account_info(),
-                        to: ctx.accounts.vault_token_account.to_account_info(),
-                        authority: ctx.accounts.vault.to_account_info(),
-                    },
-                    seeds,
-                ),
-                amount,
-                ctx.accounts.asset_mint.decimals,
-            )?;
-
-            // Mint shares to user
-            token_interface::mint_to(
-                CpiContext::new_with_signer(
-                    ctx.accounts.share_token_program.to_account_info(),
-                    MintTo {
-                        mint: ctx.accounts.share_mint.to_account_info(),
-                        to: ctx.accounts.user_share_account.to_account_info(),
-                        authority: ctx.accounts.vault.to_account_info(),
-                    },
-                    seeds,
-                ),
-                shares,
-            )?;
+            ctx.accounts.deposit(seeds, amount, shares)?;
         }
         RequestType::Redeem => {
             let assets = ctx.accounts.request.calculate_assets(decimals, amount)?;
-
-            // Transfer assets from vault reserve to user
-            token_interface::transfer_checked(
-                CpiContext::new_with_signer(
-                    ctx.accounts.asset_token_program.to_account_info(),
-                    TransferChecked {
-                        from: ctx.accounts.vault_token_account.to_account_info(),
-                        mint: ctx.accounts.asset_mint.to_account_info(),
-                        to: ctx.accounts.user_asset_account.to_account_info(),
-                        authority: ctx.accounts.vault.to_account_info(),
-                    },
-                    seeds,
-                ),
-                assets,
-                ctx.accounts.asset_mint.decimals,
-            )?;
+            // TODO calculate fees and transfer if WithdrawFees are enabled
+            ctx.accounts.redeem(seeds, assets)?;
         }
     }
 
