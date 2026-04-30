@@ -11,3 +11,4 @@ mod set_operator;
 mod update_async_vault;
 mod update_authority;
 mod update_vault_nav;
+mod withdraw_assets;

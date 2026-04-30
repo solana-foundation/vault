@@ -26,7 +26,7 @@ use async_vault_client::{
     InitializeDepositFeeBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
     InitializeWithdrawalFeeBuilder, InviteNewAuthorityBuilder, RejectRequestBuilder, RequestArgs,
     SetOperatorBuilder, UpdateDepositFeeBuilder, UpdateVaultBuilder as UpdateVaultAsyncBuilder,
-    UpdateVaultNavBuilder, UpdateWithdrawalFeeBuilder,
+    UpdateVaultNavBuilder, UpdateWithdrawalFeeBuilder, WithdrawAssetsBuilder,
 };
 
 use anchor_spl::{
@@ -1428,4 +1428,36 @@ pub fn reject_request(
         blockhash,
     );
     return svm.send_transaction(tx);
+}
+
+pub fn withdraw_assets(
+    svm: &mut LiteSVM,
+    authority: &Keypair,
+    asset_mint: Pubkey,
+    share_mint: Pubkey,
+    vault: Pubkey,
+    vault_token_account: Pubkey,
+    recipient_token_account: Pubkey,
+    asset_token_program: Pubkey,
+    amount: u64,
+) -> Result<TransactionMetadata, FailedTransactionMetadata> {
+    let ix = WithdrawAssetsBuilder::new()
+        .authority(authority.pubkey())
+        .asset_mint(asset_mint)
+        .share_mint(share_mint)
+        .vault(vault)
+        .vault_token_account(vault_token_account)
+        .recipient_token_account(recipient_token_account)
+        .asset_token_program(asset_token_program)
+        .amount(amount)
+        .instruction();
+
+    let blockhash = svm.latest_blockhash();
+    let tx = Transaction::new_signed_with_payer(
+        &[ix],
+        Some(&authority.pubkey()),
+        &[authority],
+        blockhash,
+    );
+    svm.send_transaction(tx)
 }
