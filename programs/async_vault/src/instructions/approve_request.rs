@@ -114,10 +114,12 @@ pub fn handler(ctx: Context<ApproveRequest>) -> Result<()> {
 
     // Transfer assets between Vault and Pending Vault (aka escrow)
     let claimable_amount = if is_deposit {
-        let shares = calculate_shares(nav, decimals, original_amount)?;
         ctx.accounts.settle_deposit(seeds, original_amount)?;
+        // Shares to be minted, floored (protocol favorable)
+        let shares = calculate_shares(nav, decimals, original_amount)?;
         shares
     } else {
+        // Assets to be transfered, floored (protocol favorable)
         let assets = calculate_assets(nav, decimals, original_amount)?;
         ctx.accounts.settle_redeem(seeds, assets)?;
         assets

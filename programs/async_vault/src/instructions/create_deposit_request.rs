@@ -54,6 +54,7 @@ pub struct CreateDepositRequest<'info> {
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
+// TODO clean this up since the generic is not needed
 impl<'info> CreateDepositRequest<'info> {
     /// Generic asset token transfer. Automatically uses vault PDA signing when
     /// authority is the vault, otherwise performs a plain user-signed transfer.

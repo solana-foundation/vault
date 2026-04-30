@@ -38,7 +38,7 @@ pub fn validate_asset_mint_extensions_from_acct_info(mint_acct: &AccountInfo) ->
 }
 
 /// Converts an asset amount into shares using the supplied NAV.
-///
+/// Rounding: floored
 /// `shares = net_amount * 10^decimals / nav`
 pub fn calculate_shares(nav: u128, decimals: u8, net_amount: u64) -> Result<u64> {
     let precision = 10u128
@@ -53,7 +53,7 @@ pub fn calculate_shares(nav: u128, decimals: u8, net_amount: u64) -> Result<u64>
 }
 
 /// Converts a share amount into assets using the supplied NAV.
-///
+/// Rounding: floored
 /// `assets = share_amount * nav / 10^decimals`
 pub fn calculate_assets(nav: u128, decimals: u8, share_amount: u64) -> Result<u64> {
     let precision = 10u128

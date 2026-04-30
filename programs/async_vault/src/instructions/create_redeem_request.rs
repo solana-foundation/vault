@@ -44,6 +44,7 @@ pub struct CreateRedeemRequest<'info> {
 }
 
 impl<'info> CreateRedeemRequest<'info> {
+    /// Burn User shares
     pub fn burn_shares(&self, amount: u64) -> Result<()> {
         let cpi_accounts = Burn {
             mint: self.share_mint.to_account_info(),
@@ -65,13 +66,6 @@ pub fn handler(ctx: Context<CreateRedeemRequest>, args: RequestArgs) -> Result<(
     require!(args.amount > 0, VaultProgramError::InsufficientRedeemAmount);
 
     ctx.accounts.burn_shares(args.amount)?;
-
-    let gross_assets = ctx
-        .accounts
-        .vault
-        .calculate_assets(ctx.accounts.share_mint.decimals, args.amount)?;
-
-    require!(gross_assets > 0, VaultProgramError::ZeroAssets);
 
     let current_timestamp = Clock::get()?.unix_timestamp;
     ctx.accounts.request.set_inner(Request {
