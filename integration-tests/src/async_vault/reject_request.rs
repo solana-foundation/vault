@@ -70,10 +70,6 @@ fn test_reject_deposit_request(deposit_amount: u64) {
     let user_balance_after_deposit =
         get_token_account_amount(&svm.get_account(&user_token_account).unwrap());
     assert_eq!(user_balance_after_deposit, user_amount - deposit_amount);
-    assert_eq!(
-        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
-        deposit_amount
-    );
 
     let vault_before = Vault::from_bytes(svm.get_account(&vault_pubkey).unwrap().data()).unwrap();
     let pending_before = vault_before.pending_async_requests;

@@ -20,8 +20,9 @@ pub struct RejectRequest<'info> {
 
     #[account(
         mut,
-        constraint = request.vault == vault.key(),
         close = user,
+        constraint = request.owner == user.key() @ AsyncVaultError::UnauthorizedSigner,
+        has_one = vault.key(),
     )]
     pub request: Account<'info, Request>,
 
@@ -33,14 +34,14 @@ pub struct RejectRequest<'info> {
         bump = vault.bump,
         constraint = vault.authority == authority.key() @ AsyncVaultError::UnauthorizedSigner,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     /// CHECK: Validated against request.owner. Receives rent on account close.
     #[account(
         mut,
         constraint = user.key() == request.owner @ AsyncVaultError::UnauthorizedSigner,
     )]
-    pub user: UncheckedAccount<'info>,
+    pub user: AccountInfo<'info>,
 
     #[account(
         mut,
@@ -143,8 +144,6 @@ pub fn handler(ctx: Context<RejectRequest>) -> Result<()> {
             ctx.accounts.mint_shares(shares)?;
         }
     }
-
-    ctx.accounts.request.request_state = RequestState::Rejected;
 
     ctx.accounts.vault.pending_async_requests = ctx
         .accounts

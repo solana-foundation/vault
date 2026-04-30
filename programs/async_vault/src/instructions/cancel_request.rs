@@ -23,7 +23,7 @@ pub struct CancelRequest<'info> {
         mut,
         close = user,
         constraint = request.owner == user.key() @ AsyncVaultError::UnauthorizedSigner,
-        constraint = request.vault == vault.key() @ AsyncVaultError::InvalidPendingVault,
+        has_one = vault.key(),
     )]
     pub request: Account<'info, Request>,
 
