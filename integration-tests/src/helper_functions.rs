@@ -1427,6 +1427,5 @@ pub fn reject_request(
         &[authority],
         blockhash,
     );
-
     return svm.send_transaction(tx);
 }
