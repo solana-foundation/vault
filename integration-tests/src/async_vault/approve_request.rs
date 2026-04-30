@@ -70,7 +70,8 @@ fn setup(
     )
 }
 
-#[test_case(200, 1_000_000, 5_000_000_000 ; "nav=200")]
+#[test_case(200, 1_000_000, 5_000_000_000_000 ; "nav=200_10-9")]
+#[test_case(200_000_000_000, 1_000_000, 5_000 ; "nav=200")]
 fn test_approve_deposit_request_success(
     nav: u128,
     deposit_amount: u64,
@@ -161,7 +162,8 @@ fn test_approve_deposit_request_success(
     );
 }
 
-#[test_case(200, 5_000_000_000_000, 1_000_000 ; "nav=200")]
+#[test_case(200, 5_000_000_000_000, 1_000_000 ; "nav=200_10-9")]
+#[test_case(200_000_000_000, 5_000, 1_000_000 ; "nav=200")]
 fn test_approve_redeem_request_success(
     nav: u128,
     redeem_amount: u64,
