@@ -54,38 +54,19 @@ pub struct CreateDepositRequest<'info> {
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
-// TODO clean this up since the generic is not needed
 impl<'info> CreateDepositRequest<'info> {
-    /// Generic asset token transfer. Automatically uses vault PDA signing when
-    /// authority is the vault, otherwise performs a plain user-signed transfer.
-    pub fn transfer_asset_token(
-        &self,
-        from: AccountInfo<'info>,
-        to: AccountInfo<'info>,
-        authority: AccountInfo<'info>,
-        amount: u64,
-    ) -> Result<()> {
-        let cpi_accounts = TransferChecked {
-            from,
-            mint: self.asset_mint.to_account_info(),
-            to,
-            authority: authority.clone(),
-        };
-
-        if authority.key() == self.vault.key() {
-            let share_mint = self.share_mint.key();
-            let seeds: &[&[&[u8]]] =
-                &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
-            let cpi_ctx = CpiContext::new_with_signer(
-                self.asset_token_program.to_account_info(),
-                cpi_accounts,
-                seeds,
-            );
-            token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
-        } else {
-            let cpi_ctx = CpiContext::new(self.asset_token_program.to_account_info(), cpi_accounts);
-            token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
-        }
+    /// Transfers assets from the User's TokenAccount to the pending vault (aka escrow)
+    pub fn transfer_assets_from_user_to_pending_vault(&self, amount: u64) -> Result<()> {
+        let cpi_ctx = CpiContext::new(
+            self.asset_token_program.to_account_info(),
+            TransferChecked {
+                from: self.user_token_account.to_account_info(),
+                mint: self.asset_mint.to_account_info(),
+                to: self.pending_vault.to_account_info(),
+                authority: self.user.to_account_info(),
+            },
+        );
+        token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
 }
 pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<()> {
@@ -98,12 +79,8 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
     // SAFETY: TransferFees are required to be 0, therefore using args.amount is safe.
-    ctx.accounts.transfer_asset_token(
-        ctx.accounts.user_token_account.to_account_info(),
-        ctx.accounts.pending_vault.to_account_info(),
-        ctx.accounts.user.to_account_info(),
-        args.amount,
-    )?;
+    ctx.accounts
+        .transfer_assets_from_user_to_pending_vault(args.amount)?;
 
     let current_timestamp = Clock::get()?.unix_timestamp;
     ctx.accounts.request.set_inner(Request {
