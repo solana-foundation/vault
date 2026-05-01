@@ -4,6 +4,7 @@ use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
+    extensions::fee::processor::{get_deposit_fee_and_net, get_withdrawal_fee_and_net},
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
     utils::{calculate_assets, calculate_shares},
 };
@@ -91,10 +92,22 @@ impl<'info> ApproveRequest<'info> {
             self.asset_mint.decimals,
         )
     }
+
 }
 
-// TODO add fee handling
-pub fn handler(ctx: Context<ApproveRequest>) -> Result<()> {
+fn validate_fee_recipient(info: &AccountInfo, expected_owner: Pubkey) -> Result<()> {
+    let data = info.try_borrow_data()?;
+    require!(data.len() >= 64, AsyncVaultError::InvalidFeeRecipient);
+    let owner = Pubkey::new_from_array(
+        data[32..64]
+            .try_into()
+            .map_err(|_| AsyncVaultError::InvalidFeeRecipient)?,
+    );
+    require!(owner == expected_owner, AsyncVaultError::InvalidFeeRecipient);
+    Ok(())
+}
+
+pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
     require!(
@@ -112,32 +125,78 @@ pub fn handler(ctx: Context<ApproveRequest>) -> Result<()> {
     let is_deposit = matches!(ctx.accounts.request.request_type, RequestType::Deposit);
     let original_amount = ctx.accounts.request.amount;
 
+    let vault_data = ctx
+        .accounts
+        .vault
+        .to_account_info()
+        .try_borrow_data()?
+        .to_vec();
+    let mut remaining = ctx.remaining_accounts.iter();
+
     // Transfer assets between Vault and Pending Vault (aka escrow)
-    let claimable_amount = if is_deposit {
-        ctx.accounts.settle_deposit(seeds, original_amount)?;
+    let (claimable_amount, balance_delta) = if is_deposit {
+        let (deposit_fee, net_deposit) = get_deposit_fee_and_net(&vault_data, original_amount)?;
+        if deposit_fee > 0 {
+            let fee_recipient_info = remaining.next().ok_or(AsyncVaultError::MissingFeeRecipient)?;
+            validate_fee_recipient(fee_recipient_info, ctx.accounts.vault.fee_recipient)?;
+            token_interface::transfer_checked(
+                CpiContext::new_with_signer(
+                    ctx.accounts.asset_token_program.to_account_info(),
+                    TransferChecked {
+                        from: ctx.accounts.pending_vault.to_account_info(),
+                        mint: ctx.accounts.asset_mint.to_account_info(),
+                        to: fee_recipient_info.to_account_info(),
+                        authority: ctx.accounts.vault.to_account_info(),
+                    },
+                    seeds,
+                ),
+                deposit_fee,
+                ctx.accounts.asset_mint.decimals,
+            )?;
+        }
+        ctx.accounts.settle_deposit(seeds, net_deposit)?;
         // Shares to be minted, floored (protocol favorable)
-        let shares = calculate_shares(nav, decimals, original_amount)?;
-        shares
+        let shares = calculate_shares(nav, decimals, net_deposit)?;
+        (shares, net_deposit)
     } else {
-        // Assets to be transfered, floored (protocol favorable)
+        // Assets to be transferred, floored (protocol favorable)
         let assets = calculate_assets(nav, decimals, original_amount)?;
-        ctx.accounts.settle_redeem(seeds, assets)?;
-        assets
+        let (withdraw_fee, net_assets) = get_withdrawal_fee_and_net(&vault_data, assets)?;
+        if withdraw_fee > 0 {
+            let fee_recipient_info = remaining.next().ok_or(AsyncVaultError::MissingFeeRecipient)?;
+            validate_fee_recipient(fee_recipient_info, ctx.accounts.vault.fee_recipient)?;
+            token_interface::transfer_checked(
+                CpiContext::new_with_signer(
+                    ctx.accounts.asset_token_program.to_account_info(),
+                    TransferChecked {
+                        from: ctx.accounts.vault_token_account.to_account_info(),
+                        mint: ctx.accounts.asset_mint.to_account_info(),
+                        to: fee_recipient_info.to_account_info(),
+                        authority: ctx.accounts.vault.to_account_info(),
+                    },
+                    seeds,
+                ),
+                withdraw_fee,
+                ctx.accounts.asset_mint.decimals,
+            )?;
+        }
+        ctx.accounts.settle_redeem(seeds, net_assets)?;
+        (net_assets, assets)
     };
 
     let vault = &mut ctx.accounts.vault;
     let request = &mut ctx.accounts.request;
 
-    // Upate Vault's `total_asset_balance`
+    // Update Vault's `total_asset_balance`
     if is_deposit {
         vault.total_asset_balance = vault
             .total_asset_balance
-            .checked_add(original_amount)
+            .checked_add(balance_delta)
             .ok_or(AsyncVaultError::ArithmeticError)?;
     } else {
         vault.total_asset_balance = vault
             .total_asset_balance
-            .checked_sub(claimable_amount)
+            .checked_sub(balance_delta)
             .ok_or(AsyncVaultError::ArithmeticError)?;
     }
 

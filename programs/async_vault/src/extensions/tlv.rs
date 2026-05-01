@@ -1,8 +1,10 @@
 use anchor_lang::prelude::*;
 
-use crate::error::AsyncVaultError;
+use crate::{error::AsyncVaultError, state::Vault};
 
 use super::{ExtensionType, TLV_HEADER_SIZE};
+
+pub const TLV_START: usize = 8 + Vault::INIT_SPACE;
 
 pub fn get_extension_bytes(tlv_data: &[u8], ext_type: ExtensionType) -> Option<&[u8]> {
     let mut offset = 0;
