@@ -13,15 +13,9 @@ pub struct CreateRedeemRequest<'info> {
     pub user: Signer<'info>,
 
     pub asset_mint: InterfaceAccount<'info, Mint>,
+
     #[account(mut)]
     pub share_mint: InterfaceAccount<'info, Mint>,
-
-    #[account(
-        init,
-        space = 8 + Request::INIT_SPACE,
-        payer = user,
-    )]
-    pub request: Account<'info, Request>,
 
     #[account(
         mut,
@@ -31,6 +25,13 @@ pub struct CreateRedeemRequest<'info> {
         bump = vault.bump
     )]
     pub vault: Account<'info, Vault>,
+
+    #[account(
+        init,
+        space = 8 + Request::INIT_SPACE,
+        payer = user,
+    )]
+    pub request: Account<'info, Request>,
 
     #[account(
         mut,

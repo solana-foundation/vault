@@ -20,13 +20,6 @@ pub struct CreateDepositRequest<'info> {
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
-        init,
-        space = 8 + Request::INIT_SPACE,
-        payer = user,
-    )]
-    pub request: Account<'info, Request>,
-
-    #[account(
         mut,
         has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
         has_one = share_mint @ AsyncVaultError::InvalidShareMint,
@@ -34,6 +27,13 @@ pub struct CreateDepositRequest<'info> {
         bump = vault.bump
     )]
     pub vault: Account<'info, Vault>,
+
+    #[account(
+        init,
+        space = 8 + Request::INIT_SPACE,
+        payer = user,
+    )]
+    pub request: Account<'info, Request>,
 
     #[account(
         mut,

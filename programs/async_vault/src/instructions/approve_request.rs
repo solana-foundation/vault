@@ -13,6 +13,9 @@ use crate::{
 pub struct ApproveRequest<'info> {
     pub authority: Signer<'info>,
 
+    pub asset_mint: InterfaceAccount<'info, Mint>,
+    pub share_mint: InterfaceAccount<'info, Mint>,
+
     #[account(
         mut,
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
@@ -28,10 +31,6 @@ pub struct ApproveRequest<'info> {
         has_one = vault @ AsyncVaultError::InvalidRequest,
     )]
     pub request: Account<'info, Request>,
-
-    pub asset_mint: InterfaceAccount<'info, Mint>,
-
-    pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,

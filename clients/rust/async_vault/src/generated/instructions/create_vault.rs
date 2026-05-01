@@ -20,11 +20,11 @@ pub struct CreateVault {
 
     pub share_mint: solana_pubkey::Pubkey,
 
+    pub vault: solana_pubkey::Pubkey,
+
     pub reserve: solana_pubkey::Pubkey,
 
     pub pending_vault: solana_pubkey::Pubkey,
-
-    pub vault: solana_pubkey::Pubkey,
 
     pub asset_token_program: solana_pubkey::Pubkey,
 
@@ -56,12 +56,12 @@ impl CreateVault {
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.share_mint, false));
+        accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new(self.reserve, false));
         accounts.push(solana_instruction::AccountMeta::new(
             self.pending_vault,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_token_program,
             false,
@@ -135,9 +135,9 @@ impl CreateVaultInstructionArgs {
 ///   1. `[signer]` mint_authority
 ///   2. `[]` asset_mint
 ///   3. `[writable]` share_mint
-///   4. `[writable]` reserve
-///   5. `[writable]` pending_vault
-///   6. `[writable]` vault
+///   4. `[writable]` vault
+///   5. `[writable]` reserve
+///   6. `[writable]` pending_vault
 ///   7. `[]` asset_token_program
 ///   8. `[]` share_token_program
 ///   9. `[optional]` system_program (default to `11111111111111111111111111111111`)
@@ -147,9 +147,9 @@ pub struct CreateVaultBuilder {
     mint_authority: Option<solana_pubkey::Pubkey>,
     asset_mint: Option<solana_pubkey::Pubkey>,
     share_mint: Option<solana_pubkey::Pubkey>,
+    vault: Option<solana_pubkey::Pubkey>,
     reserve: Option<solana_pubkey::Pubkey>,
     pending_vault: Option<solana_pubkey::Pubkey>,
-    vault: Option<solana_pubkey::Pubkey>,
     asset_token_program: Option<solana_pubkey::Pubkey>,
     share_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
@@ -191,6 +191,12 @@ impl CreateVaultBuilder {
     }
 
     #[inline(always)]
+    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
+        self.vault = Some(vault);
+        self
+    }
+
+    #[inline(always)]
     pub fn reserve(&mut self, reserve: solana_pubkey::Pubkey) -> &mut Self {
         self.reserve = Some(reserve);
         self
@@ -199,12 +205,6 @@ impl CreateVaultBuilder {
     #[inline(always)]
     pub fn pending_vault(&mut self, pending_vault: solana_pubkey::Pubkey) -> &mut Self {
         self.pending_vault = Some(pending_vault);
-        self
-    }
-
-    #[inline(always)]
-    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-        self.vault = Some(vault);
         self
     }
 
@@ -281,9 +281,9 @@ impl CreateVaultBuilder {
             mint_authority: self.mint_authority.expect("mint_authority is not set"),
             asset_mint: self.asset_mint.expect("asset_mint is not set"),
             share_mint: self.share_mint.expect("share_mint is not set"),
+            vault: self.vault.expect("vault is not set"),
             reserve: self.reserve.expect("reserve is not set"),
             pending_vault: self.pending_vault.expect("pending_vault is not set"),
-            vault: self.vault.expect("vault is not set"),
             asset_token_program: self
                 .asset_token_program
                 .expect("asset_token_program is not set"),
@@ -328,11 +328,11 @@ pub struct CreateVaultCpiAccounts<'a, 'b> {
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
+    pub vault: &'b solana_account_info::AccountInfo<'a>,
+
     pub reserve: &'b solana_account_info::AccountInfo<'a>,
 
     pub pending_vault: &'b solana_account_info::AccountInfo<'a>,
-
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
 
@@ -354,11 +354,11 @@ pub struct CreateVaultCpi<'a, 'b> {
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
+    pub vault: &'b solana_account_info::AccountInfo<'a>,
+
     pub reserve: &'b solana_account_info::AccountInfo<'a>,
 
     pub pending_vault: &'b solana_account_info::AccountInfo<'a>,
-
-    pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
 
@@ -381,9 +381,9 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
             mint_authority: accounts.mint_authority,
             asset_mint: accounts.asset_mint,
             share_mint: accounts.share_mint,
+            vault: accounts.vault,
             reserve: accounts.reserve,
             pending_vault: accounts.pending_vault,
-            vault: accounts.vault,
             asset_token_program: accounts.asset_token_program,
             share_token_program: accounts.share_token_program,
             system_program: accounts.system_program,
@@ -431,6 +431,7 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
             *self.share_mint.key,
             false,
         ));
+        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.reserve.key,
             false,
@@ -439,7 +440,6 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
             *self.pending_vault.key,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_token_program.key,
             false,
@@ -474,9 +474,9 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
         account_infos.push(self.mint_authority.clone());
         account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint.clone());
+        account_infos.push(self.vault.clone());
         account_infos.push(self.reserve.clone());
         account_infos.push(self.pending_vault.clone());
-        account_infos.push(self.vault.clone());
         account_infos.push(self.asset_token_program.clone());
         account_infos.push(self.share_token_program.clone());
         account_infos.push(self.system_program.clone());
@@ -500,9 +500,9 @@ impl<'a, 'b> CreateVaultCpi<'a, 'b> {
 ///   1. `[signer]` mint_authority
 ///   2. `[]` asset_mint
 ///   3. `[writable]` share_mint
-///   4. `[writable]` reserve
-///   5. `[writable]` pending_vault
-///   6. `[writable]` vault
+///   4. `[writable]` vault
+///   5. `[writable]` reserve
+///   6. `[writable]` pending_vault
 ///   7. `[]` asset_token_program
 ///   8. `[]` share_token_program
 ///   9. `[]` system_program
@@ -519,9 +519,9 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
             mint_authority: None,
             asset_mint: None,
             share_mint: None,
+            vault: None,
             reserve: None,
             pending_vault: None,
-            vault: None,
             asset_token_program: None,
             share_token_program: None,
             system_program: None,
@@ -569,6 +569,12 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
+    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.vault = Some(vault);
+        self
+    }
+
+    #[inline(always)]
     pub fn reserve(&mut self, reserve: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.reserve = Some(reserve);
         self
@@ -580,12 +586,6 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
         pending_vault: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.pending_vault = Some(pending_vault);
-        self
-    }
-
-    #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.vault = Some(vault);
         self
     }
 
@@ -725,14 +725,14 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
 
             share_mint: self.instruction.share_mint.expect("share_mint is not set"),
 
+            vault: self.instruction.vault.expect("vault is not set"),
+
             reserve: self.instruction.reserve.expect("reserve is not set"),
 
             pending_vault: self
                 .instruction
                 .pending_vault
                 .expect("pending_vault is not set"),
-
-            vault: self.instruction.vault.expect("vault is not set"),
 
             asset_token_program: self
                 .instruction
@@ -764,9 +764,9 @@ struct CreateVaultCpiBuilderInstruction<'a, 'b> {
     mint_authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
+    vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     reserve: Option<&'b solana_account_info::AccountInfo<'a>>,
     pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
-    vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,

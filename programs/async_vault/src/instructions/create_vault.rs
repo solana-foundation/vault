@@ -36,6 +36,15 @@ pub struct CreateVault<'info> {
 
     #[account(
         init,
+        space = 8 + Vault::INIT_SPACE,
+        payer = payer,
+        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
+        bump
+    )]
+    pub vault: Account<'info, Vault>,
+
+    #[account(
+        init,
         token::authority = vault,
         token::mint = asset_mint,
         token::token_program = asset_token_program,
@@ -55,15 +64,6 @@ pub struct CreateVault<'info> {
         bump,
     )]
     pub pending_vault: InterfaceAccount<'info, TokenAccount>,
-
-    #[account(
-        init,
-        space = 8 + Vault::INIT_SPACE,
-        payer = payer,
-        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
-        bump
-    )]
-    pub vault: Account<'info, Vault>,
 
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub share_token_program: Interface<'info, TokenInterface>,

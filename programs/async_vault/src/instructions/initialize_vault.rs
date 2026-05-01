@@ -10,6 +10,7 @@ use crate::{
 pub struct InitializeVault<'info> {
     pub authority: Signer<'info>,
 
+    // TODO this can be removed
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(

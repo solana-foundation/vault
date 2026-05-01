@@ -18,9 +18,9 @@ pub struct CreateDepositRequest {
 
     pub share_mint: solana_pubkey::Pubkey,
 
-    pub request: solana_pubkey::Pubkey,
-
     pub vault: solana_pubkey::Pubkey,
+
+    pub request: solana_pubkey::Pubkey,
 
     pub user_token_account: solana_pubkey::Pubkey,
 
@@ -56,8 +56,8 @@ impl CreateDepositRequest {
             self.share_mint,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(self.request, true));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
+        accounts.push(solana_instruction::AccountMeta::new(self.request, true));
         accounts.push(solana_instruction::AccountMeta::new(
             self.user_token_account,
             false,
@@ -132,8 +132,8 @@ impl CreateDepositRequestInstructionArgs {
 ///   0. `[writable, signer]` user
 ///   1. `[]` asset_mint
 ///   2. `[]` share_mint
-///   3. `[writable, signer]` request
-///   4. `[writable]` vault
+///   3. `[writable]` vault
+///   4. `[writable, signer]` request
 ///   5. `[writable]` user_token_account
 ///   6. `[writable]` pending_vault
 ///   7. `[]` asset_token_program
@@ -143,8 +143,8 @@ pub struct CreateDepositRequestBuilder {
     user: Option<solana_pubkey::Pubkey>,
     asset_mint: Option<solana_pubkey::Pubkey>,
     share_mint: Option<solana_pubkey::Pubkey>,
-    request: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
+    request: Option<solana_pubkey::Pubkey>,
     user_token_account: Option<solana_pubkey::Pubkey>,
     pending_vault: Option<solana_pubkey::Pubkey>,
     asset_token_program: Option<solana_pubkey::Pubkey>,
@@ -177,14 +177,14 @@ impl CreateDepositRequestBuilder {
     }
 
     #[inline(always)]
-    pub fn request(&mut self, request: solana_pubkey::Pubkey) -> &mut Self {
-        self.request = Some(request);
+    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
+        self.vault = Some(vault);
         self
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-        self.vault = Some(vault);
+    pub fn request(&mut self, request: solana_pubkey::Pubkey) -> &mut Self {
+        self.request = Some(request);
         self
     }
 
@@ -242,8 +242,8 @@ impl CreateDepositRequestBuilder {
             user: self.user.expect("user is not set"),
             asset_mint: self.asset_mint.expect("asset_mint is not set"),
             share_mint: self.share_mint.expect("share_mint is not set"),
-            request: self.request.expect("request is not set"),
             vault: self.vault.expect("vault is not set"),
+            request: self.request.expect("request is not set"),
             user_token_account: self
                 .user_token_account
                 .expect("user_token_account is not set"),
@@ -271,9 +271,9 @@ pub struct CreateDepositRequestCpiAccounts<'a, 'b> {
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
-    pub request: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
 
     pub user_token_account: &'b solana_account_info::AccountInfo<'a>,
 
@@ -295,9 +295,9 @@ pub struct CreateDepositRequestCpi<'a, 'b> {
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
-    pub request: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
 
     pub user_token_account: &'b solana_account_info::AccountInfo<'a>,
 
@@ -321,8 +321,8 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
             user: accounts.user,
             asset_mint: accounts.asset_mint,
             share_mint: accounts.share_mint,
-            request: accounts.request,
             vault: accounts.vault,
+            request: accounts.request,
             user_token_account: accounts.user_token_account,
             pending_vault: accounts.pending_vault,
             asset_token_program: accounts.asset_token_program,
@@ -367,11 +367,11 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
             *self.share_mint.key,
             false,
         ));
+        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.request.key,
             true,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.user_token_account.key,
             false,
@@ -411,8 +411,8 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
         account_infos.push(self.user.clone());
         account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint.clone());
-        account_infos.push(self.request.clone());
         account_infos.push(self.vault.clone());
+        account_infos.push(self.request.clone());
         account_infos.push(self.user_token_account.clone());
         account_infos.push(self.pending_vault.clone());
         account_infos.push(self.asset_token_program.clone());
@@ -436,8 +436,8 @@ impl<'a, 'b> CreateDepositRequestCpi<'a, 'b> {
 ///   0. `[writable, signer]` user
 ///   1. `[]` asset_mint
 ///   2. `[]` share_mint
-///   3. `[writable, signer]` request
-///   4. `[writable]` vault
+///   3. `[writable]` vault
+///   4. `[writable, signer]` request
 ///   5. `[writable]` user_token_account
 ///   6. `[writable]` pending_vault
 ///   7. `[]` asset_token_program
@@ -454,8 +454,8 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
             user: None,
             asset_mint: None,
             share_mint: None,
-            request: None,
             vault: None,
+            request: None,
             user_token_account: None,
             pending_vault: None,
             asset_token_program: None,
@@ -491,14 +491,14 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
-    pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.request = Some(request);
+    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.vault = Some(vault);
         self
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.vault = Some(vault);
+    pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.request = Some(request);
         self
     }
 
@@ -594,9 +594,9 @@ impl<'a, 'b> CreateDepositRequestCpiBuilder<'a, 'b> {
 
             share_mint: self.instruction.share_mint.expect("share_mint is not set"),
 
-            request: self.instruction.request.expect("request is not set"),
-
             vault: self.instruction.vault.expect("vault is not set"),
+
+            request: self.instruction.request.expect("request is not set"),
 
             user_token_account: self
                 .instruction
@@ -632,8 +632,8 @@ struct CreateDepositRequestCpiBuilderInstruction<'a, 'b> {
     user: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
-    request: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    request: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,

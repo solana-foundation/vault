@@ -17,9 +17,9 @@ pub struct RejectRequest {
 
     pub share_mint: solana_pubkey::Pubkey,
 
-    pub request: solana_pubkey::Pubkey,
-
     pub vault: solana_pubkey::Pubkey,
+
+    pub request: solana_pubkey::Pubkey,
 
     pub user: solana_pubkey::Pubkey,
 
@@ -57,8 +57,8 @@ impl RejectRequest {
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.share_mint, false));
-        accounts.push(solana_instruction::AccountMeta::new(self.request, false));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
+        accounts.push(solana_instruction::AccountMeta::new(self.request, false));
         accounts.push(solana_instruction::AccountMeta::new(self.user, false));
         if let Some(user_token_account) = self.user_token_account {
             accounts.push(solana_instruction::AccountMeta::new(
@@ -161,8 +161,8 @@ impl Default for RejectRequestInstructionData {
 ///   0. `[signer]` authority
 ///   1. `[]` asset_mint
 ///   2. `[writable]` share_mint
-///   3. `[writable]` request
-///   4. `[writable]` vault
+///   3. `[writable]` vault
+///   4. `[writable]` request
 ///   5. `[writable]` user
 ///   6. `[writable, optional]` user_token_account
 ///   7. `[writable, optional]` asset_pending_vault
@@ -175,8 +175,8 @@ pub struct RejectRequestBuilder {
     authority: Option<solana_pubkey::Pubkey>,
     asset_mint: Option<solana_pubkey::Pubkey>,
     share_mint: Option<solana_pubkey::Pubkey>,
-    request: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
+    request: Option<solana_pubkey::Pubkey>,
     user: Option<solana_pubkey::Pubkey>,
     user_token_account: Option<solana_pubkey::Pubkey>,
     asset_pending_vault: Option<solana_pubkey::Pubkey>,
@@ -211,14 +211,14 @@ impl RejectRequestBuilder {
     }
 
     #[inline(always)]
-    pub fn request(&mut self, request: solana_pubkey::Pubkey) -> &mut Self {
-        self.request = Some(request);
+    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
+        self.vault = Some(vault);
         self
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-        self.vault = Some(vault);
+    pub fn request(&mut self, request: solana_pubkey::Pubkey) -> &mut Self {
+        self.request = Some(request);
         self
     }
 
@@ -308,8 +308,8 @@ impl RejectRequestBuilder {
             authority: self.authority.expect("authority is not set"),
             asset_mint: self.asset_mint.expect("asset_mint is not set"),
             share_mint: self.share_mint.expect("share_mint is not set"),
-            request: self.request.expect("request is not set"),
             vault: self.vault.expect("vault is not set"),
+            request: self.request.expect("request is not set"),
             user: self.user.expect("user is not set"),
             user_token_account: self.user_token_account,
             asset_pending_vault: self.asset_pending_vault,
@@ -333,9 +333,9 @@ pub struct RejectRequestCpiAccounts<'a, 'b> {
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
-    pub request: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
 
     pub user: &'b solana_account_info::AccountInfo<'a>,
 
@@ -363,9 +363,9 @@ pub struct RejectRequestCpi<'a, 'b> {
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
-    pub request: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
 
     pub user: &'b solana_account_info::AccountInfo<'a>,
 
@@ -392,8 +392,8 @@ impl<'a, 'b> RejectRequestCpi<'a, 'b> {
             authority: accounts.authority,
             asset_mint: accounts.asset_mint,
             share_mint: accounts.share_mint,
-            request: accounts.request,
             vault: accounts.vault,
+            request: accounts.request,
             user: accounts.user,
             user_token_account: accounts.user_token_account,
             asset_pending_vault: accounts.asset_pending_vault,
@@ -443,11 +443,11 @@ impl<'a, 'b> RejectRequestCpi<'a, 'b> {
             *self.share_mint.key,
             false,
         ));
+        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.request.key,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(*self.user.key, false));
         if let Some(user_token_account) = self.user_token_account {
             accounts.push(solana_instruction::AccountMeta::new(
@@ -527,8 +527,8 @@ impl<'a, 'b> RejectRequestCpi<'a, 'b> {
         account_infos.push(self.authority.clone());
         account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint.clone());
-        account_infos.push(self.request.clone());
         account_infos.push(self.vault.clone());
+        account_infos.push(self.request.clone());
         account_infos.push(self.user.clone());
         if let Some(user_token_account) = self.user_token_account {
             account_infos.push(user_token_account.clone());
@@ -565,8 +565,8 @@ impl<'a, 'b> RejectRequestCpi<'a, 'b> {
 ///   0. `[signer]` authority
 ///   1. `[]` asset_mint
 ///   2. `[writable]` share_mint
-///   3. `[writable]` request
-///   4. `[writable]` vault
+///   3. `[writable]` vault
+///   4. `[writable]` request
 ///   5. `[writable]` user
 ///   6. `[writable, optional]` user_token_account
 ///   7. `[writable, optional]` asset_pending_vault
@@ -586,8 +586,8 @@ impl<'a, 'b> RejectRequestCpiBuilder<'a, 'b> {
             authority: None,
             asset_mint: None,
             share_mint: None,
-            request: None,
             vault: None,
+            request: None,
             user: None,
             user_token_account: None,
             asset_pending_vault: None,
@@ -625,14 +625,14 @@ impl<'a, 'b> RejectRequestCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
-    pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.request = Some(request);
+    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.vault = Some(vault);
         self
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.vault = Some(vault);
+    pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.request = Some(request);
         self
     }
 
@@ -748,9 +748,9 @@ impl<'a, 'b> RejectRequestCpiBuilder<'a, 'b> {
 
             share_mint: self.instruction.share_mint.expect("share_mint is not set"),
 
-            request: self.instruction.request.expect("request is not set"),
-
             vault: self.instruction.vault.expect("vault is not set"),
+
+            request: self.instruction.request.expect("request is not set"),
 
             user: self.instruction.user.expect("user is not set"),
 
@@ -782,8 +782,8 @@ struct RejectRequestCpiBuilderInstruction<'a, 'b> {
     authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
-    request: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    request: Option<&'b solana_account_info::AccountInfo<'a>>,
     user: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,

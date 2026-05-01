@@ -20,14 +20,6 @@ pub struct RejectRequest<'info> {
 
     #[account(
         mut,
-        close = user,
-        constraint = request.owner == user.key() @ AsyncVaultError::UnauthorizedSigner,
-        has_one = vault.key(),
-    )]
-    pub request: Account<'info, Request>,
-
-    #[account(
-        mut,
         has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
         has_one = share_mint @ AsyncVaultError::InvalidShareMint,
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
@@ -35,6 +27,14 @@ pub struct RejectRequest<'info> {
         constraint = vault.authority == authority.key() @ AsyncVaultError::UnauthorizedSigner,
     )]
     pub vault: Box<Account<'info, Vault>>,
+
+    #[account(
+        mut,
+        close = user,
+        constraint = request.owner == user.key() @ AsyncVaultError::UnauthorizedSigner,
+        has_one = vault.key(),
+    )]
+    pub request: Account<'info, Request>,
 
     /// CHECK: Validated against request.owner. Receives rent on account close.
     #[account(

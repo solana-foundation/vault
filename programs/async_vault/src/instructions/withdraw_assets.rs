@@ -12,6 +12,7 @@ pub struct WithdrawAssets<'info> {
 
     pub asset_mint: InterfaceAccount<'info, Mint>,
 
+    // TODO this can be removed
     pub share_mint: InterfaceAccount<'info, Mint>,
 
     #[account(

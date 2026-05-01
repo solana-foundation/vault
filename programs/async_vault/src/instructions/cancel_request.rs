@@ -21,20 +21,20 @@ pub struct CancelRequest<'info> {
 
     #[account(
         mut,
-        close = user,
-        constraint = request.owner == user.key() @ AsyncVaultError::UnauthorizedSigner,
-        has_one = vault.key(),
-    )]
-    pub request: Account<'info, Request>,
-
-    #[account(
-        mut,
         has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
         has_one = share_mint @ AsyncVaultError::InvalidShareMint,
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump = vault.bump
     )]
     pub vault: Account<'info, Vault>,
+
+    #[account(
+        mut,
+        close = user,
+        constraint = request.owner == user.key() @ AsyncVaultError::UnauthorizedSigner,
+        has_one = vault,
+    )]
+    pub request: Account<'info, Request>,
 
     #[account(
         mut,

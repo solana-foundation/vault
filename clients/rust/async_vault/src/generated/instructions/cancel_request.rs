@@ -17,9 +17,9 @@ pub struct CancelRequest {
 
     pub share_mint: solana_pubkey::Pubkey,
 
-    pub request: solana_pubkey::Pubkey,
-
     pub vault: solana_pubkey::Pubkey,
+
+    pub request: solana_pubkey::Pubkey,
 
     pub user_token_account: Option<solana_pubkey::Pubkey>,
 
@@ -52,8 +52,8 @@ impl CancelRequest {
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.share_mint, false));
-        accounts.push(solana_instruction::AccountMeta::new(self.request, false));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
+        accounts.push(solana_instruction::AccountMeta::new(self.request, false));
         if let Some(user_token_account) = self.user_token_account {
             accounts.push(solana_instruction::AccountMeta::new(
                 user_token_account,
@@ -155,8 +155,8 @@ impl Default for CancelRequestInstructionData {
 ///   0. `[writable, signer]` user
 ///   1. `[]` asset_mint
 ///   2. `[writable]` share_mint
-///   3. `[writable]` request
-///   4. `[writable]` vault
+///   3. `[writable]` vault
+///   4. `[writable]` request
 ///   5. `[writable, optional]` user_token_account
 ///   6. `[writable, optional]` asset_pending_vault
 ///   7. `[writable, optional]` user_share_account
@@ -168,8 +168,8 @@ pub struct CancelRequestBuilder {
     user: Option<solana_pubkey::Pubkey>,
     asset_mint: Option<solana_pubkey::Pubkey>,
     share_mint: Option<solana_pubkey::Pubkey>,
-    request: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
+    request: Option<solana_pubkey::Pubkey>,
     user_token_account: Option<solana_pubkey::Pubkey>,
     asset_pending_vault: Option<solana_pubkey::Pubkey>,
     user_share_account: Option<solana_pubkey::Pubkey>,
@@ -203,14 +203,14 @@ impl CancelRequestBuilder {
     }
 
     #[inline(always)]
-    pub fn request(&mut self, request: solana_pubkey::Pubkey) -> &mut Self {
-        self.request = Some(request);
+    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
+        self.vault = Some(vault);
         self
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: solana_pubkey::Pubkey) -> &mut Self {
-        self.vault = Some(vault);
+    pub fn request(&mut self, request: solana_pubkey::Pubkey) -> &mut Self {
+        self.request = Some(request);
         self
     }
 
@@ -294,8 +294,8 @@ impl CancelRequestBuilder {
             user: self.user.expect("user is not set"),
             asset_mint: self.asset_mint.expect("asset_mint is not set"),
             share_mint: self.share_mint.expect("share_mint is not set"),
-            request: self.request.expect("request is not set"),
             vault: self.vault.expect("vault is not set"),
+            request: self.request.expect("request is not set"),
             user_token_account: self.user_token_account,
             asset_pending_vault: self.asset_pending_vault,
             user_share_account: self.user_share_account,
@@ -318,9 +318,9 @@ pub struct CancelRequestCpiAccounts<'a, 'b> {
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
-    pub request: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
 
     pub user_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
 
@@ -346,9 +346,9 @@ pub struct CancelRequestCpi<'a, 'b> {
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
-    pub request: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub request: &'b solana_account_info::AccountInfo<'a>,
 
     pub user_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
 
@@ -373,8 +373,8 @@ impl<'a, 'b> CancelRequestCpi<'a, 'b> {
             user: accounts.user,
             asset_mint: accounts.asset_mint,
             share_mint: accounts.share_mint,
-            request: accounts.request,
             vault: accounts.vault,
+            request: accounts.request,
             user_token_account: accounts.user_token_account,
             asset_pending_vault: accounts.asset_pending_vault,
             user_share_account: accounts.user_share_account,
@@ -420,11 +420,11 @@ impl<'a, 'b> CancelRequestCpi<'a, 'b> {
             *self.share_mint.key,
             false,
         ));
+        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.request.key,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         if let Some(user_token_account) = self.user_token_account {
             accounts.push(solana_instruction::AccountMeta::new(
                 *user_token_account.key,
@@ -503,8 +503,8 @@ impl<'a, 'b> CancelRequestCpi<'a, 'b> {
         account_infos.push(self.user.clone());
         account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint.clone());
-        account_infos.push(self.request.clone());
         account_infos.push(self.vault.clone());
+        account_infos.push(self.request.clone());
         if let Some(user_token_account) = self.user_token_account {
             account_infos.push(user_token_account.clone());
         }
@@ -540,8 +540,8 @@ impl<'a, 'b> CancelRequestCpi<'a, 'b> {
 ///   0. `[writable, signer]` user
 ///   1. `[]` asset_mint
 ///   2. `[writable]` share_mint
-///   3. `[writable]` request
-///   4. `[writable]` vault
+///   3. `[writable]` vault
+///   4. `[writable]` request
 ///   5. `[writable, optional]` user_token_account
 ///   6. `[writable, optional]` asset_pending_vault
 ///   7. `[writable, optional]` user_share_account
@@ -560,8 +560,8 @@ impl<'a, 'b> CancelRequestCpiBuilder<'a, 'b> {
             user: None,
             asset_mint: None,
             share_mint: None,
-            request: None,
             vault: None,
+            request: None,
             user_token_account: None,
             asset_pending_vault: None,
             user_share_account: None,
@@ -598,14 +598,14 @@ impl<'a, 'b> CancelRequestCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
-    pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.request = Some(request);
+    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.vault = Some(vault);
         self
     }
 
     #[inline(always)]
-    pub fn vault(&mut self, vault: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.vault = Some(vault);
+    pub fn request(&mut self, request: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.request = Some(request);
         self
     }
 
@@ -715,9 +715,9 @@ impl<'a, 'b> CancelRequestCpiBuilder<'a, 'b> {
 
             share_mint: self.instruction.share_mint.expect("share_mint is not set"),
 
-            request: self.instruction.request.expect("request is not set"),
-
             vault: self.instruction.vault.expect("vault is not set"),
+
+            request: self.instruction.request.expect("request is not set"),
 
             user_token_account: self.instruction.user_token_account,
 
@@ -747,8 +747,8 @@ struct CancelRequestCpiBuilderInstruction<'a, 'b> {
     user: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
-    request: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    request: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,
