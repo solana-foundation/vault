@@ -22,6 +22,12 @@ As a corollary, the program will not initialize token accounts nor enforce ATAs.
 
 ## **Programs:**
 
+# **Async Vault**
+
+The primary vault implementation supporting asynchronous deposit and redemption flows, where requests are queued and settled by a vault authority.
+
+- [Sequence Diagrams](programs/async_vault/SEQUENCES.md)
+
 # **Vault (Atomic Vault)**
 
 This is an MVP, it's not production ready since we have decided to focus on the Async Vault implementation

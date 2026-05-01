@@ -135,8 +135,10 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
 
     // Transfer assets between Vault and Pending Vault (aka escrow)
     let (claimable_amount, balance_delta) = if is_deposit {
+        // Check for DepositFee Extension and calculate fee owed
         let (deposit_fee, net_deposit) = get_deposit_fee_and_net(&vault_data, original_amount)?;
         if deposit_fee > 0 {
+            // Validate and transfer fees to fee_recipient
             let fee_recipient_info = remaining.next().ok_or(AsyncVaultError::MissingFeeRecipient)?;
             validate_fee_recipient(fee_recipient_info, ctx.accounts.vault.fee_recipient)?;
             token_interface::transfer_checked(
@@ -161,8 +163,11 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
     } else {
         // Assets to be transferred, floored (protocol favorable)
         let assets = calculate_assets(nav, decimals, original_amount)?;
+
+        // Check for WithdrawFee Extension and calculate fee owed
         let (withdraw_fee, net_assets) = get_withdrawal_fee_and_net(&vault_data, assets)?;
         if withdraw_fee > 0 {
+            // Validate and transfer fees to fee_recipient
             let fee_recipient_info = remaining.next().ok_or(AsyncVaultError::MissingFeeRecipient)?;
             validate_fee_recipient(fee_recipient_info, ctx.accounts.vault.fee_recipient)?;
             token_interface::transfer_checked(
