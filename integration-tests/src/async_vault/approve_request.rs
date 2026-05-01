@@ -51,7 +51,6 @@ fn setup(
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(svm, &authority.pubkey(), &[&authority])
@@ -330,7 +329,6 @@ fn test_approve_request_fails(
     );
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])

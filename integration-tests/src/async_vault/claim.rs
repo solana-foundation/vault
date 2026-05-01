@@ -52,7 +52,6 @@ fn setup(
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(svm, &authority.pubkey(), &[&authority])

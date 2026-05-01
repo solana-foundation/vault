@@ -46,7 +46,6 @@ fn test_cancel_deposit_request(deposit_amount: u64) {
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
@@ -162,7 +161,6 @@ fn test_cancel_deposit_request_fails(wrong_user: bool) {
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
@@ -273,7 +271,6 @@ fn test_cancel_redeem_request(share_amount: u64) {
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])

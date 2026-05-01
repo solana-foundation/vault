@@ -41,7 +41,6 @@ fn test_set_operator_succeeds() {
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])

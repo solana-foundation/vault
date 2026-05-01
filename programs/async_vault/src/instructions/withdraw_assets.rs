@@ -12,13 +12,9 @@ pub struct WithdrawAssets<'info> {
 
     pub asset_mint: InterfaceAccount<'info, Mint>,
 
-    // TODO this can be removed
-    pub share_mint: InterfaceAccount<'info, Mint>,
-
     #[account(
         mut,
         has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
-        has_one = share_mint @ AsyncVaultError::InvalidShareMint,
         constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
     )]
     pub vault: Account<'info, Vault>,
@@ -43,8 +39,11 @@ pub struct WithdrawAssets<'info> {
 
 impl<'info> WithdrawAssets<'info> {
     pub fn transfer_assets_to_authority(&mut self, amount: u64) -> Result<()> {
-        let share_mint = self.share_mint.key();
-        let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
+        let seeds: &[&[&[u8]]] = &[&[
+            VAULT_CONFIG_SEED,
+            self.vault.share_mint.as_ref(),
+            &[self.vault.bump],
+        ]];
 
         let cpi_accounts = TransferChecked {
             from: self.vault_token_account.to_account_info(),

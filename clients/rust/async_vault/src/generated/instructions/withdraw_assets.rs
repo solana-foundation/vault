@@ -15,8 +15,6 @@ pub struct WithdrawAssets {
 
     pub asset_mint: solana_pubkey::Pubkey,
 
-    pub share_mint: solana_pubkey::Pubkey,
-
     pub vault: solana_pubkey::Pubkey,
 
     pub vault_token_account: solana_pubkey::Pubkey,
@@ -41,17 +39,13 @@ impl WithdrawAssets {
         args: WithdrawAssetsInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.authority,
             true,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.share_mint,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
@@ -122,16 +116,14 @@ impl WithdrawAssetsInstructionArgs {
 ///
 ///   0. `[signer]` authority
 ///   1. `[]` asset_mint
-///   2. `[]` share_mint
-///   3. `[writable]` vault
-///   4. `[writable]` vault_token_account
-///   5. `[writable]` recipient_token_account
-///   6. `[]` asset_token_program
+///   2. `[writable]` vault
+///   3. `[writable]` vault_token_account
+///   4. `[writable]` recipient_token_account
+///   5. `[]` asset_token_program
 #[derive(Clone, Debug, Default)]
 pub struct WithdrawAssetsBuilder {
     authority: Option<solana_pubkey::Pubkey>,
     asset_mint: Option<solana_pubkey::Pubkey>,
-    share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     vault_token_account: Option<solana_pubkey::Pubkey>,
     recipient_token_account: Option<solana_pubkey::Pubkey>,
@@ -154,12 +146,6 @@ impl WithdrawAssetsBuilder {
     #[inline(always)]
     pub fn asset_mint(&mut self, asset_mint: solana_pubkey::Pubkey) -> &mut Self {
         self.asset_mint = Some(asset_mint);
-        self
-    }
-
-    #[inline(always)]
-    pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
-        self.share_mint = Some(share_mint);
         self
     }
 
@@ -218,7 +204,6 @@ impl WithdrawAssetsBuilder {
         let accounts = WithdrawAssets {
             authority: self.authority.expect("authority is not set"),
             asset_mint: self.asset_mint.expect("asset_mint is not set"),
-            share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
             vault_token_account: self
                 .vault_token_account
@@ -244,8 +229,6 @@ pub struct WithdrawAssetsCpiAccounts<'a, 'b> {
 
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
 
-    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault_token_account: &'b solana_account_info::AccountInfo<'a>,
@@ -263,8 +246,6 @@ pub struct WithdrawAssetsCpi<'a, 'b> {
     pub authority: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
-
-    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
@@ -287,7 +268,6 @@ impl<'a, 'b> WithdrawAssetsCpi<'a, 'b> {
             __program: program,
             authority: accounts.authority,
             asset_mint: accounts.asset_mint,
-            share_mint: accounts.share_mint,
             vault: accounts.vault,
             vault_token_account: accounts.vault_token_account,
             recipient_token_account: accounts.recipient_token_account,
@@ -322,17 +302,13 @@ impl<'a, 'b> WithdrawAssetsCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(7 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(6 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.authority.key,
             true,
         ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
-            false,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.share_mint.key,
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
@@ -364,11 +340,10 @@ impl<'a, 'b> WithdrawAssetsCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(8 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(7 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.authority.clone());
         account_infos.push(self.asset_mint.clone());
-        account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.vault_token_account.clone());
         account_infos.push(self.recipient_token_account.clone());
@@ -391,11 +366,10 @@ impl<'a, 'b> WithdrawAssetsCpi<'a, 'b> {
 ///
 ///   0. `[signer]` authority
 ///   1. `[]` asset_mint
-///   2. `[]` share_mint
-///   3. `[writable]` vault
-///   4. `[writable]` vault_token_account
-///   5. `[writable]` recipient_token_account
-///   6. `[]` asset_token_program
+///   2. `[writable]` vault
+///   3. `[writable]` vault_token_account
+///   4. `[writable]` recipient_token_account
+///   5. `[]` asset_token_program
 #[derive(Clone, Debug)]
 pub struct WithdrawAssetsCpiBuilder<'a, 'b> {
     instruction: Box<WithdrawAssetsCpiBuilderInstruction<'a, 'b>>,
@@ -407,7 +381,6 @@ impl<'a, 'b> WithdrawAssetsCpiBuilder<'a, 'b> {
             __program: program,
             authority: None,
             asset_mint: None,
-            share_mint: None,
             vault: None,
             vault_token_account: None,
             recipient_token_account: None,
@@ -430,15 +403,6 @@ impl<'a, 'b> WithdrawAssetsCpiBuilder<'a, 'b> {
         asset_mint: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
         self.instruction.asset_mint = Some(asset_mint);
-        self
-    }
-
-    #[inline(always)]
-    pub fn share_mint(
-        &mut self,
-        share_mint: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.share_mint = Some(share_mint);
         self
     }
 
@@ -529,8 +493,6 @@ impl<'a, 'b> WithdrawAssetsCpiBuilder<'a, 'b> {
 
             asset_mint: self.instruction.asset_mint.expect("asset_mint is not set"),
 
-            share_mint: self.instruction.share_mint.expect("share_mint is not set"),
-
             vault: self.instruction.vault.expect("vault is not set"),
 
             vault_token_account: self
@@ -561,7 +523,6 @@ struct WithdrawAssetsCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
     authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
-    share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
     recipient_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,

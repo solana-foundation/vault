@@ -40,7 +40,6 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
     if pre_initialize {
         InitializeAsyncVaultBuilder::new()
             .authority(authority.pubkey())
-            .share_mint(share_mint.pubkey())
             .vault(vault_pubkey)
             .instruction()
             .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
@@ -59,7 +58,6 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
 
     let result = InitializeAsyncVaultBuilder::new()
         .authority(effective_authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(

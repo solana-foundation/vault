@@ -49,7 +49,6 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
@@ -198,7 +197,6 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])

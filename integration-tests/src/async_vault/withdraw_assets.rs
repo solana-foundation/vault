@@ -45,7 +45,6 @@ fn test_withdraw_assets_success(deposit_amount: u64, withdraw_amount: u64) {
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
@@ -77,7 +76,6 @@ fn test_withdraw_assets_success(deposit_amount: u64, withdraw_amount: u64) {
     WithdrawAssetsBuilder::new()
         .authority(authority.pubkey())
         .asset_mint(asset_mint.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .vault_token_account(reserve_pubkey)
         .recipient_token_account(recipient_ata)
@@ -126,7 +124,6 @@ fn test_withdraw_assets_fails(use_wrong_signer: bool, pause_vault: bool) {
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .instruction()
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
@@ -170,7 +167,6 @@ fn test_withdraw_assets_fails(use_wrong_signer: bool, pause_vault: bool) {
     let err = WithdrawAssetsBuilder::new()
         .authority(signer.pubkey())
         .asset_mint(asset_mint.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .vault_token_account(reserve_pubkey)
         .recipient_token_account(recipient_ata)

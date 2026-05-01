@@ -10,14 +10,9 @@ use crate::{
 pub struct InitializeVault<'info> {
     pub authority: Signer<'info>,
 
-    // TODO this can be removed
-    pub share_mint: InterfaceAccount<'info, Mint>,
-
     #[account(
         mut,
         constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
-        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
-        bump
     )]
     pub vault: Account<'info, Vault>,
 }
