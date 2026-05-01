@@ -117,8 +117,6 @@ pub struct CreateVaultInstructionArgs {
     pub authority: Pubkey,
     pub fee_recipient: Pubkey,
     pub initial_price: u64,
-    pub async_inflows: bool,
-    pub async_outflows: bool,
 }
 
 impl CreateVaultInstructionArgs {
@@ -156,8 +154,6 @@ pub struct CreateVaultBuilder {
     authority: Option<Pubkey>,
     fee_recipient: Option<Pubkey>,
     initial_price: Option<u64>,
-    async_inflows: Option<bool>,
-    async_outflows: Option<bool>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -245,18 +241,6 @@ impl CreateVaultBuilder {
         self
     }
 
-    #[inline(always)]
-    pub fn async_inflows(&mut self, async_inflows: bool) -> &mut Self {
-        self.async_inflows = Some(async_inflows);
-        self
-    }
-
-    #[inline(always)]
-    pub fn async_outflows(&mut self, async_outflows: bool) -> &mut Self {
-        self.async_outflows = Some(async_outflows);
-        self
-    }
-
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -304,14 +288,6 @@ impl CreateVaultBuilder {
                 .initial_price
                 .clone()
                 .expect("initial_price is not set"),
-            async_inflows: self
-                .async_inflows
-                .clone()
-                .expect("async_inflows is not set"),
-            async_outflows: self
-                .async_outflows
-                .clone()
-                .expect("async_outflows is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -528,8 +504,6 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
             authority: None,
             fee_recipient: None,
             initial_price: None,
-            async_inflows: None,
-            async_outflows: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -634,18 +608,6 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
         self
     }
 
-    #[inline(always)]
-    pub fn async_inflows(&mut self, async_inflows: bool) -> &mut Self {
-        self.instruction.async_inflows = Some(async_inflows);
-        self
-    }
-
-    #[inline(always)]
-    pub fn async_outflows(&mut self, async_outflows: bool) -> &mut Self {
-        self.instruction.async_outflows = Some(async_outflows);
-        self
-    }
-
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -700,16 +662,6 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
                 .initial_price
                 .clone()
                 .expect("initial_price is not set"),
-            async_inflows: self
-                .instruction
-                .async_inflows
-                .clone()
-                .expect("async_inflows is not set"),
-            async_outflows: self
-                .instruction
-                .async_outflows
-                .clone()
-                .expect("async_outflows is not set"),
         };
         let instruction = CreateVaultCpi {
             __program: self.instruction.__program,
@@ -773,8 +725,6 @@ struct CreateVaultCpiBuilderInstruction<'a, 'b> {
     authority: Option<Pubkey>,
     fee_recipient: Option<Pubkey>,
     initial_price: Option<u64>,
-    async_inflows: Option<bool>,
-    async_outflows: Option<bool>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

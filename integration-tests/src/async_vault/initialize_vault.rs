@@ -83,8 +83,6 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
             vault_after.vault_token_account
         );
         assert_eq!(vault_before.initial_price, vault_after.initial_price);
-        assert_eq!(vault_before.async_inflows, vault_after.async_inflows);
-        assert_eq!(vault_before.async_outflows, vault_after.async_outflows);
         assert_eq!(vault_before.nav, vault_after.nav);
         assert_eq!(vault_before.nav_version, vault_after.nav_version);
         assert_eq!(vault_before.pending_vault, vault_after.pending_vault);

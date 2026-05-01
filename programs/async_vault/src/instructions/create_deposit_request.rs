@@ -71,10 +71,6 @@ impl<'info> CreateDepositRequest<'info> {
 }
 pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
-    require!(
-        ctx.accounts.vault.async_inflows,
-        VaultProgramError::AsyncInflowsDisabled
-    );
 
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 

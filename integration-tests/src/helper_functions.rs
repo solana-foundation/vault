@@ -939,8 +939,6 @@ pub fn set_up_async_vault(
         .share_token_program(share_token_program)
         .authority(authority.pubkey())
         .initial_price(initial_price)
-        .async_inflows(true)
-        .async_outflows(true)
         .instruction()
         .send_transaction(svm, &payer.pubkey(), &[&payer, &mint_authority])
         .expect("vault creation should succeed");

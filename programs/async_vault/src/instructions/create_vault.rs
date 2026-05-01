@@ -15,8 +15,6 @@ pub struct AsyncVaultArgs {
     authority: Pubkey,
     fee_recipient: Pubkey,
     initial_price: u64,
-    async_inflows: bool,
-    async_outflows: bool,
 }
 
 #[derive(Accounts)]
@@ -120,8 +118,6 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
         pending_vault: ctx.accounts.pending_vault.key(),
         nav: 0,
         nav_version: 0,
-        async_inflows: args.async_inflows,
-        async_outflows: args.async_outflows,
         pending_async_requests: 0,
         total_asset_balance: 0,
         pending_authority: None,

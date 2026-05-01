@@ -17,24 +17,19 @@ use crate::helper_functions::{
     RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
 };
 
-#[test_case(100_000_000, true, true, true, false, token::ID,token::ID, 0 ; "both async inflows and outflows")]
-#[test_case(100_000_000, true, true, true, false, token_2022::ID,token_2022::ID, 0 ; "Token 2022 program for both mints")]
-#[test_case(100_000_000, true, true, true, false, token::ID,token_2022::ID, 0 ; "Token program for asset, Token program 2022 for share")]
-#[test_case(100_000_000, true, true, true, false, token_2022::ID,token::ID, 0 ; "Token 2022 program for asset, Token program for share")]
-#[test_case(100_000_000, true, false, true, false,token_2022::ID,token_2022::ID, 0 ; "async inflows only")]
-#[test_case(100_000_000, false, true, true, false,token_2022::ID,token_2022::ID, 0 ; "async outflows only")]
-#[test_case(100_000_000, false, false, true, false,token_2022::ID,token_2022::ID, 0 ; "no async flows")]
-#[test_case(1, true, true, true, false,token_2022::ID,token_2022::ID, 0 ; "minimum price")]
-#[test_case(u64::MAX, true, true, true,  false,token_2022::ID,token_2022::ID, 0 ; "maximum price")]
-#[test_case(0, true, true, true,  false,token_2022::ID,token_2022::ID, 0 ; "zero initial price fails")]
-#[test_case(100_000_000, true, true, false, false,token_2022::ID,token_2022::ID, 0 ; "invalid mint authority fails")]
-#[test_case(100_000_000, true, true, true,  false,token_2022::ID,token_2022::ID, 0 ; "duplicate vault creation fails")]
-#[test_case(100_000_000, true, true, true,  true, token_2022::ID,token_2022::ID, 0 ; "same mints fails")]
-#[test_case(100_000_000, true, true, true,  false, token_2022::ID,token_2022::ID, 1 ; "nonzero transfer fee asset mint fails")]
+#[test_case(100_000_000, true, false, token::ID,token::ID, 0 ; "both async inflows and outflows")]
+#[test_case(100_000_000, true, false, token_2022::ID,token_2022::ID, 0 ; "Token 2022 program for both mints")]
+#[test_case(100_000_000, true, false, token::ID,token_2022::ID, 0 ; "Token program for asset, Token program 2022 for share")]
+#[test_case(100_000_000, true, false, token_2022::ID,token::ID, 0 ; "Token 2022 program for asset, Token program for share")]
+#[test_case(1, true, false,token_2022::ID,token_2022::ID, 0 ; "minimum price")]
+#[test_case(u64::MAX, true,  false,token_2022::ID,token_2022::ID, 0 ; "maximum price")]
+#[test_case(0, true,  false,token_2022::ID,token_2022::ID, 0 ; "zero initial price fails")]
+#[test_case(100_000_000, false, false,token_2022::ID,token_2022::ID, 0 ; "invalid mint authority fails")]
+#[test_case(100_000_000, true,  false,token_2022::ID,token_2022::ID, 0 ; "duplicate vault creation fails")]
+#[test_case(100_000_000, true,  true, token_2022::ID,token_2022::ID, 0 ; "same mints fails")]
+#[test_case(100_000_000, true,  false, token_2022::ID,token_2022::ID, 1 ; "nonzero transfer fee asset mint fails")]
 fn test_create_vault(
     initial_price: u64,
-    async_inflows: bool,
-    async_outflows: bool,
     use_valid_mint_authority: bool,
     use_same_mints: bool,
     asset_program: Pubkey,
@@ -116,8 +111,6 @@ fn test_create_vault(
         .share_token_program(share_program)
         .authority(authority.pubkey())
         .initial_price(initial_price)
-        .async_inflows(async_inflows)
-        .async_outflows(async_outflows)
         .instruction()
         .send_transaction(
             &mut svm,
@@ -149,8 +142,6 @@ fn test_create_vault(
         assert!(!vault_config.initialized);
         assert_eq!(vault_config.nav, 0);
         assert_eq!(vault_config.nav_version, 0);
-        assert_eq!(vault_config.async_inflows, async_inflows);
-        assert_eq!(vault_config.async_outflows, async_outflows);
         assert_eq!(vault_config.pending_async_requests, 0);
         assert_eq!(vault_config.total_asset_balance, 0);
     } else {
@@ -256,8 +247,6 @@ fn test_create_vault_nonzero_share_mint_supply_fails() {
         .share_token_program(token::ID)
         .authority(authority.pubkey())
         .initial_price(100_000_000)
-        .async_inflows(true)
-        .async_outflows(true)
         .instruction()
         .send_transaction(&mut svm, &payer.pubkey(), &[&payer, &mint_authority]);
 
