@@ -6,7 +6,7 @@ use crate::{
     error::AsyncVaultError,
     extensions::fee::processor::{get_deposit_fee_and_net, get_withdrawal_fee_and_net},
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
-    utils::{calculate_assets, calculate_shares},
+    utils::{calculate_assets, calculate_shares, validate_token_account_owner},
 };
 
 #[derive(Accounts)]
@@ -54,17 +54,26 @@ pub struct ApproveRequest<'info> {
     pub asset_token_program: Interface<'info, TokenInterface>,
 }
 
+// TODO [SYSTEM DESIGN]: As this is currently written, the fee_recipient_token_account is only
+// required if the DepositFee|WithrawFee Extension is enabled AND produces a fee > 0.
+// This creates an inconsistent API at the expense of a very minor optimization.
+
 impl<'info> ApproveRequest<'info> {
-    /// Transfers assets from pending vault to vault, enabling the Authority to withdraw
-    /// in a future transaction.
-    pub fn settle_deposit(&self, seeds: &[&[&[u8]]], amount: u64) -> Result<()> {
+    /// Transfers assets from the pending vault (aka escrow) to the supplied
+    /// TokenAccount.
+    fn transfer_asset_from_pending_vault(
+        &self,
+        to: AccountInfo<'info>,
+        amount: u64,
+        seeds: &[&[&[u8]]],
+    ) -> Result<()> {
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 self.asset_token_program.to_account_info(),
                 TransferChecked {
                     from: self.pending_vault.to_account_info(),
                     mint: self.asset_mint.to_account_info(),
-                    to: self.vault_token_account.to_account_info(),
+                    to,
                     authority: self.vault.to_account_info(),
                 },
                 seeds,
@@ -74,39 +83,44 @@ impl<'info> ApproveRequest<'info> {
         )
     }
 
-    /// Transfers assets from vault to pending vault, removing them from the supply
-    /// that the Authority may withdraw from.
-    pub fn settle_redeem(&self, seeds: &[&[&[u8]]], assets: u64) -> Result<()> {
+    /// Transfers assets from the vault to the supplied TokenAccount.
+    fn transfer_asset_from_vault(
+        &self,
+        to: AccountInfo<'info>,
+        amount: u64,
+        seeds: &[&[&[u8]]],
+    ) -> Result<()> {
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
                 self.asset_token_program.to_account_info(),
                 TransferChecked {
                     from: self.vault_token_account.to_account_info(),
                     mint: self.asset_mint.to_account_info(),
-                    to: self.pending_vault.to_account_info(),
+                    to,
                     authority: self.vault.to_account_info(),
                 },
                 seeds,
             ),
-            assets,
+            amount,
             self.asset_mint.decimals,
         )
     }
-}
 
-fn validate_fee_recipient(info: &AccountInfo, expected_owner: Pubkey) -> Result<()> {
-    let data = info.try_borrow_data()?;
-    require!(data.len() >= 64, AsyncVaultError::InvalidFeeRecipient);
-    let owner = Pubkey::new_from_array(
-        data[32..64]
-            .try_into()
-            .map_err(|_| AsyncVaultError::InvalidFeeRecipient)?,
-    );
-    require!(
-        owner == expected_owner,
-        AsyncVaultError::InvalidFeeRecipient
-    );
-    Ok(())
+    /// Transfers assets from pending vault to vault, enabling the Authority to withdraw
+    /// in a future transaction.
+    fn settle_deposit(&self, seeds: &[&[&[u8]]], amount: u64) -> Result<()> {
+        self.transfer_asset_from_pending_vault(
+            self.vault_token_account.to_account_info(),
+            amount,
+            seeds,
+        )
+    }
+
+    /// Transfers assets from vault to pending vault, removing them from the supply
+    /// that the Authority may withdraw from.
+    fn settle_redeem(&self, seeds: &[&[&[u8]]], assets: u64) -> Result<()> {
+        self.transfer_asset_from_vault(self.pending_vault.to_account_info(), assets, seeds)
+    }
 }
 
 pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) -> Result<()> {
@@ -141,23 +155,17 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
         let (deposit_fee, net_deposit) = get_deposit_fee_and_net(&vault_data, original_amount)?;
         if deposit_fee > 0 {
             // Validate and transfer fees to fee_recipient
-            let fee_recipient_info = remaining
+            let fee_recipient_token_account_info = remaining
                 .next()
                 .ok_or(AsyncVaultError::MissingFeeRecipient)?;
-            validate_fee_recipient(fee_recipient_info, ctx.accounts.vault.fee_recipient)?;
-            token_interface::transfer_checked(
-                CpiContext::new_with_signer(
-                    ctx.accounts.asset_token_program.to_account_info(),
-                    TransferChecked {
-                        from: ctx.accounts.pending_vault.to_account_info(),
-                        mint: ctx.accounts.asset_mint.to_account_info(),
-                        to: fee_recipient_info.to_account_info(),
-                        authority: ctx.accounts.vault.to_account_info(),
-                    },
-                    seeds,
-                ),
+            validate_token_account_owner(
+                fee_recipient_token_account_info,
+                &ctx.accounts.vault.fee_recipient,
+            )?;
+            ctx.accounts.transfer_asset_from_pending_vault(
+                fee_recipient_token_account_info.to_account_info(),
                 deposit_fee,
-                ctx.accounts.asset_mint.decimals,
+                seeds,
             )?;
         }
         ctx.accounts.settle_deposit(seeds, net_deposit)?;
@@ -172,23 +180,17 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
         let (withdraw_fee, net_assets) = get_withdrawal_fee_and_net(&vault_data, assets)?;
         if withdraw_fee > 0 {
             // Validate and transfer fees to fee_recipient
-            let fee_recipient_info = remaining
+            let fee_recipient_token_account_info = remaining
                 .next()
                 .ok_or(AsyncVaultError::MissingFeeRecipient)?;
-            validate_fee_recipient(fee_recipient_info, ctx.accounts.vault.fee_recipient)?;
-            token_interface::transfer_checked(
-                CpiContext::new_with_signer(
-                    ctx.accounts.asset_token_program.to_account_info(),
-                    TransferChecked {
-                        from: ctx.accounts.vault_token_account.to_account_info(),
-                        mint: ctx.accounts.asset_mint.to_account_info(),
-                        to: fee_recipient_info.to_account_info(),
-                        authority: ctx.accounts.vault.to_account_info(),
-                    },
-                    seeds,
-                ),
+            validate_token_account_owner(
+                fee_recipient_token_account_info,
+                &ctx.accounts.vault.fee_recipient,
+            )?;
+            ctx.accounts.transfer_asset_from_vault(
+                fee_recipient_token_account_info.to_account_info(),
                 withdraw_fee,
-                ctx.accounts.asset_mint.decimals,
+                seeds,
             )?;
         }
         ctx.accounts.settle_redeem(seeds, net_assets)?;

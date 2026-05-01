@@ -1,4 +1,4 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, solana_program::entrypoint::ProgramResult};
 use anchor_spl::token_2022::spl_token_2022::{
     self,
     extension::{BaseStateWithExtensions, StateWithExtensions},
@@ -34,6 +34,24 @@ pub fn validate_asset_mint_extensions_from_acct_info(mint_acct: &AccountInfo) ->
         }
     }
 
+    Ok(())
+}
+
+/// Read the `owner` Pubkey of a TokenAccount without deserializing the whole account
+/// and validate against an expected owner.
+pub fn validate_token_account_owner(info: &AccountInfo, expected_owner: &Pubkey) -> ProgramResult {
+    let data = info.try_borrow_data()?;
+    if data.len() < 64 {
+        return Err(ProgramError::InvalidAccountData);
+    }
+    let owner = Pubkey::new_from_array(
+        data[32..64]
+            .try_into()
+            .map_err(|_| ProgramError::InvalidAccountData)?,
+    );
+    if owner.ne(&expected_owner) {
+        return Err(ProgramError::InvalidAccountOwner);
+    }
     Ok(())
 }
 
