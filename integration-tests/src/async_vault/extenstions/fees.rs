@@ -55,7 +55,14 @@ fn setup_with_fees(
         pending_vault_pubkey,
         fee_recipient_ata,
         user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 1_000_000_000, 100_000_000);
+    ) = set_up_async_vault(
+        &mut svm,
+        token::ID,
+        None,
+        token::ID,
+        1_000_000_000,
+        100_000_000,
+    );
 
     if let Some(fee) = deposit_fee {
         InitializeDepositFeeBuilder::new()
@@ -122,10 +129,7 @@ fn approve_request_with_fee_recipient(
     reserve_pubkey: Pubkey,
     pending_vault_pubkey: Pubkey,
     fee_recipient_ata: Option<Pubkey>,
-) -> Result<
-    litesvm::types::TransactionMetadata,
-    litesvm::types::FailedTransactionMetadata,
-> {
+) -> Result<litesvm::types::TransactionMetadata, litesvm::types::FailedTransactionMetadata> {
     let mut builder = ApproveRequestBuilder::new();
     builder
         .authority(authority.pubkey())
@@ -195,8 +199,7 @@ fn test_approve_deposit_with_fee(
         .send_transaction(&mut svm, &user.pubkey(), &[&user, &request_keypair])
         .expect("create deposit request should succeed");
 
-    let pending_before =
-        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
+    let pending_before = get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
     let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
     let fee_recipient_before =
         get_token_account_amount(&svm.get_account(&fee_recipient_ata).unwrap());
@@ -292,7 +295,12 @@ fn test_approve_redeem_with_fee(
     );
     set_vault_total_asset_balance(&mut svm, vault_pubkey, gross_assets);
 
-    set_share_balance(&mut svm, &user_share_account, &share_mint.pubkey(), redeem_shares);
+    set_share_balance(
+        &mut svm,
+        &user_share_account,
+        &share_mint.pubkey(),
+        redeem_shares,
+    );
 
     let request_keypair = Keypair::new();
     CreateRedeemRequestBuilder::new()
@@ -312,8 +320,7 @@ fn test_approve_redeem_with_fee(
         .expect("create redeem request should succeed");
 
     let reserve_before = get_token_account_amount(&svm.get_account(&reserve_pubkey).unwrap());
-    let pending_before =
-        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
+    let pending_before = get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());
     let fee_recipient_before =
         get_token_account_amount(&svm.get_account(&fee_recipient_ata).unwrap());
 

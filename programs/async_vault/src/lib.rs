@@ -6,8 +6,8 @@ pub mod instructions;
 pub mod state;
 pub mod utils;
 
-use instructions::*;
 use extensions::*;
+use instructions::*;
 
 declare_id!("2kUpRoU8oGpstygkk3ZE51upGSq9UpkjNoEUiiQ88MMY");
 

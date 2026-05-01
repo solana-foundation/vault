@@ -92,7 +92,6 @@ impl<'info> ApproveRequest<'info> {
             self.asset_mint.decimals,
         )
     }
-
 }
 
 fn validate_fee_recipient(info: &AccountInfo, expected_owner: Pubkey) -> Result<()> {
@@ -103,7 +102,10 @@ fn validate_fee_recipient(info: &AccountInfo, expected_owner: Pubkey) -> Result<
             .try_into()
             .map_err(|_| AsyncVaultError::InvalidFeeRecipient)?,
     );
-    require!(owner == expected_owner, AsyncVaultError::InvalidFeeRecipient);
+    require!(
+        owner == expected_owner,
+        AsyncVaultError::InvalidFeeRecipient
+    );
     Ok(())
 }
 
@@ -139,7 +141,9 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
         let (deposit_fee, net_deposit) = get_deposit_fee_and_net(&vault_data, original_amount)?;
         if deposit_fee > 0 {
             // Validate and transfer fees to fee_recipient
-            let fee_recipient_info = remaining.next().ok_or(AsyncVaultError::MissingFeeRecipient)?;
+            let fee_recipient_info = remaining
+                .next()
+                .ok_or(AsyncVaultError::MissingFeeRecipient)?;
             validate_fee_recipient(fee_recipient_info, ctx.accounts.vault.fee_recipient)?;
             token_interface::transfer_checked(
                 CpiContext::new_with_signer(
@@ -168,7 +172,9 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
         let (withdraw_fee, net_assets) = get_withdrawal_fee_and_net(&vault_data, assets)?;
         if withdraw_fee > 0 {
             // Validate and transfer fees to fee_recipient
-            let fee_recipient_info = remaining.next().ok_or(AsyncVaultError::MissingFeeRecipient)?;
+            let fee_recipient_info = remaining
+                .next()
+                .ok_or(AsyncVaultError::MissingFeeRecipient)?;
             validate_fee_recipient(fee_recipient_info, ctx.accounts.vault.fee_recipient)?;
             token_interface::transfer_checked(
                 CpiContext::new_with_signer(
