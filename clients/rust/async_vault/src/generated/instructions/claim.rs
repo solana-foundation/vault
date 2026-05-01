@@ -12,6 +12,8 @@ pub const CLAIM_DISCRIMINATOR: [u8; 8] = [62, 198, 214, 193, 213, 159, 108, 210]
 #[derive(Debug)]
 pub struct Claim {
     pub user: solana_pubkey::Pubkey,
+    /// Necessary to send Request owner rent if Operator is claiming.
+    pub owner: solana_pubkey::Pubkey,
 
     pub asset_mint: solana_pubkey::Pubkey,
 
@@ -45,8 +47,9 @@ impl Claim {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.user, true));
+        accounts.push(solana_instruction::AccountMeta::new(self.owner, false));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.asset_mint,
             false,
@@ -139,18 +142,20 @@ impl Default for ClaimInstructionData {
 /// ### Accounts:
 ///
 ///   0. `[writable, signer]` user
-///   1. `[]` asset_mint
-///   2. `[writable]` share_mint
-///   3. `[writable]` vault
-///   4. `[writable]` request
-///   5. `[writable, optional]` pending_vault
-///   6. `[writable, optional]` user_share_account
-///   7. `[writable, optional]` user_asset_account
-///   8. `[]` asset_token_program
-///   9. `[optional]` share_token_program
+///   1. `[writable]` owner
+///   2. `[]` asset_mint
+///   3. `[writable]` share_mint
+///   4. `[writable]` vault
+///   5. `[writable]` request
+///   6. `[writable, optional]` pending_vault
+///   7. `[writable, optional]` user_share_account
+///   8. `[writable, optional]` user_asset_account
+///   9. `[]` asset_token_program
+///   10. `[optional]` share_token_program
 #[derive(Clone, Debug, Default)]
 pub struct ClaimBuilder {
     user: Option<solana_pubkey::Pubkey>,
+    owner: Option<solana_pubkey::Pubkey>,
     asset_mint: Option<solana_pubkey::Pubkey>,
     share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
@@ -171,6 +176,13 @@ impl ClaimBuilder {
     #[inline(always)]
     pub fn user(&mut self, user: solana_pubkey::Pubkey) -> &mut Self {
         self.user = Some(user);
+        self
+    }
+
+    /// Necessary to send Request owner rent if Operator is claiming.
+    #[inline(always)]
+    pub fn owner(&mut self, owner: solana_pubkey::Pubkey) -> &mut Self {
+        self.owner = Some(owner);
         self
     }
 
@@ -268,6 +280,7 @@ impl ClaimBuilder {
     pub fn instruction(&self) -> solana_instruction::Instruction {
         let accounts = Claim {
             user: self.user.expect("user is not set"),
+            owner: self.owner.expect("owner is not set"),
             asset_mint: self.asset_mint.expect("asset_mint is not set"),
             share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
@@ -288,6 +301,8 @@ impl ClaimBuilder {
 /// `claim` CPI accounts.
 pub struct ClaimCpiAccounts<'a, 'b> {
     pub user: &'b solana_account_info::AccountInfo<'a>,
+    /// Necessary to send Request owner rent if Operator is claiming.
+    pub owner: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
 
@@ -316,6 +331,8 @@ pub struct ClaimCpi<'a, 'b> {
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
     pub user: &'b solana_account_info::AccountInfo<'a>,
+    /// Necessary to send Request owner rent if Operator is claiming.
+    pub owner: &'b solana_account_info::AccountInfo<'a>,
 
     pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
 
@@ -346,6 +363,7 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
         Self {
             __program: program,
             user: accounts.user,
+            owner: accounts.owner,
             asset_mint: accounts.asset_mint,
             share_mint: accounts.share_mint,
             vault: accounts.vault,
@@ -384,8 +402,9 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(10 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(11 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.user.key, true));
+        accounts.push(solana_instruction::AccountMeta::new(*self.owner.key, false));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.asset_mint.key,
             false,
@@ -461,9 +480,10 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(11 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(12 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.user.clone());
+        account_infos.push(self.owner.clone());
         account_infos.push(self.asset_mint.clone());
         account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
@@ -498,15 +518,16 @@ impl<'a, 'b> ClaimCpi<'a, 'b> {
 /// ### Accounts:
 ///
 ///   0. `[writable, signer]` user
-///   1. `[]` asset_mint
-///   2. `[writable]` share_mint
-///   3. `[writable]` vault
-///   4. `[writable]` request
-///   5. `[writable, optional]` pending_vault
-///   6. `[writable, optional]` user_share_account
-///   7. `[writable, optional]` user_asset_account
-///   8. `[]` asset_token_program
-///   9. `[optional]` share_token_program
+///   1. `[writable]` owner
+///   2. `[]` asset_mint
+///   3. `[writable]` share_mint
+///   4. `[writable]` vault
+///   5. `[writable]` request
+///   6. `[writable, optional]` pending_vault
+///   7. `[writable, optional]` user_share_account
+///   8. `[writable, optional]` user_asset_account
+///   9. `[]` asset_token_program
+///   10. `[optional]` share_token_program
 #[derive(Clone, Debug)]
 pub struct ClaimCpiBuilder<'a, 'b> {
     instruction: Box<ClaimCpiBuilderInstruction<'a, 'b>>,
@@ -517,6 +538,7 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
         let instruction = Box::new(ClaimCpiBuilderInstruction {
             __program: program,
             user: None,
+            owner: None,
             asset_mint: None,
             share_mint: None,
             vault: None,
@@ -534,6 +556,13 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn user(&mut self, user: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.user = Some(user);
+        self
+    }
+
+    /// Necessary to send Request owner rent if Operator is claiming.
+    #[inline(always)]
+    pub fn owner(&mut self, owner: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.owner = Some(owner);
         self
     }
 
@@ -665,6 +694,8 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
 
             user: self.instruction.user.expect("user is not set"),
 
+            owner: self.instruction.owner.expect("owner is not set"),
+
             asset_mint: self.instruction.asset_mint.expect("asset_mint is not set"),
 
             share_mint: self.instruction.share_mint.expect("share_mint is not set"),
@@ -697,6 +728,7 @@ impl<'a, 'b> ClaimCpiBuilder<'a, 'b> {
 struct ClaimCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
     user: Option<&'b solana_account_info::AccountInfo<'a>>,
+    owner: Option<&'b solana_account_info::AccountInfo<'a>>,
     asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,

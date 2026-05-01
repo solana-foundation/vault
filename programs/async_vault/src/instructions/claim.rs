@@ -13,6 +13,11 @@ pub struct Claim<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
+    /// CHECK: handled in request constraint
+    /// Necessary to send Request owner rent if Operator is claiming.
+    #[account(mut)]
+    pub owner: UncheckedAccount<'info>,
+
     pub asset_mint: InterfaceAccount<'info, Mint>,
 
     #[account(mut)]
@@ -30,7 +35,8 @@ pub struct Claim<'info> {
     // Owner|Operator check in handler.
     #[account(
         mut,
-        close = user,
+        close = owner,
+        has_one = owner @ AsyncVaultError::InvalidRequest,
         has_one = vault @ AsyncVaultError::InvalidRequest,
     )]
     pub request: Account<'info, Request>,
