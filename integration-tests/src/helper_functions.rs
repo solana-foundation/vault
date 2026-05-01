@@ -1007,6 +1007,8 @@ pub fn set_vault_total_asset_balance(svm: &mut LiteSVM, vault: Pubkey, amount: u
     vault_state.total_asset_balance = amount;
     let mut buf = Vec::new();
     vault_state.serialize(&mut buf).unwrap();
+    let tlv_bytes = account.data()[buf.len()..].to_vec();
+    buf.extend_from_slice(&tlv_bytes);
     account.data = buf;
     svm.set_account(vault, account).unwrap();
 }

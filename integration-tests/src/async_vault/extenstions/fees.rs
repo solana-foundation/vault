@@ -14,30 +14,8 @@ use test_case::test_case;
 
 use crate::helper_functions::{
     assert_error_code, get_token_account_amount, helper_mint_to, set_share_balance,
-    set_up_async_vault,
+    set_up_async_vault, set_vault_total_asset_balance,
 };
-
-// TODO consolidate this with `set_vault_total_asset_balance` so the canonical helper util will preserve TLV data
-// TODO move the initialize_deposit_fee and initialize_withdraw_fee instructions to a new file under src/extensions/fee/instructions
-
-// Preserves TLV extension bytes that follow the serialized Vault struct, unlike the
-// set_vault_total_asset_balance helper which truncates the account to struct size.
-fn set_vault_balance_preserve_tlv(svm: &mut LiteSVM, vault: Pubkey, amount: u64) {
-    use async_vault_client::Vault;
-    use borsh::BorshSerialize;
-    use solana_sdk::account::ReadableAccount;
-
-    let mut account = svm.get_account(&vault).unwrap();
-    let mut vault_state = Vault::from_bytes(account.data()).unwrap();
-    vault_state.total_asset_balance = amount;
-    let mut buf = Vec::new();
-    vault_state.serialize(&mut buf).unwrap();
-    // Preserve TLV extension bytes that live beyond the serialized struct.
-    let tlv_bytes = account.data()[buf.len()..].to_vec();
-    buf.extend_from_slice(&tlv_bytes);
-    account.data = buf;
-    svm.set_account(vault, account).unwrap();
-}
 
 // NAV: 200_000_000_000 with 9 decimals → shares = assets/200, assets = shares*200
 const NAV: u128 = 200_000_000_000;
@@ -312,7 +290,7 @@ fn test_approve_redeem_with_fee(
         gross_assets,
         &token::ID,
     );
-    set_vault_balance_preserve_tlv(&mut svm, vault_pubkey, gross_assets);
+    set_vault_total_asset_balance(&mut svm, vault_pubkey, gross_assets);
 
     set_share_balance(&mut svm, &user_share_account, &share_mint.pubkey(), redeem_shares);
 
@@ -504,7 +482,7 @@ fn test_approve_fee_missing_remaining_account_fails(is_deposit: bool) {
             gross_assets,
             &token::ID,
         );
-        set_vault_balance_preserve_tlv(&mut svm, vault_pubkey, gross_assets);
+        set_vault_total_asset_balance(&mut svm, vault_pubkey, gross_assets);
         set_share_balance(&mut svm, &user_share_account, &share_mint.pubkey(), 5_000);
 
         CreateRedeemRequestBuilder::new()
