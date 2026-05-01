@@ -7,6 +7,7 @@ pub mod state;
 pub mod utils;
 
 use instructions::*;
+use extensions::*;
 
 declare_id!("2kUpRoU8oGpstygkk3ZE51upGSq9UpkjNoEUiiQ88MMY");
 
@@ -27,42 +28,6 @@ pub mod async_vault {
     /// no new extensions can be added. Requires authority signature.
     pub fn initialize_vault(ctx: Context<InitializeVault>) -> Result<()> {
         instructions::initialize_vault::handler(ctx)
-    }
-
-    /// Adds a deposit fee TLV extension to the vault. Must be called
-    /// before vault initialization. Requires authority signature.
-    pub fn initialize_deposit_fee(
-        ctx: Context<InitDepositFee>,
-        args: InitDepositFeeArgs,
-    ) -> Result<()> {
-        instructions::initialize_deposit_fee::handler(ctx, args)
-    }
-
-    /// Adds a withdrawal fee TLV extension to the vault. Must be called
-    /// before vault initialization. Requires authority signature.
-    pub fn initialize_withdrawal_fee(
-        ctx: Context<InitWithdrawalFee>,
-        args: InitWithdrawalFeeArgs,
-    ) -> Result<()> {
-        instructions::initialize_withdrawal_fee::handler(ctx, args)
-    }
-
-    /// Updates an existing deposit fee extension. The fee must have been
-    /// previously initialized. Requires authority signature.
-    pub fn update_deposit_fee(
-        ctx: Context<UpdateDepositFee>,
-        args: UpdateDepositFeeArgs,
-    ) -> Result<()> {
-        instructions::update_deposit_fee::handler(ctx, args)
-    }
-
-    /// Updates an existing withdrawal fee extension. The fee must have been
-    /// previously initialized. Requires authority signature.
-    pub fn update_withdrawal_fee(
-        ctx: Context<UpdateWithdrawalFee>,
-        args: UpdateWithdrawalFeeArgs,
-    ) -> Result<()> {
-        instructions::update_withdrawal_fee::handler(ctx, args)
     }
 
     /// User claims their shares or assets from an approved Deposit or Redemption request.
@@ -103,7 +68,9 @@ pub mod async_vault {
 
     /// Approve a pending request, allowing the User to execute the Claim instruction.
     /// This sets the Request's claimable NAV to the Vault's current NAV.
-    pub fn approve_request<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) -> Result<()> {
+    pub fn approve_request<'info>(
+        ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>,
+    ) -> Result<()> {
         instructions::approve_request::handler(ctx)
     }
 
@@ -112,6 +79,44 @@ pub mod async_vault {
     /// The request account is closed and its rent is returned to the user.
     pub fn reject_request(ctx: Context<RejectRequest>) -> Result<()> {
         instructions::reject_request::handler(ctx)
+    }
+
+    /* EXTENSION INSTRUCTIONS */
+
+    /// Adds a deposit fee TLV extension to the vault. Must be called
+    /// before vault initialization. Requires authority signature.
+    pub fn initialize_deposit_fee(
+        ctx: Context<InitDepositFee>,
+        args: InitDepositFeeArgs,
+    ) -> Result<()> {
+        extensions::fee::instructions::initialize_deposit_fee::handler(ctx, args)
+    }
+
+    /// Adds a withdrawal fee TLV extension to the vault. Must be called
+    /// before vault initialization. Requires authority signature.
+    pub fn initialize_withdrawal_fee(
+        ctx: Context<InitWithdrawalFee>,
+        args: InitWithdrawalFeeArgs,
+    ) -> Result<()> {
+        extensions::fee::instructions::initialize_withdrawal_fee::handler(ctx, args)
+    }
+
+    /// Updates an existing deposit fee extension. The fee must have been
+    /// previously initialized. Requires authority signature.
+    pub fn update_deposit_fee(
+        ctx: Context<UpdateDepositFee>,
+        args: UpdateDepositFeeArgs,
+    ) -> Result<()> {
+        extensions::fee::instructions::update_deposit_fee::handler(ctx, args)
+    }
+
+    /// Updates an existing withdrawal fee extension. The fee must have been
+    /// previously initialized. Requires authority signature.
+    pub fn update_withdrawal_fee(
+        ctx: Context<UpdateWithdrawalFee>,
+        args: UpdateWithdrawalFeeArgs,
+    ) -> Result<()> {
+        extensions::fee::instructions::update_withdrawal_fee::handler(ctx, args)
     }
 
     /* USER INSTRUCTIONS */
