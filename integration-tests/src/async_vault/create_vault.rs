@@ -17,16 +17,13 @@ use crate::helper_functions::{
     RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
 };
 
-#[test_case(true, false, token::ID,token::ID, 0 ; "both async inflows and outflows")]
+#[test_case(true, false, token::ID,token::ID, 0 ; "Token program for both mints")]
 #[test_case(true, false, token_2022::ID,token_2022::ID, 0 ; "Token 2022 program for both mints")]
 #[test_case(true, false, token::ID,token_2022::ID, 0 ; "Token program for asset, Token program 2022 for share")]
 #[test_case(true, false, token_2022::ID,token::ID, 0 ; "Token 2022 program for asset, Token program for share")]
-#[test_case(true, false,token_2022::ID,token_2022::ID, 0 ; "minimum price")]
-#[test_case(true,  false,token_2022::ID,token_2022::ID, 0 ; "maximum price")]
-#[test_case(false, false,token_2022::ID,token_2022::ID, 0 ; "invalid mint authority fails")]
-#[test_case(true,  false,token_2022::ID,token_2022::ID, 0 ; "duplicate vault creation fails")]
-#[test_case(true,  true, token_2022::ID,token_2022::ID, 0 ; "same mints fails")]
-#[test_case(true,  false, token_2022::ID,token_2022::ID, 1 ; "nonzero transfer fee asset mint fails")]
+#[test_case(false, false, token_2022::ID,token_2022::ID, 0 ; "invalid mint authority fails")]
+#[test_case(true, true, token_2022::ID,token_2022::ID, 0 ; "same mints fails")]
+#[test_case(true, false, token_2022::ID,token_2022::ID, 1 ; "nonzero transfer fee asset mint fails")]
 fn test_create_vault(
     use_valid_mint_authority: bool,
     use_same_mints: bool,
