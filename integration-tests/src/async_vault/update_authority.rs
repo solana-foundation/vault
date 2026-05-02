@@ -30,7 +30,7 @@ fn test_invite_new_authority(use_valid_authority: bool) {
         _pending_vault_pubkey,
         _fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0);
 
     let new_authority = Keypair::new();
 
@@ -85,7 +85,7 @@ fn test_invite_new_authority_overwrites_pending() {
         _pending_vault_pubkey,
         _fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0);
 
     let first_candidate = Keypair::new();
     InviteNewAuthorityBuilder::new()
@@ -137,7 +137,7 @@ fn test_accept_authority_invitation(invite_first: bool, use_correct_new_authorit
         _pending_vault_pubkey,
         _fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0);
 
     let new_authority = Keypair::new();
     svm.airdrop(&new_authority.pubkey(), 1_000_000_000).unwrap();
@@ -212,7 +212,7 @@ fn test_full_authority_transfer_old_authority_loses_access() {
         _pending_vault_pubkey,
         _fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0);
 
     let new_authority = Keypair::new();
     svm.airdrop(&new_authority.pubkey(), 1_000_000_000).unwrap();

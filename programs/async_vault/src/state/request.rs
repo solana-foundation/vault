@@ -6,7 +6,6 @@ use anchor_lang::prelude::*;
 pub enum RequestState {
     Pending,
     Claimable,
-    Rejected,
 }
 
 /// The request types:

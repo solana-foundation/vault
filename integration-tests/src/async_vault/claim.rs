@@ -46,7 +46,7 @@ fn setup(
         pending_vault_pubkey,
         _fee_recipient_ata,
         user_share_account,
-    ) = set_up_async_vault(svm, token::ID, None, token::ID, 1_000_000_000, 100_000_000);
+    ) = set_up_async_vault(svm, token::ID, None, token::ID, 1_000_000_000);
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())

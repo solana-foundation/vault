@@ -40,7 +40,7 @@ fn test_create_redeem_request(
         _pending_vault_pubkey,
         _fee_recipient_ata,
         user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0, 100_000_000);
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0);
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())

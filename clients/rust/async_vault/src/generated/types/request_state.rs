@@ -25,5 +25,4 @@ use num_derive::FromPrimitive;
 pub enum RequestState {
     Pending,
     Claimable,
-    Rejected,
 }

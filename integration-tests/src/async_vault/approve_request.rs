@@ -47,7 +47,7 @@ fn setup(
         pending_vault_pubkey,
         _fee_recipient_ata,
         user_share_account,
-    ) = set_up_async_vault(svm, token::ID, None, token::ID, 1_000_000_000, 100_000_000);
+    ) = set_up_async_vault(svm, token::ID, None, token::ID, 1_000_000_000);
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
@@ -319,14 +319,7 @@ fn test_approve_request_fails(
         pending_vault_pubkey,
         _fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(
-        &mut svm,
-        token::ID,
-        None,
-        token::ID,
-        user_amount,
-        100_000_000,
-    );
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, user_amount);
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
         .vault(vault_pubkey)

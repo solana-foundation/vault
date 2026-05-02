@@ -29,14 +29,7 @@ fn test_update_vault_nav(updated_nav: u128) {
         _pending_vault_pubkey,
         _fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(
-        &mut svm,
-        token::ID,
-        None,
-        token::ID,
-        1_000_000_000,
-        100_000_000,
-    );
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 1_000_000_000);
 
     let vault_before = Vault::from_bytes(
         svm.get_account(&vault_pubkey)

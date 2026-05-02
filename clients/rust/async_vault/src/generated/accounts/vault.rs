@@ -40,8 +40,6 @@ pub struct Vault {
         serde(with = "serde_with::As::<serde_with::DisplayFromStr>")
     )]
     pub fee_recipient: Pubkey,
-    /// initial price of shares in asset units (scaled by asset mint decimals)
-    pub initial_price: u64,
     /// paused
     pub paused: bool,
     /// once a vault is initialized, no extensions can be added

@@ -116,7 +116,6 @@ impl Default for CreateVaultInstructionData {
 pub struct CreateVaultInstructionArgs {
     pub authority: Pubkey,
     pub fee_recipient: Pubkey,
-    pub initial_price: u64,
 }
 
 impl CreateVaultInstructionArgs {
@@ -153,7 +152,6 @@ pub struct CreateVaultBuilder {
     system_program: Option<solana_pubkey::Pubkey>,
     authority: Option<Pubkey>,
     fee_recipient: Option<Pubkey>,
-    initial_price: Option<u64>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -235,12 +233,6 @@ impl CreateVaultBuilder {
         self
     }
 
-    #[inline(always)]
-    pub fn initial_price(&mut self, initial_price: u64) -> &mut Self {
-        self.initial_price = Some(initial_price);
-        self
-    }
-
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -284,10 +276,6 @@ impl CreateVaultBuilder {
                 .fee_recipient
                 .clone()
                 .expect("fee_recipient is not set"),
-            initial_price: self
-                .initial_price
-                .clone()
-                .expect("initial_price is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -503,7 +491,6 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
             system_program: None,
             authority: None,
             fee_recipient: None,
-            initial_price: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -602,12 +589,6 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
         self
     }
 
-    #[inline(always)]
-    pub fn initial_price(&mut self, initial_price: u64) -> &mut Self {
-        self.instruction.initial_price = Some(initial_price);
-        self
-    }
-
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(
@@ -657,11 +638,6 @@ impl<'a, 'b> CreateVaultCpiBuilder<'a, 'b> {
                 .fee_recipient
                 .clone()
                 .expect("fee_recipient is not set"),
-            initial_price: self
-                .instruction
-                .initial_price
-                .clone()
-                .expect("initial_price is not set"),
         };
         let instruction = CreateVaultCpi {
             __program: self.instruction.__program,
@@ -724,7 +700,6 @@ struct CreateVaultCpiBuilderInstruction<'a, 'b> {
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     authority: Option<Pubkey>,
     fee_recipient: Option<Pubkey>,
-    initial_price: Option<u64>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

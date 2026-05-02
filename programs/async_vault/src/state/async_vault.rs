@@ -14,8 +14,6 @@ pub struct Vault {
     pub authority: Pubkey,
     /// pubkey that is required to own the TokenAccount fees are sent to
     pub fee_recipient: Pubkey,
-    /// initial price of shares in asset units (scaled by asset mint decimals)
-    pub initial_price: u64,
     /// paused
     pub paused: bool,
     /// once a vault is initialized, no extensions can be added

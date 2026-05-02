@@ -38,14 +38,7 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
         pending_vault_pubkey,
         fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(
-        &mut svm,
-        token::ID,
-        Some(0),
-        token::ID,
-        user_amount,
-        100_000_000,
-    );
+    ) = set_up_async_vault(&mut svm, token::ID, Some(0), token::ID, user_amount);
 
     InitializeAsyncVaultBuilder::new()
         .authority(authority.pubkey())
@@ -192,7 +185,6 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
         Some(0), // Must start with TransferFee of 0 to create the Vault
         token::ID,
         user_amount,
-        100_000_000,
     );
 
     InitializeAsyncVaultBuilder::new()

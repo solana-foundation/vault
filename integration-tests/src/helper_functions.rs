@@ -865,7 +865,6 @@ pub fn set_up_async_vault(
     asset_mint_transfer_fee_bps: Option<u16>,
     share_token_program: Pubkey,
     user_amount: u64,
-    initial_price: u64,
 ) -> (
     Keypair,
     Keypair,
@@ -938,7 +937,6 @@ pub fn set_up_async_vault(
         .asset_token_program(asset_token_program)
         .share_token_program(share_token_program)
         .authority(authority.pubkey())
-        .initial_price(initial_price)
         .instruction()
         .send_transaction(svm, &payer.pubkey(), &[&payer, &mint_authority])
         .expect("vault creation should succeed");
