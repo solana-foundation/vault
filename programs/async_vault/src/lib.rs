@@ -56,8 +56,8 @@ pub mod async_vault {
     }
     /// Updates the async vault configuration. Can modify paused status,
     /// async inflows, and async outflows. Requires authority signature.
-    pub fn update_vault(ctx: Context<UpdateVault>, paused: bool) -> Result<()> {
-        instructions::update_vault::handler(ctx, paused)
+    pub fn update_vault(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {
+        instructions::update_vault::handler(ctx, args)
     }
 
     /// Updates the vault nav and increases nav version by 1

@@ -80,7 +80,8 @@ impl Default for UpdateVaultInstructionData {
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct UpdateVaultInstructionArgs {
-    pub paused: bool,
+    pub paused: Option<bool>,
+    pub fee_recipient: Option<solana_pubkey::Pubkey>,
 }
 
 impl UpdateVaultInstructionArgs {
@@ -102,6 +103,7 @@ pub struct UpdateVaultBuilder {
     share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     paused: Option<bool>,
+    fee_recipient: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
@@ -134,6 +136,12 @@ impl UpdateVaultBuilder {
         self
     }
 
+    #[inline(always)]
+    pub fn fee_recipient(&mut self, fee_recipient: solana_pubkey::Pubkey) -> &mut Self {
+        self.fee_recipient = Some(fee_recipient);
+        self
+    }
+
     /// Add an additional account to the instruction.
     #[inline(always)]
     pub fn add_remaining_account(&mut self, account: solana_instruction::AccountMeta) -> &mut Self {
@@ -159,7 +167,8 @@ impl UpdateVaultBuilder {
             vault: self.vault.expect("vault is not set"),
         };
         let args = UpdateVaultInstructionArgs {
-            paused: self.paused.clone().expect("paused is not set"),
+            paused: self.paused,
+            fee_recipient: self.fee_recipient,
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
@@ -293,6 +302,7 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
             share_mint: None,
             vault: None,
             paused: None,
+            fee_recipient: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
@@ -322,6 +332,12 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn paused(&mut self, paused: bool) -> &mut Self {
         self.instruction.paused = Some(paused);
+        self
+    }
+
+    #[inline(always)]
+    pub fn fee_recipient(&mut self, fee_recipient: solana_pubkey::Pubkey) -> &mut Self {
+        self.instruction.fee_recipient = Some(fee_recipient);
         self
     }
 
@@ -364,7 +380,8 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
     #[allow(clippy::vec_init_then_push)]
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
         let args = UpdateVaultInstructionArgs {
-            paused: self.instruction.paused.clone().expect("paused is not set"),
+            paused: self.instruction.paused,
+            fee_recipient: self.instruction.fee_recipient,
         };
         let instruction = UpdateVaultCpi {
             __program: self.instruction.__program,
@@ -390,6 +407,7 @@ struct UpdateVaultCpiBuilderInstruction<'a, 'b> {
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     paused: Option<bool>,
+    fee_recipient: Option<solana_pubkey::Pubkey>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }

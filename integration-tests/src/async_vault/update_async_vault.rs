@@ -8,9 +8,10 @@ use test_case::test_case;
 
 use crate::helper_functions::{assert_error_code, set_up_async_vault};
 
-#[test_case(true; "pause vault")]
-#[test_case(false ; "unpause vault")]
-fn test_update_async_vault(paused: bool) {
+#[test_case(Some(true), false; "pause vault")]
+#[test_case(Some(false), false; "unpause vault")]
+#[test_case(None, true; "update fee_recipient only")]
+fn test_update_async_vault(paused: Option<bool>, update_fee_recipient: bool) {
     let mut svm = LiteSVM::new();
 
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
@@ -34,11 +35,21 @@ fn test_update_async_vault(paused: bool) {
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_before = Vault::from_bytes(vault_account.data()).unwrap();
 
-    UpdateVaultAsyncBuilder::new()
+    let new_fee_recipient = Keypair::new();
+
+    let mut builder = UpdateVaultAsyncBuilder::new();
+    builder
         .authority(authority.pubkey())
         .share_mint(share_mint.pubkey())
-        .paused(paused)
-        .vault(vault_pubkey)
+        .vault(vault_pubkey);
+    if let Some(p) = paused {
+        builder.paused(p);
+    }
+    if update_fee_recipient {
+        builder.fee_recipient(new_fee_recipient.pubkey());
+    }
+
+    builder
         .instruction()
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("update vault should succeed");
@@ -46,7 +57,17 @@ fn test_update_async_vault(paused: bool) {
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_after = Vault::from_bytes(vault_account.data()).unwrap();
 
-    assert_eq!(vault_after.paused, paused);
+    if let Some(p) = paused {
+        assert_eq!(vault_after.paused, p);
+    } else {
+        assert_eq!(vault_after.paused, vault_before.paused);
+    }
+
+    if update_fee_recipient {
+        assert_eq!(vault_after.fee_recipient, new_fee_recipient.pubkey());
+    } else {
+        assert_eq!(vault_after.fee_recipient, vault_before.fee_recipient);
+    }
 
     assert_eq!(vault_after.authority, vault_before.authority);
     assert_eq!(vault_after.asset_mint, vault_before.asset_mint);

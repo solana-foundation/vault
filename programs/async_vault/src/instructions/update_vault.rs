@@ -8,7 +8,8 @@ use crate::{
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct UpdateVaultArgs {
-    paused: Option<bool>,
+    pub paused: Option<bool>,
+    pub fee_recipient: Option<Pubkey>,
 }
 
 #[derive(Accounts)]
@@ -26,10 +27,16 @@ pub struct UpdateVault<'info> {
     pub vault: Account<'info, Vault>,
 }
 
-pub fn handler(ctx: Context<UpdateVault>, paused: bool) -> Result<()> {
+pub fn handler(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {
     let vault = &mut ctx.accounts.vault;
 
-    vault.paused = paused;
+    if let Some(paused) = args.paused {
+        vault.paused = paused;
+    }
+
+    if let Some(fee_recipient) = args.fee_recipient {
+        vault.fee_recipient = fee_recipient;
+    }
 
     Ok(())
 }
