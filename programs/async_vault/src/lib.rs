@@ -54,8 +54,8 @@ pub mod async_vault {
     pub fn accept_authority_invitation(ctx: Context<AcceptAuthorityInvitation>) -> Result<()> {
         instructions::accept_authority_invitation::handler(ctx)
     }
-    /// Updates the async vault configuration. Can modify paused status,
-    /// async inflows, and async outflows. Requires authority signature.
+    /// Updates the async vault configuration. Can modify paused status
+    /// and the fee_recipient. Requires authority signature.
     pub fn update_vault(ctx: Context<UpdateVault>, args: UpdateVaultArgs) -> Result<()> {
         instructions::update_vault::handler(ctx, args)
     }
