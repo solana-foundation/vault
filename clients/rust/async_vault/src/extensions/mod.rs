@@ -17,8 +17,7 @@ pub(super) fn get_extension_bytes(tlv_data: &[u8], ext_type: ExtensionType) -> O
     let mut offset = 0;
     while offset + TLV_HEADER_SIZE <= tlv_data.len() {
         let entry_type = u16::from_le_bytes([tlv_data[offset], tlv_data[offset + 1]]);
-        let entry_len =
-            u16::from_le_bytes([tlv_data[offset + 2], tlv_data[offset + 3]]) as usize;
+        let entry_len = u16::from_le_bytes([tlv_data[offset + 2], tlv_data[offset + 3]]) as usize;
         let value_end = offset + TLV_HEADER_SIZE + entry_len;
         if value_end > tlv_data.len() {
             return None;

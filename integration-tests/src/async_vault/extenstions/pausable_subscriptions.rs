@@ -1,8 +1,9 @@
 use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
 use async_vault_client::{
-    lite::SendTransaction, sdk::program_id, CreateDepositRequestBuilder,
-    InitializePausableSubscriptionsBuilder, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
-    RequestArgs, UpdatePausableSubscriptionsBuilder, UpdateVaultNavBuilder, Vault,
+    extensions::pausable_subscriptions, lite::SendTransaction, sdk::program_id,
+    CreateDepositRequestBuilder, InitializePausableSubscriptionsBuilder,
+    InitializeVaultBuilder as InitializeAsyncVaultBuilder, RequestArgs,
+    UpdatePausableSubscriptionsBuilder, UpdateVaultNavBuilder, Vault,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
@@ -116,6 +117,12 @@ fn test_initialize_pausable_subscriptions_paused_false() {
     let (mut svm, _authority, asset_mint, share_mint, user, vault_pubkey, pending_vault_pubkey) =
         setup(Some(false));
 
+    let pausable_subs = pausable_subscriptions::get_state(
+        svm.get_account(&vault_pubkey).expect("vault exists").data(),
+    )
+    .expect("PausableSubscriptions should be initialized");
+    assert!(!pausable_subs.paused);
+
     let deposit_amount = 1_000_000u64;
     let user_token_account = get_associated_token_address_with_program_id(
         &user.pubkey(),
@@ -227,6 +234,12 @@ fn test_update_paused_true_blocks_deposit() {
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("update to paused=true should succeed");
 
+    let pausable_subs = pausable_subscriptions::get_state(
+        svm.get_account(&vault_pubkey).expect("vault exists").data(),
+    )
+    .expect("PausableSubscriptions should be initialized");
+    assert!(pausable_subs.paused);
+
     let err = create_deposit_request(
         &mut svm,
         &user,
@@ -271,6 +284,12 @@ fn test_update_paused_false_allows_deposit() {
         .instruction()
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("update to paused=false should succeed");
+
+    let pausable_subs = pausable_subscriptions::get_state(
+        svm.get_account(&vault_pubkey).expect("vault exists").data(),
+    )
+    .expect("PausableSubscriptions should be initialized");
+    assert!(!pausable_subs.paused);
 
     let deposit_amount = 1_000_000u64;
     let pending_before = get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap());

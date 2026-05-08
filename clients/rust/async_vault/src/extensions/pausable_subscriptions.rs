@@ -8,10 +8,14 @@ pub fn get_state(vault_data: &[u8]) -> Option<PausableSubscriptions> {
     if vault_data.len() <= VAULT_TLV_START {
         return None;
     }
-    let bytes =
-        get_extension_bytes(&vault_data[VAULT_TLV_START..], ExtensionType::PausableSubscriptions)?;
+    let bytes = get_extension_bytes(
+        &vault_data[VAULT_TLV_START..],
+        ExtensionType::PausableSubscriptions,
+    )?;
     if bytes.is_empty() {
         return None;
     }
-    Some(PausableSubscriptions { paused: bytes[0] != 0 })
+    Some(PausableSubscriptions {
+        paused: bytes[0] != 0,
+    })
 }
