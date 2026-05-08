@@ -119,6 +119,28 @@ pub mod async_vault {
         extensions::fee::instructions::update_withdrawal_fee::handler(ctx, args)
     }
 
+    /// Adds a PausableSubscriptions TLV extension to the vault. Must be called
+    /// before vault initialization. Requires authority signature.
+    pub fn initialize_pausable_subscriptions(
+        ctx: Context<InitPausableSubscriptions>,
+        args: InitPausableSubscriptionsArgs,
+    ) -> Result<()> {
+        extensions::pausable_subscriptions::instructions::initialize_pausable_subscriptions::handler(
+            ctx, args,
+        )
+    }
+
+    /// Updates the paused state of an existing PausableSubscriptions extension.
+    /// When paused is true, new deposit requests are rejected. Requires authority signature.
+    pub fn update_pausable_subscriptions(
+        ctx: Context<UpdatePausableSubscriptions>,
+        args: UpdatePausableSubscriptionsArgs,
+    ) -> Result<()> {
+        extensions::pausable_subscriptions::instructions::update_pausable_subscriptions::handler(
+            ctx, args,
+        )
+    }
+
     /* USER INSTRUCTIONS */
 
     /// Creates a deposit request with state pending (Pending vault authority acceptance)

@@ -90,6 +90,9 @@ pub enum AsyncVaultError {
     /// 6026 - Request is not in a Claimable state.
     #[error("Request is not in a Claimable state.")]
     RequestNotClaimable = 0x178A,
+    /// 6027 - Subscriptions are paused
+    #[error("Subscriptions are paused")]
+    SubscriptionsPaused = 0x178B,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

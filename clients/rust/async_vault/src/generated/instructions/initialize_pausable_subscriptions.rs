@@ -5,22 +5,29 @@
 //! <https://github.com/codama-idl/codama>
 
 use borsh::{BorshDeserialize, BorshSerialize};
-use solana_pubkey::Pubkey;
 
-pub const UPDATE_VAULT_DISCRIMINATOR: [u8; 8] = [67, 229, 185, 188, 226, 11, 210, 60];
+pub const INITIALIZE_PAUSABLE_SUBSCRIPTIONS_DISCRIMINATOR: [u8; 8] =
+    [54, 69, 88, 16, 146, 253, 73, 189];
 
 /// Accounts.
 #[derive(Debug)]
-pub struct UpdateVault {
+pub struct InitializePausableSubscriptions {
+    pub payer: solana_pubkey::Pubkey,
+
     pub authority: solana_pubkey::Pubkey,
 
     pub share_mint: solana_pubkey::Pubkey,
 
     pub vault: solana_pubkey::Pubkey,
+
+    pub system_program: solana_pubkey::Pubkey,
 }
 
-impl UpdateVault {
-    pub fn instruction(&self, args: UpdateVaultInstructionArgs) -> solana_instruction::Instruction {
+impl InitializePausableSubscriptions {
+    pub fn instruction(
+        &self,
+        args: InitializePausableSubscriptionsInstructionArgs,
+    ) -> solana_instruction::Instruction {
         self.instruction_with_remaining_accounts(args, &[])
     }
 
@@ -28,10 +35,11 @@ impl UpdateVault {
     #[allow(clippy::vec_init_then_push)]
     pub fn instruction_with_remaining_accounts(
         &self,
-        args: UpdateVaultInstructionArgs,
+        args: InitializePausableSubscriptionsInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
+        accounts.push(solana_instruction::AccountMeta::new(self.payer, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.authority,
             true,
@@ -41,8 +49,14 @@ impl UpdateVault {
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.system_program,
+            false,
+        ));
         accounts.extend_from_slice(remaining_accounts);
-        let mut data = UpdateVaultInstructionData::new().try_to_vec().unwrap();
+        let mut data = InitializePausableSubscriptionsInstructionData::new()
+            .try_to_vec()
+            .unwrap();
         let mut args = args.try_to_vec().unwrap();
         data.append(&mut args);
 
@@ -56,14 +70,14 @@ impl UpdateVault {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct UpdateVaultInstructionData {
+pub struct InitializePausableSubscriptionsInstructionData {
     discriminator: [u8; 8],
 }
 
-impl UpdateVaultInstructionData {
+impl InitializePausableSubscriptionsInstructionData {
     pub fn new() -> Self {
         Self {
-            discriminator: [67, 229, 185, 188, 226, 11, 210, 60],
+            discriminator: [54, 69, 88, 16, 146, 253, 73, 189],
         }
     }
 
@@ -72,7 +86,7 @@ impl UpdateVaultInstructionData {
     }
 }
 
-impl Default for UpdateVaultInstructionData {
+impl Default for InitializePausableSubscriptionsInstructionData {
     fn default() -> Self {
         Self::new()
     }
@@ -80,37 +94,45 @@ impl Default for UpdateVaultInstructionData {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct UpdateVaultInstructionArgs {
-    pub paused: Option<bool>,
-    pub fee_recipient: Option<Pubkey>,
+pub struct InitializePausableSubscriptionsInstructionArgs {
+    pub paused: bool,
 }
 
-impl UpdateVaultInstructionArgs {
+impl InitializePausableSubscriptionsInstructionArgs {
     pub(crate) fn try_to_vec(&self) -> Result<Vec<u8>, std::io::Error> {
         borsh::to_vec(self)
     }
 }
 
-/// Instruction builder for `UpdateVault`.
+/// Instruction builder for `InitializePausableSubscriptions`.
 ///
 /// ### Accounts:
 ///
-///   0. `[signer]` authority
-///   1. `[]` share_mint
-///   2. `[writable]` vault
+///   0. `[writable, signer]` payer
+///   1. `[signer]` authority
+///   2. `[]` share_mint
+///   3. `[writable]` vault
+///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
-pub struct UpdateVaultBuilder {
+pub struct InitializePausableSubscriptionsBuilder {
+    payer: Option<solana_pubkey::Pubkey>,
     authority: Option<solana_pubkey::Pubkey>,
     share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
+    system_program: Option<solana_pubkey::Pubkey>,
     paused: Option<bool>,
-    fee_recipient: Option<Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
-impl UpdateVaultBuilder {
+impl InitializePausableSubscriptionsBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    #[inline(always)]
+    pub fn payer(&mut self, payer: solana_pubkey::Pubkey) -> &mut Self {
+        self.payer = Some(payer);
+        self
     }
 
     #[inline(always)]
@@ -131,17 +153,16 @@ impl UpdateVaultBuilder {
         self
     }
 
-    /// `[optional argument]`
+    /// `[optional account, default to '11111111111111111111111111111111']`
     #[inline(always)]
-    pub fn paused(&mut self, paused: bool) -> &mut Self {
-        self.paused = Some(paused);
+    pub fn system_program(&mut self, system_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.system_program = Some(system_program);
         self
     }
 
-    /// `[optional argument]`
     #[inline(always)]
-    pub fn fee_recipient(&mut self, fee_recipient: Pubkey) -> &mut Self {
-        self.fee_recipient = Some(fee_recipient);
+    pub fn paused(&mut self, paused: bool) -> &mut Self {
+        self.paused = Some(paused);
         self
     }
 
@@ -164,54 +185,67 @@ impl UpdateVaultBuilder {
 
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
-        let accounts = UpdateVault {
+        let accounts = InitializePausableSubscriptions {
+            payer: self.payer.expect("payer is not set"),
             authority: self.authority.expect("authority is not set"),
             share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
+            system_program: self
+                .system_program
+                .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
         };
-        let args = UpdateVaultInstructionArgs {
-            paused: self.paused.clone(),
-            fee_recipient: self.fee_recipient.clone(),
+        let args = InitializePausableSubscriptionsInstructionArgs {
+            paused: self.paused.clone().expect("paused is not set"),
         };
 
         accounts.instruction_with_remaining_accounts(args, &self.__remaining_accounts)
     }
 }
 
-/// `update_vault` CPI accounts.
-pub struct UpdateVaultCpiAccounts<'a, 'b> {
+/// `initialize_pausable_subscriptions` CPI accounts.
+pub struct InitializePausableSubscriptionsCpiAccounts<'a, 'b> {
+    pub payer: &'b solana_account_info::AccountInfo<'a>,
+
     pub authority: &'b solana_account_info::AccountInfo<'a>,
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
-/// `update_vault` CPI instruction.
-pub struct UpdateVaultCpi<'a, 'b> {
+/// `initialize_pausable_subscriptions` CPI instruction.
+pub struct InitializePausableSubscriptionsCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
+    pub payer: &'b solana_account_info::AccountInfo<'a>,
+
     pub authority: &'b solana_account_info::AccountInfo<'a>,
 
     pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
+
+    pub system_program: &'b solana_account_info::AccountInfo<'a>,
     /// The arguments for the instruction.
-    pub __args: UpdateVaultInstructionArgs,
+    pub __args: InitializePausableSubscriptionsInstructionArgs,
 }
 
-impl<'a, 'b> UpdateVaultCpi<'a, 'b> {
+impl<'a, 'b> InitializePausableSubscriptionsCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_account_info::AccountInfo<'a>,
-        accounts: UpdateVaultCpiAccounts<'a, 'b>,
-        args: UpdateVaultInstructionArgs,
+        accounts: InitializePausableSubscriptionsCpiAccounts<'a, 'b>,
+        args: InitializePausableSubscriptionsInstructionArgs,
     ) -> Self {
         Self {
             __program: program,
+            payer: accounts.payer,
             authority: accounts.authority,
             share_mint: accounts.share_mint,
             vault: accounts.vault,
+            system_program: accounts.system_program,
             __args: args,
         }
     }
@@ -242,7 +276,8 @@ impl<'a, 'b> UpdateVaultCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(3 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
+        accounts.push(solana_instruction::AccountMeta::new(*self.payer.key, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.authority.key,
             true,
@@ -252,6 +287,10 @@ impl<'a, 'b> UpdateVaultCpi<'a, 'b> {
             false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.system_program.key,
+            false,
+        ));
         remaining_accounts.iter().for_each(|remaining_account| {
             accounts.push(solana_instruction::AccountMeta {
                 pubkey: *remaining_account.0.key,
@@ -259,7 +298,9 @@ impl<'a, 'b> UpdateVaultCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let mut data = UpdateVaultInstructionData::new().try_to_vec().unwrap();
+        let mut data = InitializePausableSubscriptionsInstructionData::new()
+            .try_to_vec()
+            .unwrap();
         let mut args = self.__args.try_to_vec().unwrap();
         data.append(&mut args);
 
@@ -268,11 +309,13 @@ impl<'a, 'b> UpdateVaultCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(6 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
+        account_infos.push(self.payer.clone());
         account_infos.push(self.authority.clone());
         account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
+        account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
             .for_each(|remaining_account| account_infos.push(remaining_account.0.clone()));
@@ -285,30 +328,39 @@ impl<'a, 'b> UpdateVaultCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `UpdateVault` via CPI.
+/// Instruction builder for `InitializePausableSubscriptions` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[signer]` authority
-///   1. `[]` share_mint
-///   2. `[writable]` vault
+///   0. `[writable, signer]` payer
+///   1. `[signer]` authority
+///   2. `[]` share_mint
+///   3. `[writable]` vault
+///   4. `[]` system_program
 #[derive(Clone, Debug)]
-pub struct UpdateVaultCpiBuilder<'a, 'b> {
-    instruction: Box<UpdateVaultCpiBuilderInstruction<'a, 'b>>,
+pub struct InitializePausableSubscriptionsCpiBuilder<'a, 'b> {
+    instruction: Box<InitializePausableSubscriptionsCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
+impl<'a, 'b> InitializePausableSubscriptionsCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(UpdateVaultCpiBuilderInstruction {
+        let instruction = Box::new(InitializePausableSubscriptionsCpiBuilderInstruction {
             __program: program,
+            payer: None,
             authority: None,
             share_mint: None,
             vault: None,
+            system_program: None,
             paused: None,
-            fee_recipient: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
+    }
+
+    #[inline(always)]
+    pub fn payer(&mut self, payer: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.payer = Some(payer);
+        self
     }
 
     #[inline(always)]
@@ -332,17 +384,18 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
         self
     }
 
-    /// `[optional argument]`
     #[inline(always)]
-    pub fn paused(&mut self, paused: bool) -> &mut Self {
-        self.instruction.paused = Some(paused);
+    pub fn system_program(
+        &mut self,
+        system_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.system_program = Some(system_program);
         self
     }
 
-    /// `[optional argument]`
     #[inline(always)]
-    pub fn fee_recipient(&mut self, fee_recipient: Pubkey) -> &mut Self {
-        self.instruction.fee_recipient = Some(fee_recipient);
+    pub fn paused(&mut self, paused: bool) -> &mut Self {
+        self.instruction.paused = Some(paused);
         self
     }
 
@@ -384,18 +437,24 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
     #[allow(clippy::clone_on_copy)]
     #[allow(clippy::vec_init_then_push)]
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
-        let args = UpdateVaultInstructionArgs {
-            paused: self.instruction.paused.clone(),
-            fee_recipient: self.instruction.fee_recipient.clone(),
+        let args = InitializePausableSubscriptionsInstructionArgs {
+            paused: self.instruction.paused.clone().expect("paused is not set"),
         };
-        let instruction = UpdateVaultCpi {
+        let instruction = InitializePausableSubscriptionsCpi {
             __program: self.instruction.__program,
+
+            payer: self.instruction.payer.expect("payer is not set"),
 
             authority: self.instruction.authority.expect("authority is not set"),
 
             share_mint: self.instruction.share_mint.expect("share_mint is not set"),
 
             vault: self.instruction.vault.expect("vault is not set"),
+
+            system_program: self
+                .instruction
+                .system_program
+                .expect("system_program is not set"),
             __args: args,
         };
         instruction.invoke_signed_with_remaining_accounts(
@@ -406,13 +465,14 @@ impl<'a, 'b> UpdateVaultCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct UpdateVaultCpiBuilderInstruction<'a, 'b> {
+struct InitializePausableSubscriptionsCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
+    payer: Option<&'b solana_account_info::AccountInfo<'a>>,
     authority: Option<&'b solana_account_info::AccountInfo<'a>>,
     share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     paused: Option<bool>,
-    fee_recipient: Option<Pubkey>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,
 }
