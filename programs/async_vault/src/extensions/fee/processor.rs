@@ -9,7 +9,6 @@ use crate::extensions::{read_vault_extension, ExtensionType};
 pub struct DepositFee(pub FeeType);
 
 impl crate::extensions::VaultExtension for DepositFee {
-    const DATA_SIZE: usize = 9;
     const EXTENSION_TYPE: ExtensionType = ExtensionType::DepositFee; // max Borsh size of FeeType (FixedAmount variant: 1 discriminant + 8 u64)
 }
 
@@ -19,7 +18,6 @@ impl crate::extensions::VaultExtension for DepositFee {
 pub struct WithdrawalFee(pub FeeType);
 
 impl crate::extensions::VaultExtension for WithdrawalFee {
-    const DATA_SIZE: usize = 9;
     const EXTENSION_TYPE: ExtensionType = ExtensionType::WithdrawalFee; // max Borsh size of FeeType (FixedAmount variant: 1 discriminant + 8 u64)
 }
 

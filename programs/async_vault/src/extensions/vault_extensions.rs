@@ -48,7 +48,7 @@ pub trait VaultExtension: AnchorSerialize + AnchorDeserialize + Sized {
     /// The TLV discriminant that identifies this extension in vault account data.
     const EXTENSION_TYPE: ExtensionType;
     /// Borsh-serialized byte count of this extension's data payload.
-    const DATA_SIZE: usize;
+    const DATA_SIZE: usize = Self::EXTENSION_TYPE.data_len();
     /// Total bytes consumed in the TLV region: `TLV_HEADER_SIZE + DATA_SIZE`.
     const TLV_SIZE: usize = TLV_HEADER_SIZE + Self::DATA_SIZE;
 }

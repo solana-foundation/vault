@@ -11,7 +11,6 @@ pub struct PausableRedemption {
 }
 
 impl crate::extensions::VaultExtension for PausableRedemption {
-    const DATA_SIZE: usize = std::mem::size_of::<Self>();
     const EXTENSION_TYPE: ExtensionType = ExtensionType::PausableRedemptions;
 }
 

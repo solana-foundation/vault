@@ -11,7 +11,6 @@ pub struct PausableSubscription {
 }
 
 impl crate::extensions::VaultExtension for PausableSubscription {
-    const DATA_SIZE: usize = std::mem::size_of::<Self>();
     const EXTENSION_TYPE: ExtensionType = ExtensionType::PausableSubscriptions;
 }
 
