@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 
 use crate::extensions::{
-    pausable_redemptions::PausableRedemption, BasicExtensionAccounts, update_vault_extension,
+    pausable_redemptions::PausableRedemption, update_vault_extension, BasicExtensionAccounts,
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -15,6 +15,8 @@ pub fn handler(
 ) -> Result<()> {
     update_vault_extension(
         &ctx.accounts.vault.to_account_info(),
-        &PausableRedemption { paused: args.paused },
+        &PausableRedemption {
+            paused: args.paused,
+        },
     )
 }

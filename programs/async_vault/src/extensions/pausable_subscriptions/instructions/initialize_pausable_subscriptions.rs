@@ -3,8 +3,7 @@ use anchor_lang::prelude::*;
 use crate::{
     error::AsyncVaultError,
     extensions::{
-        init_vault_extension, pausable_subscriptions::PausableSubscription,
-        VaultExtension,
+        init_vault_extension, pausable_subscriptions::PausableSubscription, VaultExtension,
     },
     state::Vault,
 };
@@ -40,6 +39,8 @@ pub fn handler(
     init_vault_extension(
         &ctx.accounts.vault.to_account_info(),
         &ctx.accounts.vault,
-        &PausableSubscription { paused: args.paused },
+        &PausableSubscription {
+            paused: args.paused,
+        },
     )
 }

@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use vault_common::FeeType;
 
-use crate::extensions::{fee::DepositFee, BasicExtensionAccounts, update_vault_extension};
+use crate::extensions::{fee::DepositFee, update_vault_extension, BasicExtensionAccounts};
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct UpdateDepositFeeArgs {

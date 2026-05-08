@@ -11,8 +11,8 @@ pub struct PausableSubscription {
 }
 
 impl crate::extensions::VaultExtension for PausableSubscription {
-    const EXTENSION_TYPE: ExtensionType = ExtensionType::PausableSubscriptions;
     const DATA_SIZE: usize = std::mem::size_of::<Self>();
+    const EXTENSION_TYPE: ExtensionType = ExtensionType::PausableSubscriptions;
 }
 
 pub fn check_subscriptions_paused(account_data: &[u8]) -> Result<()> {

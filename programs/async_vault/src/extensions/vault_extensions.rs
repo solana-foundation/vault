@@ -9,7 +9,6 @@ use crate::{
     state::Vault,
 };
 
-
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u16)]
 pub enum ExtensionType {
@@ -124,7 +123,8 @@ pub fn read_vault_extension<E: VaultExtension>(account_data: &[u8]) -> Result<Op
         .map(|bytes| {
             // Use deserialize (not try_from_slice) so zero-padding appended by write_extension
             // for variable-size types like FeeType doesn't cause a trailing-bytes error.
-            E::deserialize(&mut &bytes[..]).map_err(|_| AsyncVaultError::InvalidExtensionData.into())
+            E::deserialize(&mut &bytes[..])
+                .map_err(|_| AsyncVaultError::InvalidExtensionData.into())
         })
         .transpose()
 }

@@ -11,8 +11,8 @@ pub struct PausableRedemption {
 }
 
 impl crate::extensions::VaultExtension for PausableRedemption {
-    const EXTENSION_TYPE: ExtensionType = ExtensionType::PausableRedemptions;
     const DATA_SIZE: usize = std::mem::size_of::<Self>();
+    const EXTENSION_TYPE: ExtensionType = ExtensionType::PausableRedemptions;
 }
 
 pub fn check_redemptions_paused(account_data: &[u8]) -> Result<()> {
