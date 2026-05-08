@@ -4,19 +4,19 @@ use anchor_spl::token_interface::Mint;
 use crate::{
     error::AsyncVaultError,
     extensions::{
-        self, pausable_subscriptions::PausableSubscription, ExtensionType,
-        PAUSABLE_SUBSCRIPTIONS_TLV_SIZE, TLV_START,
+        self, pausable_redemptions::PausableRedemption, ExtensionType,
+        PAUSABLE_REDEMPTIONS_TLV_SIZE, TLV_START,
     },
     state::{Vault, VAULT_CONFIG_SEED},
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
-pub struct InitPausableSubscriptionsArgs {
+pub struct InitPausableRedemptionsArgs {
     pub paused: bool,
 }
 
 #[derive(Accounts)]
-pub struct InitPausableSubscriptions<'info> {
+pub struct InitPausableRedemptions<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
 
@@ -26,7 +26,7 @@ pub struct InitPausableSubscriptions<'info> {
 
     #[account(
         mut,
-        realloc = vault.to_account_info().data_len() + PAUSABLE_SUBSCRIPTIONS_TLV_SIZE,
+        realloc = vault.to_account_info().data_len() + PAUSABLE_REDEMPTIONS_TLV_SIZE,
         realloc::payer = payer,
         realloc::zero = false,
         constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
@@ -39,8 +39,8 @@ pub struct InitPausableSubscriptions<'info> {
 }
 
 pub fn handler(
-    ctx: Context<InitPausableSubscriptions>,
-    args: InitPausableSubscriptionsArgs,
+    ctx: Context<InitPausableRedemptions>,
+    args: InitPausableRedemptionsArgs,
 ) -> Result<()> {
     ctx.accounts.vault.assert_uninitialized()?;
 
@@ -52,12 +52,12 @@ pub fn handler(
     let tlv_data = &mut data[TLV_START..];
 
     require!(
-        !extensions::has_extension(tlv_data, ExtensionType::PausableSubscriptions),
+        !extensions::has_extension(tlv_data, ExtensionType::PausableRedemptions),
         AsyncVaultError::ExtensionAlreadyInitialized
     );
 
     let write_offset = extensions::tlv_used_len(tlv_data);
-    let serialized = PausableSubscription {
+    let serialized = PausableRedemption {
         paused: args.paused,
     }
     .try_to_vec()
@@ -66,7 +66,7 @@ pub fn handler(
     extensions::write_extension(
         tlv_data,
         write_offset,
-        ExtensionType::PausableSubscriptions,
+        ExtensionType::PausableRedemptions,
         &serialized,
     )?;
 

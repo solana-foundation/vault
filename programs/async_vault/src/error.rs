@@ -58,4 +58,6 @@ pub enum AsyncVaultError {
     RequestNotClaimable,
     #[msg("Subscriptions are paused")]
     SubscriptionsPaused,
+    #[msg("Redemptions are paused")]
+    RedemptionsPaused,
 }

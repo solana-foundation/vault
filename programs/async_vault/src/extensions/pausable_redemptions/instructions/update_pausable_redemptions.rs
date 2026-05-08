@@ -3,17 +3,17 @@ use anchor_spl::token_interface::Mint;
 
 use crate::{
     error::AsyncVaultError,
-    extensions::{self, pausable_subscriptions::PausableSubscription, ExtensionType, TLV_START},
+    extensions::{self, pausable_redemptions::PausableRedemption, ExtensionType, TLV_START},
     state::{Vault, VAULT_CONFIG_SEED},
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
-pub struct UpdatePausableSubscriptionsArgs {
+pub struct UpdatePausableRedemptionsArgs {
     pub paused: bool,
 }
 
 #[derive(Accounts)]
-pub struct UpdatePausableSubscriptions<'info> {
+pub struct UpdatePausableRedemptions<'info> {
     pub authority: Signer<'info>,
 
     pub share_mint: InterfaceAccount<'info, Mint>,
@@ -28,8 +28,8 @@ pub struct UpdatePausableSubscriptions<'info> {
 }
 
 pub fn handler(
-    ctx: Context<UpdatePausableSubscriptions>,
-    args: UpdatePausableSubscriptionsArgs,
+    ctx: Context<UpdatePausableRedemptions>,
+    args: UpdatePausableRedemptionsArgs,
 ) -> Result<()> {
     let vault_info = ctx.accounts.vault.to_account_info();
     let mut data = vault_info
@@ -38,12 +38,12 @@ pub fn handler(
         .map_err(|_| ProgramError::AccountBorrowFailed)?;
     let tlv_data = &mut data[TLV_START..];
 
-    let serialized = PausableSubscription {
+    let serialized = PausableRedemption {
         paused: args.paused,
     }
     .try_to_vec()
     .map_err(|_| AsyncVaultError::InvalidExtensionData)?;
 
-    extensions::update_extension(tlv_data, ExtensionType::PausableSubscriptions, &serialized)?;
+    extensions::update_extension(tlv_data, ExtensionType::PausableRedemptions, &serialized)?;
     Ok(())
 }

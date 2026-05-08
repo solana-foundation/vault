@@ -1,4 +1,5 @@
 pub mod fee;
+pub mod pausable_redemptions;
 pub mod pausable_subscriptions;
 
 pub(super) const VAULT_TLV_START: usize = 272;
@@ -11,6 +12,7 @@ pub(super) enum ExtensionType {
     DepositFee = 1,
     WithdrawalFee = 2,
     PausableSubscriptions = 3,
+    PausableRedemptions = 4,
 }
 
 pub(super) fn get_extension_bytes(tlv_data: &[u8], ext_type: ExtensionType) -> Option<&[u8]> {

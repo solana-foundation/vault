@@ -141,6 +141,28 @@ pub mod async_vault {
         )
     }
 
+    /// Adds a PausableRedemptions TLV extension to the vault. Must be called
+    /// before vault initialization. Requires authority signature.
+    pub fn initialize_pausable_redemptions(
+        ctx: Context<InitPausableRedemptions>,
+        args: InitPausableRedemptionsArgs,
+    ) -> Result<()> {
+        extensions::pausable_redemptions::instructions::initialize_pausable_redemptions::handler(
+            ctx, args,
+        )
+    }
+
+    /// Updates the paused state of an existing PausableRedemptions extension.
+    /// When paused is true, new redeem requests are rejected. Requires authority signature.
+    pub fn update_pausable_redemptions(
+        ctx: Context<UpdatePausableRedemptions>,
+        args: UpdatePausableRedemptionsArgs,
+    ) -> Result<()> {
+        extensions::pausable_redemptions::instructions::update_pausable_redemptions::handler(
+            ctx, args,
+        )
+    }
+
     /* USER INSTRUCTIONS */
 
     /// Creates a deposit request with state pending (Pending vault authority acceptance)

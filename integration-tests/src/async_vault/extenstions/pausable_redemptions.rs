@@ -1,17 +1,20 @@
-use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
+use anchor_spl::token;
 use async_vault_client::{
-    extensions::pausable_subscriptions, lite::SendTransaction, sdk::program_id,
-    CreateDepositRequestBuilder, InitializePausableSubscriptionsBuilder,
+    extensions::pausable_redemptions, lite::SendTransaction, sdk::program_id,
+    CreateRedeemRequestBuilder, InitializePausableRedemptionsBuilder,
     InitializeVaultBuilder as InitializeAsyncVaultBuilder, RequestArgs,
-    UpdatePausableSubscriptionsBuilder, UpdateVaultNavBuilder, Vault,
+    UpdatePausableRedemptionsBuilder, UpdateVaultNavBuilder, Vault,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, get_token_account_amount, set_up_async_vault};
+use crate::helper_functions::{
+    assert_error_code, get_token_account_amount, set_share_balance, set_up_async_vault,
+};
 
 const NAV: u128 = 1_000_000_000;
+const SHARE_AMOUNT: u64 = 1_000_000_000;
 
 fn setup(
     paused: Option<bool>,
@@ -22,7 +25,7 @@ fn setup(
     Keypair, // share_mint
     Keypair, // user
     Pubkey,  // vault_pubkey
-    Pubkey,  // pending_vault_pubkey
+    Pubkey,  // user_share_account
 ) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../../target/deploy/async_vault.so");
@@ -39,13 +42,13 @@ fn setup(
         _fee_recipient,
         _reserve_pubkey,
         vault_pubkey,
-        pending_vault_pubkey,
+        _pending_vault_pubkey,
         _fee_recipient_ata,
-        _user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 1_000_000_000);
+        user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0);
 
     if let Some(p) = paused {
-        InitializePausableSubscriptionsBuilder::new()
+        InitializePausableRedemptionsBuilder::new()
             .payer(authority.pubkey())
             .authority(authority.pubkey())
             .share_mint(share_mint.pubkey())
@@ -53,7 +56,7 @@ fn setup(
             .paused(p)
             .instruction()
             .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
-            .expect("initialize_pausable_subscriptions should succeed");
+            .expect("initialize_pausable_redemptions should succeed");
     }
 
     InitializeAsyncVaultBuilder::new()
@@ -71,6 +74,13 @@ fn setup(
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("update nav should succeed");
 
+    set_share_balance(
+        &mut svm,
+        &user_share_account,
+        &share_mint.pubkey(),
+        SHARE_AMOUNT,
+    );
+
     (
         svm,
         authority,
@@ -78,32 +88,29 @@ fn setup(
         share_mint,
         user,
         vault_pubkey,
-        pending_vault_pubkey,
+        user_share_account,
     )
 }
 
-fn create_deposit_request(
+fn create_redeem_request(
     svm: &mut LiteSVM,
     user: &Keypair,
     asset_mint: Pubkey,
     share_mint: Pubkey,
     vault_pubkey: Pubkey,
-    pending_vault_pubkey: Pubkey,
+    user_share_account: Pubkey,
     amount: u64,
 ) -> litesvm::types::TransactionResult {
-    let user_token_account =
-        get_associated_token_address_with_program_id(&user.pubkey(), &asset_mint, &token::ID);
     let request_keypair = Keypair::new();
 
-    CreateDepositRequestBuilder::new()
+    CreateRedeemRequestBuilder::new()
         .user(user.pubkey())
         .asset_mint(asset_mint)
         .share_mint(share_mint)
         .request(request_keypair.pubkey())
         .vault(vault_pubkey)
-        .user_token_account(user_token_account)
-        .pending_vault(pending_vault_pubkey)
-        .asset_token_program(spl_token::ID)
+        .user_share_account(user_share_account)
+        .share_token_program(spl_token::ID)
         .args(RequestArgs {
             amount,
             operator: None,
@@ -113,33 +120,31 @@ fn create_deposit_request(
 }
 
 #[test]
-fn test_initialize_pausable_subscriptions_paused_false() {
-    let (mut svm, _authority, asset_mint, share_mint, user, vault_pubkey, pending_vault_pubkey) =
+fn test_initialize_pausable_redemptions_paused_false() {
+    let (mut svm, _authority, asset_mint, share_mint, user, vault_pubkey, user_share_account) =
         setup(Some(false));
 
-    let pausable_subs = pausable_subscriptions::get_state(
+    let pausable_redempts = pausable_redemptions::get_state(
         svm.get_account(&vault_pubkey).expect("vault exists").data(),
     )
-    .expect("PausableSubscriptions should be initialized");
-    assert!(!pausable_subs.paused);
+    .expect("PausableRedemptions should be initialized");
+    assert!(!pausable_redempts.paused);
 
-    let deposit_amount = 1_000_000u64;
-
-    create_deposit_request(
+    create_redeem_request(
         &mut svm,
         &user,
         asset_mint.pubkey(),
         share_mint.pubkey(),
         vault_pubkey,
-        pending_vault_pubkey,
-        deposit_amount,
+        user_share_account,
+        SHARE_AMOUNT,
     )
-    .expect("deposit should succeed when paused=false");
+    .expect("redeem should succeed when paused=false");
 }
 
 #[test_case(true, false, 6004, "VaultAlreadyInitialized" ; "after_vault_init")]
 #[test_case(false, true, 6005, "ExtensionAlreadyInitialized" ; "duplicate")]
-fn test_initialize_pausable_subscriptions_fails(
+fn test_initialize_pausable_redemptions_fails(
     init_vault_first: bool,
     init_extension_first: bool,
     expected_error: u32,
@@ -163,7 +168,7 @@ fn test_initialize_pausable_subscriptions_fails(
         _pending_vault_pubkey,
         _fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 1_000_000_000);
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0);
 
     if init_vault_first {
         InitializeAsyncVaultBuilder::new()
@@ -175,7 +180,7 @@ fn test_initialize_pausable_subscriptions_fails(
     }
 
     if init_extension_first {
-        InitializePausableSubscriptionsBuilder::new()
+        InitializePausableRedemptionsBuilder::new()
             .payer(authority.pubkey())
             .authority(authority.pubkey())
             .share_mint(share_mint.pubkey())
@@ -187,7 +192,7 @@ fn test_initialize_pausable_subscriptions_fails(
         svm.expire_blockhash();
     }
 
-    let err = InitializePausableSubscriptionsBuilder::new()
+    let err = InitializePausableRedemptionsBuilder::new()
         .payer(authority.pubkey())
         .authority(authority.pubkey())
         .share_mint(share_mint.pubkey())
@@ -200,11 +205,11 @@ fn test_initialize_pausable_subscriptions_fails(
 }
 
 #[test]
-fn test_update_paused_true_blocks_deposit() {
-    let (mut svm, authority, asset_mint, share_mint, user, vault_pubkey, pending_vault_pubkey) =
+fn test_update_paused_true_blocks_redeem() {
+    let (mut svm, authority, asset_mint, share_mint, user, vault_pubkey, user_share_account) =
         setup(Some(false));
 
-    UpdatePausableSubscriptionsBuilder::new()
+    UpdatePausableRedemptionsBuilder::new()
         .authority(authority.pubkey())
         .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
@@ -213,28 +218,28 @@ fn test_update_paused_true_blocks_deposit() {
         .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
         .expect("update to paused=true should succeed");
 
-    let pausable_subs = pausable_subscriptions::get_state(
+    let pausable_redempts = pausable_redemptions::get_state(
         svm.get_account(&vault_pubkey).expect("vault exists").data(),
     )
-    .expect("PausableSubscriptions should be initialized");
-    assert!(pausable_subs.paused);
+    .expect("PausableRedemptions should be initialized");
+    assert!(pausable_redempts.paused);
 
-    let err = create_deposit_request(
+    let err = create_redeem_request(
         &mut svm,
         &user,
         asset_mint.pubkey(),
         share_mint.pubkey(),
         vault_pubkey,
-        pending_vault_pubkey,
-        1_000_000,
+        user_share_account,
+        SHARE_AMOUNT,
     )
     .unwrap_err();
-    assert_error_code(&err, 6027, "SubscriptionsPaused");
+    assert_error_code(&err, 6028, "RedemptionsPaused");
 }
 
 #[test_case(false, false, 6006, "UninitializedExtension" ; "without_init")]
 #[test_case(true, true, 6001, "UnauthorizedSigner" ; "wrong_authority")]
-fn test_update_pausable_subscriptions_fails(
+fn test_update_pausable_redemptions_fails(
     init_extension: bool,
     use_wrong_signer: bool,
     expected_error: u32,
@@ -258,10 +263,10 @@ fn test_update_pausable_subscriptions_fails(
         _pending_vault_pubkey,
         _fee_recipient_ata,
         _user_share_account,
-    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 1_000_000_000);
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0);
 
     if init_extension {
-        InitializePausableSubscriptionsBuilder::new()
+        InitializePausableRedemptionsBuilder::new()
             .payer(authority.pubkey())
             .authority(authority.pubkey())
             .share_mint(share_mint.pubkey())
@@ -269,12 +274,12 @@ fn test_update_pausable_subscriptions_fails(
             .paused(false)
             .instruction()
             .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
-            .expect("initialize_pausable_subscriptions should succeed");
+            .expect("initialize_pausable_redemptions should succeed");
     }
 
     let signer: &Keypair = if use_wrong_signer { &user } else { &authority };
 
-    let err = UpdatePausableSubscriptionsBuilder::new()
+    let err = UpdatePausableRedemptionsBuilder::new()
         .authority(signer.pubkey())
         .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)

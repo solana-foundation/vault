@@ -93,6 +93,9 @@ pub enum AsyncVaultError {
     /// 6027 - Subscriptions are paused
     #[error("Subscriptions are paused")]
     SubscriptionsPaused = 0x178B,
+    /// 6028 - Redemptions are paused
+    #[error("Redemptions are paused")]
+    RedemptionsPaused = 0x178C,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

@@ -74,9 +74,13 @@ impl<'info> CreateDepositRequest<'info> {
 pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
+    // Extension: PausableSubscription handlings
     {
         let vault_info = ctx.accounts.vault.to_account_info();
-        let data = vault_info.data.borrow();
+        let data = vault_info
+            .data
+            .try_borrow()
+            .map_err(|_| ProgramError::AccountBorrowFailed)?;
         extensions::pausable_subscriptions::check_subscriptions_paused(&data)?;
     }
 
