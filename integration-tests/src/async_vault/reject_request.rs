@@ -5,7 +5,7 @@ use async_vault_client::{
     RejectRequestBuilder, RequestArgs, UpdateVaultNavBuilder, Vault,
 };
 use litesvm::LiteSVM;
-use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
+use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
 use crate::helper_functions::{get_token_account_amount, set_share_balance, set_up_async_vault};

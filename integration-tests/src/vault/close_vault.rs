@@ -1,6 +1,6 @@
 use anchor_spl::token;
 use litesvm::LiteSVM;
-use solana_sdk::{msg, signature::Keypair, signer::Signer};
+use solana_sdk::{signature::Keypair, signer::Signer};
 use vault_client::{sdk::program_id, Pubkey};
 
 use crate::{

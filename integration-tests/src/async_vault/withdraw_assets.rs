@@ -1,4 +1,4 @@
-use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
+use anchor_spl::token;
 use async_vault_client::{
     lite::SendTransaction, sdk::program_id, InitializeVaultBuilder as InitializeAsyncVaultBuilder,
     UpdateVaultBuilder as UpdateVaultAsyncBuilder, UpdateVaultNavBuilder, WithdrawAssetsBuilder,
@@ -25,7 +25,7 @@ fn test_withdraw_assets_success(deposit_amount: u64, withdraw_amount: u64) {
         _payer,
         mint_authority,
         asset_mint,
-        share_mint,
+        _share_mint,
         _user,
         _operator,
         _fee_recipient,

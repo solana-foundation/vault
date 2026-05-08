@@ -21,7 +21,6 @@ enum FeeKind {
 fn init_fee(
     svm: &mut LiteSVM,
     authority: &Keypair,
-    share_mint: Pubkey,
     vault: Pubkey,
     fee: FeeType,
     kind: FeeKind,
@@ -30,7 +29,6 @@ fn init_fee(
         FeeKind::Deposit => InitializeDepositFeeBuilder::new()
             .payer(authority.pubkey())
             .authority(authority.pubkey())
-            .share_mint(share_mint)
             .vault(vault)
             .deposit_fee(fee)
             .instruction()
@@ -38,7 +36,6 @@ fn init_fee(
         FeeKind::Withdrawal => InitializeWithdrawalFeeBuilder::new()
             .payer(authority.pubkey())
             .authority(authority.pubkey())
-            .share_mint(share_mint)
             .vault(vault)
             .withdrawal_fee(fee)
             .instruction()
@@ -49,7 +46,6 @@ fn init_fee(
 fn update_fee(
     svm: &mut LiteSVM,
     authority: &Keypair,
-    share_mint: Pubkey,
     vault: Pubkey,
     fee: FeeType,
     kind: FeeKind,
@@ -57,14 +53,12 @@ fn update_fee(
     match kind {
         FeeKind::Deposit => UpdateDepositFeeBuilder::new()
             .authority(authority.pubkey())
-            .share_mint(share_mint)
             .vault(vault)
             .new_deposit_fee(fee)
             .instruction()
             .send_transaction(svm, &authority.pubkey(), &[authority]),
         FeeKind::Withdrawal => UpdateWithdrawalFeeBuilder::new()
             .authority(authority.pubkey())
-            .share_mint(share_mint)
             .vault(vault)
             .new_withdrawal_fee(fee)
             .instruction()
@@ -97,42 +91,27 @@ fn setup_vault() -> (LiteSVM, Keypair, Keypair, Pubkey) {
 #[test_case(FeeKind::Deposit, FeeType::FixedAmount { amount: 100 }, FeeType::Percentage { bps: 500 } ; "deposit")]
 #[test_case(FeeKind::Withdrawal, FeeType::Percentage { bps: 200 }, FeeType::FixedAmount { amount: 50 } ; "withdrawal")]
 fn test_initialize_and_update_fee(kind: FeeKind, initial_fee: FeeType, updated_fee: FeeType) {
-    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
+    let (mut svm, authority, _share_mint, vault_pubkey) = setup_vault();
 
-    init_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        initial_fee,
-        kind,
-    )
-    .expect("init fee should succeed");
+    init_fee(&mut svm, &authority, vault_pubkey, initial_fee, kind)
+        .expect("init fee should succeed");
 
     let vault_account = svm.get_account(&vault_pubkey).unwrap();
     let vault_config = Vault::from_bytes(vault_account.data()).unwrap();
     assert!(!vault_config.initialized);
 
-    update_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        updated_fee,
-        kind,
-    )
-    .expect("update fee should succeed");
+    update_fee(&mut svm, &authority, vault_pubkey, updated_fee, kind)
+        .expect("update fee should succeed");
 }
 
 #[test]
 fn test_initialize_both_fees() {
-    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
+    let (mut svm, authority, _share_mint, vault_pubkey) = setup_vault();
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
     InitializeDepositFeeBuilder::new()
         .payer(authority.pubkey())
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .deposit_fee(deposit_fee)
         .instruction()
@@ -143,7 +122,6 @@ fn test_initialize_both_fees() {
     InitializeWithdrawalFeeBuilder::new()
         .payer(authority.pubkey())
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .withdrawal_fee(withdrawal_fee)
         .instruction()
@@ -154,67 +132,39 @@ fn test_initialize_both_fees() {
 #[test_case(FeeKind::Deposit, FeeType::FixedAmount { amount: 100 } ; "deposit")]
 #[test_case(FeeKind::Withdrawal, FeeType::Percentage { bps: 100 } ; "withdrawal")]
 fn test_duplicate_init_fails(kind: FeeKind, fee: FeeType) {
-    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
+    let (mut svm, authority, _share_mint, vault_pubkey) = setup_vault();
 
-    init_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        fee.clone(),
-        kind,
-    )
-    .expect("first init should succeed");
+    init_fee(&mut svm, &authority, vault_pubkey, fee.clone(), kind)
+        .expect("first init should succeed");
 
     svm.expire_blockhash();
 
-    let result = init_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        fee,
-        kind,
-    );
+    let result = init_fee(&mut svm, &authority, vault_pubkey, fee, kind);
     assert_error_code(&result.unwrap_err(), 6005, "ExtensionAlreadyInitialized");
 }
 
 #[test_case(FeeKind::Deposit, FeeType::FixedAmount { amount: 100 } ; "deposit")]
 #[test_case(FeeKind::Withdrawal, FeeType::Percentage { bps: 100 } ; "withdrawal")]
 fn test_update_before_init_fails(kind: FeeKind, fee: FeeType) {
-    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
+    let (mut svm, authority, _share_mint, vault_pubkey) = setup_vault();
 
-    let result = update_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        fee,
-        kind,
-    );
+    let result = update_fee(&mut svm, &authority, vault_pubkey, fee, kind);
     assert_error_code(&result.unwrap_err(), 6006, "UninitializedExtension");
 }
 
 #[test_case(FeeKind::Deposit ; "deposit")]
 #[test_case(FeeKind::Withdrawal ; "withdrawal")]
 fn test_invalid_bps_init_fails(kind: FeeKind) {
-    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
+    let (mut svm, authority, _share_mint, vault_pubkey) = setup_vault();
 
     let fee = FeeType::Percentage { bps: 10_001 };
-    let result = init_fee(
-        &mut svm,
-        &authority,
-        share_mint.pubkey(),
-        vault_pubkey,
-        fee,
-        kind,
-    );
+    let result = init_fee(&mut svm, &authority, vault_pubkey, fee, kind);
     assert_error_code(&result.unwrap_err(), 6000, "FeeBPSLimitReached");
 }
 
 #[test]
 fn test_initialize_fee_unauthorized_signer_fails() {
-    let (mut svm, _authority, share_mint, vault_pubkey) = setup_vault();
+    let (mut svm, _authority, _share_mint, vault_pubkey) = setup_vault();
 
     let unauthorized = Keypair::new();
     svm.airdrop(&unauthorized.pubkey(), 1_000_000_000).unwrap();
@@ -223,7 +173,6 @@ fn test_initialize_fee_unauthorized_signer_fails() {
     let result = InitializeDepositFeeBuilder::new()
         .payer(unauthorized.pubkey())
         .authority(unauthorized.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .deposit_fee(deposit_fee)
         .instruction()
@@ -233,13 +182,12 @@ fn test_initialize_fee_unauthorized_signer_fails() {
 
 #[test]
 fn test_update_fee_unauthorized_signer_fails() {
-    let (mut svm, authority, share_mint, vault_pubkey) = setup_vault();
+    let (mut svm, authority, _share_mint, vault_pubkey) = setup_vault();
 
     let deposit_fee = FeeType::FixedAmount { amount: 100 };
     InitializeDepositFeeBuilder::new()
         .payer(authority.pubkey())
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .deposit_fee(deposit_fee)
         .instruction()
@@ -252,7 +200,6 @@ fn test_update_fee_unauthorized_signer_fails() {
     let new_fee = FeeType::FixedAmount { amount: 200 };
     let result = UpdateDepositFeeBuilder::new()
         .authority(unauthorized.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .new_deposit_fee(new_fee)
         .instruction()

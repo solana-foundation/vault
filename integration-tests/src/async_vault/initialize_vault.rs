@@ -22,7 +22,7 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
         _payer,
         _mint_authority,
         _asset_mint,
-        share_mint,
+        _share_mint,
         _user,
         _operator,
         _fee_recipient,

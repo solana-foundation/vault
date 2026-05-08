@@ -1,11 +1,10 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token_interface::Mint;
 use vault_common::FeeType;
 
 use crate::{
     error::AsyncVaultError,
     extensions::{self, ExtensionType, FEE_TLV_SIZE, TLV_START},
-    state::{Vault, VAULT_CONFIG_SEED},
+    state::Vault,
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -20,16 +19,12 @@ pub struct InitDepositFee<'info> {
 
     pub authority: Signer<'info>,
 
-    pub share_mint: InterfaceAccount<'info, Mint>,
-
     #[account(
         mut,
         realloc = vault.to_account_info().data_len() + FEE_TLV_SIZE,
         realloc::payer = payer,
         realloc::zero = false,
         constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
-        seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
-        bump = vault.bump,
     )]
     pub vault: Account<'info, Vault>,
 

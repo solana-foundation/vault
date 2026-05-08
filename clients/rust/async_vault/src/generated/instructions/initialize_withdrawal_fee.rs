@@ -16,8 +16,6 @@ pub struct InitializeWithdrawalFee {
 
     pub authority: solana_pubkey::Pubkey,
 
-    pub share_mint: solana_pubkey::Pubkey,
-
     pub vault: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
@@ -38,15 +36,11 @@ impl InitializeWithdrawalFee {
         args: InitializeWithdrawalFeeInstructionArgs,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(self.payer, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.authority,
             true,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            self.share_mint,
-            false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -110,14 +104,12 @@ impl InitializeWithdrawalFeeInstructionArgs {
 ///
 ///   0. `[writable, signer]` payer
 ///   1. `[signer]` authority
-///   2. `[]` share_mint
-///   3. `[writable]` vault
-///   4. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   2. `[writable]` vault
+///   3. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct InitializeWithdrawalFeeBuilder {
     payer: Option<solana_pubkey::Pubkey>,
     authority: Option<solana_pubkey::Pubkey>,
-    share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     withdrawal_fee: Option<FeeType>,
@@ -138,12 +130,6 @@ impl InitializeWithdrawalFeeBuilder {
     #[inline(always)]
     pub fn authority(&mut self, authority: solana_pubkey::Pubkey) -> &mut Self {
         self.authority = Some(authority);
-        self
-    }
-
-    #[inline(always)]
-    pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
-        self.share_mint = Some(share_mint);
         self
     }
 
@@ -188,7 +174,6 @@ impl InitializeWithdrawalFeeBuilder {
         let accounts = InitializeWithdrawalFee {
             payer: self.payer.expect("payer is not set"),
             authority: self.authority.expect("authority is not set"),
-            share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
             system_program: self
                 .system_program
@@ -211,8 +196,6 @@ pub struct InitializeWithdrawalFeeCpiAccounts<'a, 'b> {
 
     pub authority: &'b solana_account_info::AccountInfo<'a>,
 
-    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
-
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
@@ -226,8 +209,6 @@ pub struct InitializeWithdrawalFeeCpi<'a, 'b> {
     pub payer: &'b solana_account_info::AccountInfo<'a>,
 
     pub authority: &'b solana_account_info::AccountInfo<'a>,
-
-    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
 
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
@@ -246,7 +227,6 @@ impl<'a, 'b> InitializeWithdrawalFeeCpi<'a, 'b> {
             __program: program,
             payer: accounts.payer,
             authority: accounts.authority,
-            share_mint: accounts.share_mint,
             vault: accounts.vault,
             system_program: accounts.system_program,
             __args: args,
@@ -279,15 +259,11 @@ impl<'a, 'b> InitializeWithdrawalFeeCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
         accounts.push(solana_instruction::AccountMeta::new(*self.payer.key, true));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.authority.key,
             true,
-        ));
-        accounts.push(solana_instruction::AccountMeta::new_readonly(
-            *self.share_mint.key,
-            false,
         ));
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
@@ -312,11 +288,10 @@ impl<'a, 'b> InitializeWithdrawalFeeCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(6 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(5 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
         account_infos.push(self.payer.clone());
         account_infos.push(self.authority.clone());
-        account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
@@ -337,9 +312,8 @@ impl<'a, 'b> InitializeWithdrawalFeeCpi<'a, 'b> {
 ///
 ///   0. `[writable, signer]` payer
 ///   1. `[signer]` authority
-///   2. `[]` share_mint
-///   3. `[writable]` vault
-///   4. `[]` system_program
+///   2. `[writable]` vault
+///   3. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct InitializeWithdrawalFeeCpiBuilder<'a, 'b> {
     instruction: Box<InitializeWithdrawalFeeCpiBuilderInstruction<'a, 'b>>,
@@ -351,7 +325,6 @@ impl<'a, 'b> InitializeWithdrawalFeeCpiBuilder<'a, 'b> {
             __program: program,
             payer: None,
             authority: None,
-            share_mint: None,
             vault: None,
             system_program: None,
             withdrawal_fee: None,
@@ -369,15 +342,6 @@ impl<'a, 'b> InitializeWithdrawalFeeCpiBuilder<'a, 'b> {
     #[inline(always)]
     pub fn authority(&mut self, authority: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
         self.instruction.authority = Some(authority);
-        self
-    }
-
-    #[inline(always)]
-    pub fn share_mint(
-        &mut self,
-        share_mint: &'b solana_account_info::AccountInfo<'a>,
-    ) -> &mut Self {
-        self.instruction.share_mint = Some(share_mint);
         self
     }
 
@@ -454,8 +418,6 @@ impl<'a, 'b> InitializeWithdrawalFeeCpiBuilder<'a, 'b> {
 
             authority: self.instruction.authority.expect("authority is not set"),
 
-            share_mint: self.instruction.share_mint.expect("share_mint is not set"),
-
             vault: self.instruction.vault.expect("vault is not set"),
 
             system_program: self
@@ -476,7 +438,6 @@ struct InitializeWithdrawalFeeCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
     payer: Option<&'b solana_account_info::AccountInfo<'a>>,
     authority: Option<&'b solana_account_info::AccountInfo<'a>>,
-    share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     withdrawal_fee: Option<FeeType>,

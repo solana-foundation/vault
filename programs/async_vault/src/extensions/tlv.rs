@@ -32,6 +32,7 @@ pub fn has_extension(tlv_data: &[u8], ext_type: ExtensionType) -> bool {
     get_extension_bytes(tlv_data, ext_type).is_some()
 }
 
+// TODO: could the value be replaced with a generic type that has an Extension Trait?
 pub fn write_extension(
     tlv_data: &mut [u8],
     write_offset: usize,
