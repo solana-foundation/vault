@@ -1,14 +1,14 @@
-use crate::extensions::TLV_HEADER_SIZE;
+use anchor_lang::prelude::*;
 
-pub const MAX_FEE_DATA_SIZE: usize = 9;
-pub const FEE_TLV_SIZE: usize = TLV_HEADER_SIZE + MAX_FEE_DATA_SIZE;
+use crate::{
+    error::AsyncVaultError,
+    extensions::{
+        get_extension_bytes, has_extension, tlv_used_len, update_extension, write_extension,
+        TLV_HEADER_SIZE, TLV_START,
+    },
+    state::Vault,
+};
 
-pub const PAUSABLE_SUBSCRIPTIONS_DATA_SIZE: usize = 1;
-pub const PAUSABLE_SUBSCRIPTIONS_TLV_SIZE: usize =
-    TLV_HEADER_SIZE + PAUSABLE_SUBSCRIPTIONS_DATA_SIZE;
-
-pub const PAUSABLE_REDEMPTIONS_DATA_SIZE: usize = 1;
-pub const PAUSABLE_REDEMPTIONS_TLV_SIZE: usize = TLV_HEADER_SIZE + PAUSABLE_REDEMPTIONS_DATA_SIZE;
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 #[repr(u16)]
@@ -30,15 +30,101 @@ impl ExtensionType {
         }
     }
 
-    pub fn data_len(&self) -> usize {
+    pub const fn data_len(&self) -> usize {
         match self {
-            Self::DepositFee | Self::WithdrawalFee => MAX_FEE_DATA_SIZE,
-            Self::PausableSubscriptions => PAUSABLE_SUBSCRIPTIONS_DATA_SIZE,
-            Self::PausableRedemptions => PAUSABLE_REDEMPTIONS_DATA_SIZE,
+            Self::DepositFee | Self::WithdrawalFee => 9,
+            Self::PausableSubscriptions | Self::PausableRedemptions => 1,
         }
     }
 
-    pub fn tlv_len(&self) -> usize {
+    pub const fn tlv_len(&self) -> usize {
         TLV_HEADER_SIZE + self.data_len()
     }
+}
+
+/// Implemented by every extension data struct. Associates the struct with its
+/// [`ExtensionType`] discriminant and the total TLV byte size it occupies on-chain,
+/// enabling the generic init/update/read helpers to operate on any extension uniformly.
+pub trait VaultExtension: AnchorSerialize + AnchorDeserialize + Sized {
+    /// The TLV discriminant that identifies this extension in vault account data.
+    const EXTENSION_TYPE: ExtensionType;
+    /// Borsh-serialized byte count of this extension's data payload.
+    const DATA_SIZE: usize;
+    /// Total bytes consumed in the TLV region: `TLV_HEADER_SIZE + DATA_SIZE`.
+    const TLV_SIZE: usize = TLV_HEADER_SIZE + Self::DATA_SIZE;
+}
+
+/// Shared accounts for all update-extension instructions.
+///
+/// Enforces that `authority` matches `vault.authority`. Because update instructions
+/// do not resize the account, no payer or system program is required.
+#[derive(Accounts)]
+pub struct BasicExtensionAccounts<'info> {
+    pub authority: Signer<'info>,
+    #[account(
+        mut,
+        constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
+    )]
+    pub vault: Account<'info, Vault>,
+}
+
+/// Writes a new TLV extension entry to the vault's extension region.
+///
+/// Errors if the vault is already initialized, the extension type is already present,
+/// or serialization fails.
+pub fn init_vault_extension<E: VaultExtension>(
+    vault_info: &AccountInfo,
+    vault: &Vault,
+    value: &E,
+) -> Result<()> {
+    vault.assert_uninitialized()?;
+    let mut data = vault_info
+        .data
+        .try_borrow_mut()
+        .map_err(|_| ProgramError::AccountBorrowFailed)?;
+    let tlv_data = &mut data[TLV_START..];
+    require!(
+        !has_extension(tlv_data, E::EXTENSION_TYPE),
+        AsyncVaultError::ExtensionAlreadyInitialized
+    );
+    let write_offset = tlv_used_len(tlv_data);
+    let serialized = value
+        .try_to_vec()
+        .map_err(|_| AsyncVaultError::InvalidExtensionData)?;
+    write_extension(tlv_data, write_offset, E::EXTENSION_TYPE, &serialized)
+}
+
+/// Overwrites an existing TLV extension entry in the vault's extension region.
+///
+/// Errors if the extension type is not present or serialization fails.
+pub fn update_vault_extension<E: VaultExtension>(
+    vault_info: &AccountInfo,
+    value: &E,
+) -> Result<()> {
+    let mut data = vault_info
+        .data
+        .try_borrow_mut()
+        .map_err(|_| ProgramError::AccountBorrowFailed)?;
+    let tlv_data = &mut data[TLV_START..];
+    let serialized = value
+        .try_to_vec()
+        .map_err(|_| AsyncVaultError::InvalidExtensionData)?;
+    update_extension(tlv_data, E::EXTENSION_TYPE, &serialized)
+}
+
+/// Deserializes an extension from raw vault account data.
+///
+/// Returns `Ok(None)` if the account has no TLV region or the extension type is absent.
+pub fn read_vault_extension<E: VaultExtension>(account_data: &[u8]) -> Result<Option<E>> {
+    if account_data.len() <= TLV_START {
+        return Ok(None);
+    }
+    let tlv_data = &account_data[TLV_START..];
+    get_extension_bytes(tlv_data, E::EXTENSION_TYPE)
+        .map(|bytes| {
+            // Use deserialize (not try_from_slice) so zero-padding appended by write_extension
+            // for variable-size types like FeeType doesn't cause a trailing-bytes error.
+            E::deserialize(&mut &bytes[..]).map_err(|_| AsyncVaultError::InvalidExtensionData.into())
+        })
+        .transpose()
 }

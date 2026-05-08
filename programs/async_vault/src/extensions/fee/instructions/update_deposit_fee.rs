@@ -1,42 +1,17 @@
 use anchor_lang::prelude::*;
 use vault_common::FeeType;
 
-use crate::{
-    error::AsyncVaultError,
-    extensions::{self, ExtensionType, TLV_START},
-    state::Vault,
-};
+use crate::extensions::{fee::DepositFee, BasicExtensionAccounts, update_vault_extension};
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
 pub struct UpdateDepositFeeArgs {
     pub new_deposit_fee: FeeType,
 }
 
-#[derive(Accounts)]
-pub struct UpdateDepositFee<'info> {
-    pub authority: Signer<'info>,
-
-    #[account(
-        mut,
-        constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
-    )]
-    pub vault: Account<'info, Vault>,
-}
-
-pub fn handler(ctx: Context<UpdateDepositFee>, args: UpdateDepositFeeArgs) -> Result<()> {
+pub fn handler(ctx: Context<BasicExtensionAccounts>, args: UpdateDepositFeeArgs) -> Result<()> {
     args.new_deposit_fee.validate()?;
-
-    let vault_info = ctx.accounts.vault.to_account_info();
-    let mut data = vault_info.data.borrow_mut();
-    let tlv_start = TLV_START;
-    let tlv_data = &mut data[tlv_start..];
-
-    let serialized = args
-        .new_deposit_fee
-        .try_to_vec()
-        .map_err(|_| AsyncVaultError::InvalidExtensionData)?;
-
-    extensions::update_extension(tlv_data, ExtensionType::DepositFee, &serialized)?;
-
-    Ok(())
+    update_vault_extension(
+        &ctx.accounts.vault.to_account_info(),
+        &DepositFee(args.new_deposit_fee),
+    )
 }

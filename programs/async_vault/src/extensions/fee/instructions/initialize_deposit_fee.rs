@@ -3,7 +3,7 @@ use vault_common::FeeType;
 
 use crate::{
     error::AsyncVaultError,
-    extensions::{self, ExtensionType, FEE_TLV_SIZE, TLV_START},
+    extensions::{fee::DepositFee, init_vault_extension, VaultExtension},
     state::Vault,
 };
 
@@ -21,7 +21,7 @@ pub struct InitDepositFee<'info> {
 
     #[account(
         mut,
-        realloc = vault.to_account_info().data_len() + FEE_TLV_SIZE,
+        realloc = vault.to_account_info().data_len() + DepositFee::TLV_SIZE,
         realloc::payer = payer,
         realloc::zero = false,
         constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
@@ -32,31 +32,10 @@ pub struct InitDepositFee<'info> {
 }
 
 pub fn handler(ctx: Context<InitDepositFee>, args: InitDepositFeeArgs) -> Result<()> {
-    ctx.accounts.vault.assert_uninitialized()?;
     args.deposit_fee.validate()?;
-
-    let vault_info = ctx.accounts.vault.to_account_info();
-    let mut data = vault_info.data.borrow_mut();
-    let tlv_start = TLV_START;
-    let tlv_data = &mut data[tlv_start..];
-
-    require!(
-        !extensions::has_extension(tlv_data, ExtensionType::DepositFee),
-        AsyncVaultError::ExtensionAlreadyInitialized
-    );
-
-    let write_offset = extensions::tlv_used_len(tlv_data);
-    let serialized = args
-        .deposit_fee
-        .try_to_vec()
-        .map_err(|_| AsyncVaultError::InvalidExtensionData)?;
-
-    extensions::write_extension(
-        tlv_data,
-        write_offset,
-        ExtensionType::DepositFee,
-        &serialized,
-    )?;
-
-    Ok(())
+    init_vault_extension(
+        &ctx.accounts.vault.to_account_info(),
+        &ctx.accounts.vault,
+        &DepositFee(args.deposit_fee),
+    )
 }

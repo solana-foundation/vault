@@ -104,7 +104,7 @@ pub mod async_vault {
     /// Updates an existing deposit fee extension. The fee must have been
     /// previously initialized. Requires authority signature.
     pub fn update_deposit_fee(
-        ctx: Context<UpdateDepositFee>,
+        ctx: Context<BasicExtensionAccounts>,
         args: UpdateDepositFeeArgs,
     ) -> Result<()> {
         extensions::fee::instructions::update_deposit_fee::handler(ctx, args)
@@ -113,7 +113,7 @@ pub mod async_vault {
     /// Updates an existing withdrawal fee extension. The fee must have been
     /// previously initialized. Requires authority signature.
     pub fn update_withdrawal_fee(
-        ctx: Context<UpdateWithdrawalFee>,
+        ctx: Context<BasicExtensionAccounts>,
         args: UpdateWithdrawalFeeArgs,
     ) -> Result<()> {
         extensions::fee::instructions::update_withdrawal_fee::handler(ctx, args)
@@ -133,7 +133,7 @@ pub mod async_vault {
     /// Updates the paused state of an existing PausableSubscriptions extension.
     /// When paused is true, new deposit requests are rejected. Requires authority signature.
     pub fn update_pausable_subscriptions(
-        ctx: Context<UpdatePausableSubscriptions>,
+        ctx: Context<BasicExtensionAccounts>,
         args: UpdatePausableSubscriptionsArgs,
     ) -> Result<()> {
         extensions::pausable_subscriptions::instructions::update_pausable_subscriptions::handler(
@@ -155,7 +155,7 @@ pub mod async_vault {
     /// Updates the paused state of an existing PausableRedemptions extension.
     /// When paused is true, new redeem requests are rejected. Requires authority signature.
     pub fn update_pausable_redemptions(
-        ctx: Context<UpdatePausableRedemptions>,
+        ctx: Context<BasicExtensionAccounts>,
         args: UpdatePausableRedemptionsArgs,
     ) -> Result<()> {
         extensions::pausable_redemptions::instructions::update_pausable_redemptions::handler(

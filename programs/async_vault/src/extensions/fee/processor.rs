@@ -1,38 +1,38 @@
 use anchor_lang::prelude::*;
 use vault_common::{FeeType, VaultProgramError};
 
-use crate::{
-    error::AsyncVaultError,
-    extensions::{self, ExtensionType, TLV_START},
-};
+use crate::extensions::{read_vault_extension, ExtensionType};
 
-/// Get the DepositFee or WithdrawFee from Vault TLV data.
-pub fn get_fee_extension(account_data: &[u8], ext_type: ExtensionType) -> Result<Option<FeeType>> {
-    if account_data.len() <= TLV_START {
-        return Ok(None);
-    }
-    let tlv_data = &account_data[TLV_START..];
-    match extensions::get_extension_bytes(tlv_data, ext_type) {
-        Some(bytes) => {
-            let mut slice = bytes;
-            let fee = FeeType::deserialize(&mut slice)
-                .map_err(|_| AsyncVaultError::InvalidExtensionData)?;
-            Ok(Some(fee))
-        }
-        None => Ok(None),
-    }
+/// TLV wrapper for a deposit fee. Serializes identically to the inner [`FeeType`],
+/// and associates it with [`ExtensionType::DepositFee`] for generic TLV operations.
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct DepositFee(pub FeeType);
+
+impl crate::extensions::VaultExtension for DepositFee {
+    const EXTENSION_TYPE: ExtensionType = ExtensionType::DepositFee;
+    const DATA_SIZE: usize = 9; // max Borsh size of FeeType (FixedAmount variant: 1 discriminant + 8 u64)
+}
+
+/// TLV wrapper for a withdrawal fee. Serializes identically to the inner [`FeeType`],
+/// and associates it with [`ExtensionType::WithdrawalFee`] for generic TLV operations.
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct WithdrawalFee(pub FeeType);
+
+impl crate::extensions::VaultExtension for WithdrawalFee {
+    const EXTENSION_TYPE: ExtensionType = ExtensionType::WithdrawalFee;
+    const DATA_SIZE: usize = 9; // max Borsh size of FeeType (FixedAmount variant: 1 discriminant + 8 u64)
 }
 
 pub fn get_deposit_fee(account_data: &[u8], amount: u64) -> Result<u64> {
-    match get_fee_extension(account_data, ExtensionType::DepositFee)? {
-        Some(fee) => Ok(fee.get_fee(amount)?),
+    match read_vault_extension::<DepositFee>(account_data)? {
+        Some(ext) => ext.0.get_fee(amount),
         None => Ok(0),
     }
 }
 
 pub fn get_withdrawal_fee(account_data: &[u8], amount: u64) -> Result<u64> {
-    match get_fee_extension(account_data, ExtensionType::WithdrawalFee)? {
-        Some(fee) => fee.get_fee(amount),
+    match read_vault_extension::<WithdrawalFee>(account_data)? {
+        Some(ext) => ext.0.get_fee(amount),
         None => Ok(0),
     }
 }
