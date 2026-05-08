@@ -3,13 +3,13 @@ use async_vault_client::{
     extensions::pausable_subscriptions, lite::SendTransaction, sdk::program_id,
     CreateDepositRequestBuilder, InitializePausableSubscriptionsBuilder,
     InitializeVaultBuilder as InitializeAsyncVaultBuilder, RequestArgs,
-    UpdatePausableSubscriptionsBuilder, UpdateVaultNavBuilder, Vault,
+    UpdatePausableSubscriptionsBuilder, UpdateVaultNavBuilder,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, get_token_account_amount, set_up_async_vault};
+use crate::helper_functions::{assert_error_code, set_up_async_vault};
 
 const NAV: u128 = 1_000_000_000;
 
@@ -48,7 +48,6 @@ fn setup(
         InitializePausableSubscriptionsBuilder::new()
             .payer(authority.pubkey())
             .authority(authority.pubkey())
-            .share_mint(share_mint.pubkey())
             .vault(vault_pubkey)
             .paused(p)
             .instruction()
@@ -154,7 +153,7 @@ fn test_initialize_pausable_subscriptions_fails(
         _payer,
         _mint_authority,
         _asset_mint,
-        share_mint,
+        _share_mint,
         _user,
         _operator,
         _fee_recipient,
@@ -178,7 +177,6 @@ fn test_initialize_pausable_subscriptions_fails(
         InitializePausableSubscriptionsBuilder::new()
             .payer(authority.pubkey())
             .authority(authority.pubkey())
-            .share_mint(share_mint.pubkey())
             .vault(vault_pubkey)
             .paused(false)
             .instruction()
@@ -190,7 +188,6 @@ fn test_initialize_pausable_subscriptions_fails(
     let err = InitializePausableSubscriptionsBuilder::new()
         .payer(authority.pubkey())
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .paused(false)
         .instruction()
@@ -206,7 +203,6 @@ fn test_update_paused_true_blocks_deposit() {
 
     UpdatePausableSubscriptionsBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .paused(true)
         .instruction()
@@ -249,7 +245,7 @@ fn test_update_pausable_subscriptions_fails(
         _payer,
         _mint_authority,
         _asset_mint,
-        share_mint,
+        _share_mint,
         user,
         _operator,
         _fee_recipient,
@@ -264,7 +260,6 @@ fn test_update_pausable_subscriptions_fails(
         InitializePausableSubscriptionsBuilder::new()
             .payer(authority.pubkey())
             .authority(authority.pubkey())
-            .share_mint(share_mint.pubkey())
             .vault(vault_pubkey)
             .paused(false)
             .instruction()
@@ -276,7 +271,6 @@ fn test_update_pausable_subscriptions_fails(
 
     let err = UpdatePausableSubscriptionsBuilder::new()
         .authority(signer.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .paused(true)
         .instruction()

@@ -3,15 +3,13 @@ use async_vault_client::{
     extensions::pausable_redemptions, lite::SendTransaction, sdk::program_id,
     CreateRedeemRequestBuilder, InitializePausableRedemptionsBuilder,
     InitializeVaultBuilder as InitializeAsyncVaultBuilder, RequestArgs,
-    UpdatePausableRedemptionsBuilder, UpdateVaultNavBuilder, Vault,
+    UpdatePausableRedemptionsBuilder, UpdateVaultNavBuilder,
 };
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{
-    assert_error_code, get_token_account_amount, set_share_balance, set_up_async_vault,
-};
+use crate::helper_functions::{assert_error_code, set_share_balance, set_up_async_vault};
 
 const NAV: u128 = 1_000_000_000;
 const SHARE_AMOUNT: u64 = 1_000_000_000;
@@ -51,7 +49,6 @@ fn setup(
         InitializePausableRedemptionsBuilder::new()
             .payer(authority.pubkey())
             .authority(authority.pubkey())
-            .share_mint(share_mint.pubkey())
             .vault(vault_pubkey)
             .paused(p)
             .instruction()
@@ -159,7 +156,7 @@ fn test_initialize_pausable_redemptions_fails(
         _payer,
         _mint_authority,
         _asset_mint,
-        share_mint,
+        _share_mint,
         _user,
         _operator,
         _fee_recipient,
@@ -183,7 +180,6 @@ fn test_initialize_pausable_redemptions_fails(
         InitializePausableRedemptionsBuilder::new()
             .payer(authority.pubkey())
             .authority(authority.pubkey())
-            .share_mint(share_mint.pubkey())
             .vault(vault_pubkey)
             .paused(false)
             .instruction()
@@ -195,7 +191,6 @@ fn test_initialize_pausable_redemptions_fails(
     let err = InitializePausableRedemptionsBuilder::new()
         .payer(authority.pubkey())
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .paused(false)
         .instruction()
@@ -211,7 +206,6 @@ fn test_update_paused_true_blocks_redeem() {
 
     UpdatePausableRedemptionsBuilder::new()
         .authority(authority.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .paused(true)
         .instruction()
@@ -254,7 +248,7 @@ fn test_update_pausable_redemptions_fails(
         _payer,
         _mint_authority,
         _asset_mint,
-        share_mint,
+        _share_mint,
         user,
         _operator,
         _fee_recipient,
@@ -269,7 +263,6 @@ fn test_update_pausable_redemptions_fails(
         InitializePausableRedemptionsBuilder::new()
             .payer(authority.pubkey())
             .authority(authority.pubkey())
-            .share_mint(share_mint.pubkey())
             .vault(vault_pubkey)
             .paused(false)
             .instruction()
@@ -281,7 +274,6 @@ fn test_update_pausable_redemptions_fails(
 
     let err = UpdatePausableRedemptionsBuilder::new()
         .authority(signer.pubkey())
-        .share_mint(share_mint.pubkey())
         .vault(vault_pubkey)
         .paused(true)
         .instruction()
