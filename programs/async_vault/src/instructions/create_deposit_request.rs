@@ -1,5 +1,11 @@
 use crate::{
-    error::AsyncVaultError, extensions, utils::validate_asset_mint_extensions_from_acct_info,
+    error::AsyncVaultError,
+    extensions::{
+        self,
+        request_extensions::{compute_request_extension_space, init_request_extension},
+        subscription_queue::processor::{next_subscription_request_id, SubscriptionQueueRequest},
+    },
+    utils::validate_asset_mint_extensions_from_acct_info,
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
@@ -30,9 +36,11 @@ pub struct CreateDepositRequest<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
+    // Space is extended conditionally: if SubscriptionQueue is active on the vault,
+    // extra bytes are reserved for the SubscriptionQueueRequest TLV extension.
     #[account(
         init,
-        space = 8 + Request::INIT_SPACE,
+        space = 8 + Request::INIT_SPACE + compute_request_extension_space(&vault.to_account_info()),
         payer = user,
     )]
     pub request: Account<'info, Request>,
@@ -56,6 +64,7 @@ pub struct CreateDepositRequest<'info> {
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
+
 impl<'info> CreateDepositRequest<'info> {
     /// Transfers assets from the User's TokenAccount to the pending vault (aka escrow)
     pub fn transfer_assets_from_user_to_pending_vault(&self, amount: u64) -> Result<()> {
@@ -71,18 +80,20 @@ impl<'info> CreateDepositRequest<'info> {
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
 }
+
 pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
-    // Extension: PausableSubscription handlings
-    {
+    // Read vault TLV data once: check PausableSubscriptions and capture SubscriptionQueue state.
+    let vault_data = {
         let vault_info = ctx.accounts.vault.to_account_info();
         let data = vault_info
             .data
             .try_borrow()
             .map_err(|_| ProgramError::AccountBorrowFailed)?;
         extensions::pausable_subscriptions::check_subscriptions_paused(&data)?;
-    }
+        data.to_vec()
+    };
 
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
@@ -110,6 +121,16 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         .pending_async_requests
         .checked_add(1)
         .ok_or(VaultProgramError::ArithmeticError)?;
+
+    // Extension: SubscriptionQueue — increment counter and tag the request with its ID.
+    if let Some(id) =
+        next_subscription_request_id(&ctx.accounts.vault.to_account_info(), &vault_data)?
+    {
+        init_request_extension(
+            &ctx.accounts.request.to_account_info(),
+            &SubscriptionQueueRequest { id },
+        )?;
+    }
 
     Ok(())
 }

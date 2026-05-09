@@ -60,4 +60,6 @@ pub enum AsyncVaultError {
     SubscriptionsPaused,
     #[msg("Redemptions are paused")]
     RedemptionsPaused,
+    #[msg("Deposit request is not next in the subscription queue")]
+    SubscriptionQueueOutOfOrder,
 }

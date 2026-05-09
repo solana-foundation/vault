@@ -6,39 +6,38 @@ use super::{ExtensionType, TLV_HEADER_SIZE};
 
 pub const TLV_START: usize = 8 + Vault::INIT_SPACE;
 
-pub fn get_extension_bytes(tlv_data: &[u8], ext_type: ExtensionType) -> Option<&[u8]> {
-    let mut offset = 0;
+// ── Raw (u16-typed) helpers ─────────────────────────────────────────────────
+// These operate on raw discriminants so they can be shared by both the Vault
+// and Request TLV systems without coupling either to the other's type enum.
 
+pub fn get_extension_bytes_raw(tlv_data: &[u8], ext_type_id: u16) -> Option<&[u8]> {
+    let mut offset = 0;
     while offset + TLV_HEADER_SIZE <= tlv_data.len() {
         let entry_type = u16::from_le_bytes([tlv_data[offset], tlv_data[offset + 1]]);
         let entry_len = u16::from_le_bytes([tlv_data[offset + 2], tlv_data[offset + 3]]) as usize;
-
         let value_end = offset + TLV_HEADER_SIZE + entry_len;
         if value_end > tlv_data.len() {
             return None;
         }
-
-        if entry_type == ext_type as u16 {
+        if entry_type == ext_type_id {
             return Some(&tlv_data[offset + TLV_HEADER_SIZE..value_end]);
         }
-
         offset = value_end;
     }
-
     None
 }
 
-pub fn has_extension(tlv_data: &[u8], ext_type: ExtensionType) -> bool {
-    get_extension_bytes(tlv_data, ext_type).is_some()
+pub fn has_extension_raw(tlv_data: &[u8], ext_type_id: u16) -> bool {
+    get_extension_bytes_raw(tlv_data, ext_type_id).is_some()
 }
 
-pub fn write_extension(
+pub fn write_extension_raw(
     tlv_data: &mut [u8],
     write_offset: usize,
-    ext_type: ExtensionType,
+    ext_type_id: u16,
+    data_len: usize,
     value: &[u8],
 ) -> Result<()> {
-    let data_len = ext_type.data_len();
     require!(
         value.len() <= data_len,
         AsyncVaultError::InvalidExtensionData
@@ -47,17 +46,39 @@ pub fn write_extension(
         write_offset + TLV_HEADER_SIZE + data_len <= tlv_data.len(),
         AsyncVaultError::InvalidExtensionData
     );
-
-    tlv_data[write_offset..write_offset + 2].copy_from_slice(&(ext_type as u16).to_le_bytes());
+    tlv_data[write_offset..write_offset + 2].copy_from_slice(&ext_type_id.to_le_bytes());
     tlv_data[write_offset + 2..write_offset + 4].copy_from_slice(&(data_len as u16).to_le_bytes());
-
     let value_start = write_offset + TLV_HEADER_SIZE;
     tlv_data[value_start..value_start + value.len()].copy_from_slice(value);
     for byte in &mut tlv_data[value_start + value.len()..value_start + data_len] {
         *byte = 0;
     }
-
     Ok(())
+}
+
+// ── Vault-typed wrappers ────────────────────────────────────────────────────
+
+pub fn get_extension_bytes(tlv_data: &[u8], ext_type: ExtensionType) -> Option<&[u8]> {
+    get_extension_bytes_raw(tlv_data, ext_type as u16)
+}
+
+pub fn has_extension(tlv_data: &[u8], ext_type: ExtensionType) -> bool {
+    has_extension_raw(tlv_data, ext_type as u16)
+}
+
+pub fn write_extension(
+    tlv_data: &mut [u8],
+    write_offset: usize,
+    ext_type: ExtensionType,
+    value: &[u8],
+) -> Result<()> {
+    write_extension_raw(
+        tlv_data,
+        write_offset,
+        ext_type as u16,
+        ext_type.data_len(),
+        value,
+    )
 }
 
 pub fn update_extension(

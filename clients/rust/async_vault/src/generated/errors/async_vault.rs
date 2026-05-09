@@ -96,6 +96,9 @@ pub enum AsyncVaultError {
     /// 6028 - Redemptions are paused
     #[error("Redemptions are paused")]
     RedemptionsPaused = 0x178C,
+    /// 6029 - Deposit request is not next in the subscription queue
+    #[error("Deposit request is not next in the subscription queue")]
+    SubscriptionQueueOutOfOrder = 0x178D,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

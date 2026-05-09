@@ -163,6 +163,13 @@ pub mod async_vault {
         )
     }
 
+    /// Adds a SubscriptionQueue TLV extension to the vault, enabling FIFO ordering
+    /// for deposit requests. Must be called before vault initialization. Requires authority
+    /// signature.
+    pub fn initialize_subscription_queue(ctx: Context<InitializeSubscriptionQueue>) -> Result<()> {
+        extensions::subscription_queue::instructions::initialize_subscription_queue::handler(ctx)
+    }
+
     /* USER INSTRUCTIONS */
 
     /// Creates a deposit request with state pending (Pending vault authority acceptance)
