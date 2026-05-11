@@ -99,6 +99,12 @@ pub enum AsyncVaultError {
     /// 6029 - Deposit request is not next in the subscription queue
     #[error("Deposit request is not next in the subscription queue")]
     SubscriptionQueueOutOfOrder = 0x178D,
+    /// 6030 - Request is not in a Canceled state.
+    #[error("Request is not in a Canceled state.")]
+    RequestIsNotCanceled = 0x178E,
+    /// 6031 - Queued deposit requests must be canceled via cancel_queued_deposit_request.
+    #[error("Queued deposit requests must be canceled via cancel_queued_deposit_request.")]
+    MustUseCancelQueuedDepositRequest = 0x178F,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

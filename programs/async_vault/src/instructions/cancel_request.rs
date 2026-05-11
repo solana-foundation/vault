@@ -6,6 +6,10 @@ use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
+    extensions::{
+        request_extensions::has_request_extension,
+        subscription_queue::processor::SubscriptionQueueRequest,
+    },
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
 };
 
@@ -128,6 +132,21 @@ pub fn handler(ctx: Context<CancelRequest>) -> Result<()> {
         ctx.accounts.request.request_state == RequestState::Pending,
         AsyncVaultError::RequestIsNotPending,
     );
+    // Subscription-queue deposits must use cancel_queued_deposit_request so the account
+    // remains open as a tombstone for queue advancement via skip_canceled_subscription_request.
+    if ctx.accounts.request.request_type == RequestType::Deposit {
+        let request_info = ctx.accounts.request.to_account_info();
+        let request_data = request_info
+            .data
+            .try_borrow()
+            .map_err(|_| ProgramError::AccountBorrowFailed)?;
+        let has_queue_ext = has_request_extension::<SubscriptionQueueRequest>(&request_data);
+        require!(
+            !has_queue_ext,
+            AsyncVaultError::MustUseCancelQueuedDepositRequest,
+        );
+        drop(request_data);
+    }
     match ctx.accounts.request.request_type {
         RequestType::Deposit => {
             let refund_amount = ctx.accounts.request.amount;

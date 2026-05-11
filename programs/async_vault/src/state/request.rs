@@ -2,10 +2,14 @@ use anchor_lang::prelude::*;
 
 /// Pending: neither approved nor rejected by the vault authority
 /// Claimable: approved by the vault authority
+/// Canceled: deposit/redemption request was refunded; account is kept open as a tombstone until the
+///           subscription/redemption queue advances past this request's ID via
+///           `skip_canceled_{subscription|redemption}_request`
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Copy, InitSpace, PartialEq)]
 pub enum RequestState {
     Pending,
     Claimable,
+    Canceled,
 }
 
 /// The request types:

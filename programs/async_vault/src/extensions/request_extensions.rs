@@ -65,6 +65,15 @@ pub fn init_request_extension<E: RequestExtension>(
     )
 }
 
+/// Returns `true` if the request account data contains the given extension type.
+pub fn has_request_extension<E: RequestExtension>(account_data: &[u8]) -> bool {
+    if account_data.len() <= REQUEST_TLV_START {
+        return false;
+    }
+    let tlv_data = &account_data[REQUEST_TLV_START..];
+    has_extension_raw(tlv_data, E::EXTENSION_TYPE as u16)
+}
+
 /// Reads a request extension from raw account data.
 ///
 /// Returns `Ok(None)` if the account has no TLV region or the extension type is absent.

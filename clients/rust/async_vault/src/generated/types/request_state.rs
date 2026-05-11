@@ -9,6 +9,9 @@ use num_derive::FromPrimitive;
 
 /// Pending: neither approved nor rejected by the vault authority
 /// Claimable: approved by the vault authority
+/// Canceled: deposit was refunded; account is kept open as a tombstone until the
+/// subscription queue advances past this request's ID via
+/// `skip_canceled_subscription_request`
 #[derive(
     BorshSerialize,
     BorshDeserialize,
@@ -25,4 +28,5 @@ use num_derive::FromPrimitive;
 pub enum RequestState {
     Pending,
     Claimable,
+    Canceled,
 }
