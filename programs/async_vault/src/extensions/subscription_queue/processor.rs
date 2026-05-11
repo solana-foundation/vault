@@ -6,12 +6,14 @@ use crate::{
     extensions::{
         read_vault_extension,
         request_extensions::{read_request_extension, RequestExtension, RequestExtensionType},
-        update_vault_extension, ExtensionType, VaultExtension,
+        tlv::{get_extension_bytes_raw_mut, TLV_START},
+        ExtensionType, VaultExtension,
     },
 };
 
 /// Vault extension: tracks FIFO ordering counters for deposit requests.
-#[derive(AnchorSerialize, AnchorDeserialize)]
+#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
+#[repr(C)]
 pub struct SubscriptionQueue {
     /// Total number of deposit requests ever created on this vault.
     pub all_time_total_subscription_requests: u64,
@@ -24,7 +26,8 @@ impl VaultExtension for SubscriptionQueue {
 }
 
 /// Request extension: the sequential deposit request ID assigned at creation.
-#[derive(AnchorSerialize, AnchorDeserialize)]
+#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
+#[repr(C)]
 pub struct SubscriptionQueueRequest {
     /// Monotonically increasing ID matching `all_time_total_subscription_requests`
     /// at the time this request was created.
@@ -72,22 +75,34 @@ pub fn check_and_advance_subscription_queue(
     Ok(Some(queue))
 }
 
-/// Increments the vault's `all_time_total_subscription_requests` counter and returns
-/// the new request ID to be stored on the request account extension.
-pub fn next_subscription_request_id(
-    vault_info: &AccountInfo,
-    vault_data: &[u8],
-) -> Result<Option<u64>> {
-    let Some(mut queue) = read_vault_extension::<SubscriptionQueue>(vault_data)? else {
+/// Increments the vault's `all_time_total_subscription_requests` counter in-place and
+/// returns the new request ID to be stored on the request account extension.
+pub fn next_subscription_request_id(vault_info: &AccountInfo) -> Result<Option<u64>> {
+    let mut data = vault_info
+        .data
+        .try_borrow_mut()
+        .map_err(|_| ProgramError::AccountBorrowFailed)?;
+
+    if data.len() <= TLV_START {
+        return Ok(None);
+    }
+
+    let tlv_data = &mut data[TLV_START..];
+    let Some(value_bytes) =
+        get_extension_bytes_raw_mut(tlv_data, ExtensionType::SubscriptionQueue as u16)
+    else {
         return Ok(None);
     };
 
+    // try_from_bytes_mut would avoid the copy but requires 8-byte alignment, which TLV
+    // value offsets don't guarantee. `pod_read_unaligned` + `copy_from_slice` handles any alignment safely.
+    let mut queue: SubscriptionQueue = bytemuck::pod_read_unaligned(value_bytes);
     queue.all_time_total_subscription_requests = queue
         .all_time_total_subscription_requests
         .checked_add(1)
         .ok_or(VaultProgramError::ArithmeticError)?;
-
     let id = queue.all_time_total_subscription_requests;
-    update_vault_extension(vault_info, &queue)?;
+    value_bytes.copy_from_slice(bytemuck::bytes_of(&queue));
+
     Ok(Some(id))
 }

@@ -12,6 +12,6 @@ pub fn handler(ctx: Context<BasicExtensionAccounts>, args: UpdateWithdrawalFeeAr
     args.new_withdrawal_fee.validate()?;
     update_vault_extension(
         &ctx.accounts.vault.to_account_info(),
-        &WithdrawalFee(args.new_withdrawal_fee),
+        &WithdrawalFee::from_fee_type(args.new_withdrawal_fee),
     )
 }

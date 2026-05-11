@@ -23,6 +23,7 @@ custom-panic = []
 anchor-lang.workspace = true
 anchor-spl.workspace = true
 vault_common.workspace = true
+bytemuck.workspace = true
 
 [dev-dependencies]
 test-case.workspace = true

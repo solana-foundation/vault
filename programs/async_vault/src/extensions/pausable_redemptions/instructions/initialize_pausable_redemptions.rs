@@ -38,7 +38,7 @@ pub fn handler(
         &ctx.accounts.vault.to_account_info(),
         &ctx.accounts.vault,
         &PausableRedemption {
-            paused: args.paused,
+            paused: args.paused as u8,
         },
     )
 }

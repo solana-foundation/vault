@@ -16,7 +16,7 @@ pub fn handler(
     update_vault_extension(
         &ctx.accounts.vault.to_account_info(),
         &PausableRedemption {
-            paused: args.paused,
+            paused: args.paused as u8,
         },
     )
 }

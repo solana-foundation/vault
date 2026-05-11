@@ -5,9 +5,12 @@ use crate::{
     extensions::{read_vault_extension, ExtensionType},
 };
 
-#[derive(AnchorSerialize, AnchorDeserialize)]
+/// Vault extension: pauses or unpauses deposit (subscription) processing.
+#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
+#[repr(C)]
 pub struct PausableSubscription {
-    pub paused: bool,
+    /// 0 = unpaused, 1 = paused.
+    pub paused: u8,
 }
 
 impl crate::extensions::VaultExtension for PausableSubscription {
@@ -16,7 +19,7 @@ impl crate::extensions::VaultExtension for PausableSubscription {
 
 pub fn check_subscriptions_paused(account_data: &[u8]) -> Result<()> {
     if let Some(ext) = read_vault_extension::<PausableSubscription>(account_data)? {
-        require!(!ext.paused, AsyncVaultError::SubscriptionsPaused);
+        require!(ext.paused == 0, AsyncVaultError::SubscriptionsPaused);
     }
     Ok(())
 }

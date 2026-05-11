@@ -27,6 +27,26 @@ pub fn get_extension_bytes_raw(tlv_data: &[u8], ext_type_id: u16) -> Option<&[u8
     None
 }
 
+pub fn get_extension_bytes_raw_mut<'a>(
+    tlv_data: &'a mut [u8],
+    ext_type_id: u16,
+) -> Option<&'a mut [u8]> {
+    let mut offset = 0;
+    while offset + TLV_HEADER_SIZE <= tlv_data.len() {
+        let entry_type = u16::from_le_bytes([tlv_data[offset], tlv_data[offset + 1]]);
+        let entry_len = u16::from_le_bytes([tlv_data[offset + 2], tlv_data[offset + 3]]) as usize;
+        let value_end = offset + TLV_HEADER_SIZE + entry_len;
+        if value_end > tlv_data.len() {
+            return None;
+        }
+        if entry_type == ext_type_id {
+            return Some(&mut tlv_data[offset + TLV_HEADER_SIZE..value_end]);
+        }
+        offset = value_end;
+    }
+    None
+}
+
 pub fn has_extension_raw(tlv_data: &[u8], ext_type_id: u16) -> bool {
     get_extension_bytes_raw(tlv_data, ext_type_id).is_some()
 }

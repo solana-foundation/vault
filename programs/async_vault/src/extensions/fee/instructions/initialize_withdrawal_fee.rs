@@ -36,6 +36,6 @@ pub fn handler(ctx: Context<InitWithdrawalFee>, args: InitWithdrawalFeeArgs) -> 
     init_vault_extension(
         &ctx.accounts.vault.to_account_info(),
         &ctx.accounts.vault,
-        &WithdrawalFee(args.withdrawal_fee),
+        &WithdrawalFee::from_fee_type(args.withdrawal_fee),
     )
 }

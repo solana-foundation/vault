@@ -36,6 +36,6 @@ pub fn handler(ctx: Context<InitDepositFee>, args: InitDepositFeeArgs) -> Result
     init_vault_extension(
         &ctx.accounts.vault.to_account_info(),
         &ctx.accounts.vault,
-        &DepositFee(args.deposit_fee),
+        &DepositFee::from_fee_type(args.deposit_fee),
     )
 }

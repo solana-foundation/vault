@@ -40,7 +40,7 @@ pub fn handler(
         &ctx.accounts.vault.to_account_info(),
         &ctx.accounts.vault,
         &PausableSubscription {
-            paused: args.paused,
+            paused: args.paused as u8,
         },
     )
 }

@@ -12,6 +12,6 @@ pub fn handler(ctx: Context<BasicExtensionAccounts>, args: UpdateDepositFeeArgs)
     args.new_deposit_fee.validate()?;
     update_vault_extension(
         &ctx.accounts.vault.to_account_info(),
-        &DepositFee(args.new_deposit_fee),
+        &DepositFee::from_fee_type(args.new_deposit_fee),
     )
 }

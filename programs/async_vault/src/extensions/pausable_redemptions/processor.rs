@@ -5,9 +5,12 @@ use crate::{
     extensions::{read_vault_extension, ExtensionType},
 };
 
-#[derive(AnchorSerialize, AnchorDeserialize)]
+/// Vault extension: pauses or unpauses withdrawal (redemption) processing.
+#[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
+#[repr(C)]
 pub struct PausableRedemption {
-    pub paused: bool,
+    /// 0 = unpaused, 1 = paused.
+    pub paused: u8,
 }
 
 impl crate::extensions::VaultExtension for PausableRedemption {
@@ -16,7 +19,7 @@ impl crate::extensions::VaultExtension for PausableRedemption {
 
 pub fn check_redemptions_paused(account_data: &[u8]) -> Result<()> {
     if let Some(ext) = read_vault_extension::<PausableRedemption>(account_data)? {
-        require!(!ext.paused, AsyncVaultError::RedemptionsPaused);
+        require!(ext.paused == 0, AsyncVaultError::RedemptionsPaused);
     }
     Ok(())
 }

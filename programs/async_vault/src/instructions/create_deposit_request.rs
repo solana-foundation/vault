@@ -84,16 +84,14 @@ impl<'info> CreateDepositRequest<'info> {
 pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
-    // Read vault TLV data once: check PausableSubscriptions and capture SubscriptionQueue state.
-    let vault_data = {
+    {
         let vault_info = ctx.accounts.vault.to_account_info();
         let data = vault_info
             .data
             .try_borrow()
             .map_err(|_| ProgramError::AccountBorrowFailed)?;
         extensions::pausable_subscriptions::check_subscriptions_paused(&data)?;
-        data.to_vec()
-    };
+    }
 
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
@@ -123,9 +121,7 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         .ok_or(VaultProgramError::ArithmeticError)?;
 
     // Extension: SubscriptionQueue — increment counter and tag the request with its ID.
-    if let Some(id) =
-        next_subscription_request_id(&ctx.accounts.vault.to_account_info(), &vault_data)?
-    {
+    if let Some(id) = next_subscription_request_id(&ctx.accounts.vault.to_account_info())? {
         init_request_extension(
             &ctx.accounts.request.to_account_info(),
             &SubscriptionQueueRequest { id },
