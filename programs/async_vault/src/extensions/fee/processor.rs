@@ -19,11 +19,17 @@ impl FeeData {
         match fee_type {
             FeeType::FixedAmount { amount } => {
                 data.copy_from_slice(&amount.to_le_bytes());
-                Self { discriminant: 0, data }
+                Self {
+                    discriminant: 0,
+                    data,
+                }
             }
             FeeType::Percentage { bps } => {
                 data[..2].copy_from_slice(&bps.to_le_bytes());
-                Self { discriminant: 1, data }
+                Self {
+                    discriminant: 1,
+                    data,
+                }
             }
         }
     }
@@ -58,6 +64,7 @@ impl DepositFee {
 
 impl std::ops::Deref for DepositFee {
     type Target = FeeData;
+
     fn deref(&self) -> &FeeData {
         &self.0
     }
@@ -80,6 +87,7 @@ impl WithdrawalFee {
 
 impl std::ops::Deref for WithdrawalFee {
     type Target = FeeData;
+
     fn deref(&self) -> &FeeData {
         &self.0
     }

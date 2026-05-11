@@ -89,7 +89,12 @@ pub fn init_vault_extension<E: VaultExtension>(
         AsyncVaultError::ExtensionAlreadyInitialized
     );
     let write_offset = tlv_used_len(tlv_data);
-    write_extension(tlv_data, write_offset, E::EXTENSION_TYPE, bytemuck::bytes_of(value))
+    write_extension(
+        tlv_data,
+        write_offset,
+        E::EXTENSION_TYPE,
+        bytemuck::bytes_of(value),
+    )
 }
 
 /// Overwrites an existing TLV extension entry in the vault's extension region.
