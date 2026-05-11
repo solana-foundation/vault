@@ -85,30 +85,38 @@ impl std::ops::Deref for WithdrawalFee {
     }
 }
 
-pub fn get_deposit_fee(account_data: &[u8], amount: u64) -> Result<u64> {
-    match read_vault_extension::<DepositFee>(account_data)? {
+pub fn get_deposit_fee(vault_info: &AccountInfo, amount: u64) -> Result<u64> {
+    let data = vault_info
+        .data
+        .try_borrow()
+        .map_err(|_| ProgramError::AccountBorrowFailed)?;
+    match read_vault_extension::<DepositFee>(&data)? {
         Some(ext) => ext.fee_type()?.get_fee(amount),
         None => Ok(0),
     }
 }
 
-pub fn get_withdrawal_fee(account_data: &[u8], amount: u64) -> Result<u64> {
-    match read_vault_extension::<WithdrawalFee>(account_data)? {
+pub fn get_withdrawal_fee(vault_info: &AccountInfo, amount: u64) -> Result<u64> {
+    let data = vault_info
+        .data
+        .try_borrow()
+        .map_err(|_| ProgramError::AccountBorrowFailed)?;
+    match read_vault_extension::<WithdrawalFee>(&data)? {
         Some(ext) => ext.fee_type()?.get_fee(amount),
         None => Ok(0),
     }
 }
 
-pub fn get_deposit_fee_and_net(account_data: &[u8], amount: u64) -> Result<(u64, u64)> {
-    let fee = get_deposit_fee(account_data, amount)?;
+pub fn get_deposit_fee_and_net(vault_info: &AccountInfo, amount: u64) -> Result<(u64, u64)> {
+    let fee = get_deposit_fee(vault_info, amount)?;
     let net = amount
         .checked_sub(fee)
         .ok_or(VaultProgramError::ArithmeticError)?;
     Ok((fee, net))
 }
 
-pub fn get_withdrawal_fee_and_net(account_data: &[u8], amount: u64) -> Result<(u64, u64)> {
-    let fee = get_withdrawal_fee(account_data, amount)?;
+pub fn get_withdrawal_fee_and_net(vault_info: &AccountInfo, amount: u64) -> Result<(u64, u64)> {
+    let fee = get_withdrawal_fee(vault_info, amount)?;
     let net = amount
         .checked_sub(fee)
         .ok_or(VaultProgramError::ArithmeticError)?;

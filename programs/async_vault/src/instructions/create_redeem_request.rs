@@ -64,14 +64,9 @@ pub fn handler(ctx: Context<CreateRedeemRequest>, args: RequestArgs) -> Result<(
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
     // Extension: PausableRedemption handling
-    {
-        let vault_info = ctx.accounts.vault.to_account_info();
-        let data = vault_info
-            .data
-            .try_borrow()
-            .map_err(|_| ProgramError::AccountBorrowFailed)?;
-        extensions::pausable_redemptions::check_redemptions_paused(&data)?;
-    }
+    extensions::pausable_redemptions::check_redemptions_paused(
+        &ctx.accounts.vault.to_account_info(),
+    )?;
 
     require!(args.amount > 0, VaultProgramError::InsufficientRedeemAmount);
 

@@ -17,8 +17,12 @@ impl crate::extensions::VaultExtension for PausableRedemption {
     const EXTENSION_TYPE: ExtensionType = ExtensionType::PausableRedemptions;
 }
 
-pub fn check_redemptions_paused(account_data: &[u8]) -> Result<()> {
-    if let Some(ext) = read_vault_extension::<PausableRedemption>(account_data)? {
+pub fn check_redemptions_paused(vault_info: &AccountInfo) -> Result<()> {
+    let data = vault_info
+        .data
+        .try_borrow()
+        .map_err(|_| ProgramError::AccountBorrowFailed)?;
+    if let Some(ext) = read_vault_extension::<PausableRedemption>(&data)? {
         require!(ext.paused == 0, AsyncVaultError::RedemptionsPaused);
     }
     Ok(())

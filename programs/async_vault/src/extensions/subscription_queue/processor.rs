@@ -7,7 +7,7 @@ use crate::{
         read_vault_extension,
         request_extensions::{read_request_extension, RequestExtension, RequestExtensionType},
         tlv::{get_extension_bytes_raw_mut, TLV_START},
-        ExtensionType, VaultExtension,
+        update_vault_extension, ExtensionType, VaultExtension,
     },
 };
 
@@ -38,12 +38,12 @@ impl RequestExtension for SubscriptionQueueRequest {
     const EXTENSION_TYPE: RequestExtensionType = RequestExtensionType::SubscriptionQueueRequest;
 }
 
-/// Validates FIFO ordering for a deposit request and returns the updated vault extension.
+/// Validates FIFO ordering for a deposit request and, if the SubscriptionQueue extension is
+/// present, advances `last_processed_subscription_request_index` and writes the updated
+/// extension back to the vault account.
 ///
-/// Returns `Ok(None)` if the vault does not have the SubscriptionQueue extension, meaning
-/// no ordering constraint applies. Returns `Ok(Some(updated_queue))` when the check passes
-/// and the caller must write the updated extension back to the vault via
-/// [`update_vault_extension`].
+/// Returns `Ok(())` whether or not the extension is present; no ordering constraint applies
+/// when the extension is absent.
 ///
 /// # Errors
 /// - [`AsyncVaultError::UninitializedExtension`] if the vault has SubscriptionQueue but the request
@@ -51,15 +51,25 @@ impl RequestExtension for SubscriptionQueueRequest {
 /// - [`AsyncVaultError::SubscriptionQueueOutOfOrder`] if the request's ID does not equal
 ///   `last_processed_subscription_request_index + 1`.
 pub fn check_and_advance_subscription_queue(
-    vault_data: &[u8],
-    request_data: &[u8],
-) -> Result<Option<SubscriptionQueue>> {
-    let Some(mut queue) = read_vault_extension::<SubscriptionQueue>(vault_data)? else {
-        return Ok(None);
+    vault_info: &AccountInfo,
+    request_info: &AccountInfo,
+) -> Result<()> {
+    let vault_data = vault_info
+        .data
+        .try_borrow()
+        .map_err(|_| ProgramError::AccountBorrowFailed)?;
+    let Some(mut queue) = read_vault_extension::<SubscriptionQueue>(&vault_data)? else {
+        return Ok(());
     };
+    drop(vault_data);
 
-    let req_ext = read_request_extension::<SubscriptionQueueRequest>(request_data)?
+    let request_data = request_info
+        .data
+        .try_borrow()
+        .map_err(|_| ProgramError::AccountBorrowFailed)?;
+    let req_ext = read_request_extension::<SubscriptionQueueRequest>(&request_data)?
         .ok_or(AsyncVaultError::UninitializedExtension)?;
+    drop(request_data);
 
     let expected = queue
         .last_processed_subscription_request_index
@@ -72,7 +82,7 @@ pub fn check_and_advance_subscription_queue(
     );
 
     queue.last_processed_subscription_request_index = req_ext.id;
-    Ok(Some(queue))
+    update_vault_extension(vault_info, &queue)
 }
 
 /// Increments the vault's `all_time_total_subscription_requests` counter in-place and

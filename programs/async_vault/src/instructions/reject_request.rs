@@ -6,9 +6,7 @@ use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
-    extensions::{
-        subscription_queue::processor::check_and_advance_subscription_queue, update_vault_extension,
-    },
+    extensions::subscription_queue::processor::check_and_advance_subscription_queue,
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
 };
 
@@ -139,25 +137,10 @@ pub fn handler(ctx: Context<RejectRequest>) -> Result<()> {
 
     // Extension: SubscriptionQueue — enforce FIFO ordering for deposit requests.
     if matches!(ctx.accounts.request.request_type, RequestType::Deposit) {
-        let vault_data = {
-            let vault_info = ctx.accounts.vault.to_account_info();
-            let data = vault_info
-                .data
-                .try_borrow()
-                .map_err(|_| ProgramError::AccountBorrowFailed)?;
-            data.to_vec()
-        };
-        let request_info = ctx.accounts.request.to_account_info();
-        let request_data = request_info
-            .data
-            .try_borrow()
-            .map_err(|_| ProgramError::AccountBorrowFailed)?
-            .to_vec();
-        if let Some(updated_queue) =
-            check_and_advance_subscription_queue(&vault_data, &request_data)?
-        {
-            update_vault_extension(&ctx.accounts.vault.to_account_info(), &updated_queue)?;
-        }
+        check_and_advance_subscription_queue(
+            &ctx.accounts.vault.to_account_info(),
+            &ctx.accounts.request.to_account_info(),
+        )?;
     }
 
     match ctx.accounts.request.request_type {

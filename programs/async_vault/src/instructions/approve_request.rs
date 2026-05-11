@@ -7,7 +7,6 @@ use crate::{
     extensions::{
         fee::processor::{get_deposit_fee_and_net, get_withdrawal_fee_and_net},
         subscription_queue::processor::check_and_advance_subscription_queue,
-        update_vault_extension,
     },
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
     utils::{calculate_assets, calculate_shares, validate_token_account_owner},
@@ -144,28 +143,12 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
     let is_deposit = matches!(ctx.accounts.request.request_type, RequestType::Deposit);
     let original_amount = ctx.accounts.request.amount;
 
-    let vault_data = ctx
-        .accounts
-        .vault
-        .to_account_info()
-        .try_borrow_data()?
-        .to_vec();
-
     // Extension: SubscriptionQueue — enforce FIFO ordering for deposit requests.
     if is_deposit {
-        let request_data = ctx
-            .accounts
-            .request
-            .to_account_info()
-            .data
-            .try_borrow()
-            .map_err(|_| ProgramError::AccountBorrowFailed)?
-            .to_vec();
-        if let Some(updated_queue) =
-            check_and_advance_subscription_queue(&vault_data, &request_data)?
-        {
-            update_vault_extension(&ctx.accounts.vault.to_account_info(), &updated_queue)?;
-        }
+        check_and_advance_subscription_queue(
+            &ctx.accounts.vault.to_account_info(),
+            &ctx.accounts.request.to_account_info(),
+        )?;
     }
 
     let mut remaining = ctx.remaining_accounts.iter();
@@ -173,7 +156,8 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
     // Transfer assets between Vault and Pending Vault (aka escrow)
     let (claimable_amount, balance_delta) = if is_deposit {
         // Check for DepositFee Extension and calculate fee owed
-        let (deposit_fee, net_deposit) = get_deposit_fee_and_net(&vault_data, original_amount)?;
+        let (deposit_fee, net_deposit) =
+            get_deposit_fee_and_net(&ctx.accounts.vault.to_account_info(), original_amount)?;
         if deposit_fee > 0 {
             // Validate and transfer fees to fee_recipient
             let fee_recipient_token_account_info = remaining
@@ -198,7 +182,8 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
         let assets = calculate_assets(nav, decimals, original_amount)?;
 
         // Check for WithdrawFee Extension and calculate fee owed
-        let (withdraw_fee, net_assets) = get_withdrawal_fee_and_net(&vault_data, assets)?;
+        let (withdraw_fee, net_assets) =
+            get_withdrawal_fee_and_net(&ctx.accounts.vault.to_account_info(), assets)?;
         if withdraw_fee > 0 {
             // Validate and transfer fees to fee_recipient
             let fee_recipient_token_account_info = remaining
