@@ -120,6 +120,10 @@ pub fn read_vault_extension<E: VaultExtension>(account_data: &[u8]) -> Result<Op
         return Ok(None);
     }
     let tlv_data = &account_data[TLV_START..];
-    Ok(get_extension_bytes(tlv_data, E::EXTENSION_TYPE)
-        .map(|bytes| bytemuck::pod_read_unaligned::<E>(bytes)))
+    get_extension_bytes(tlv_data, E::EXTENSION_TYPE)
+        .map(|bytes| {
+            bytemuck::try_pod_read_unaligned::<E>(bytes)
+                .map_err(|_| crate::error::AsyncVaultError::InvalidExtensionData.into())
+        })
+        .transpose()
 }

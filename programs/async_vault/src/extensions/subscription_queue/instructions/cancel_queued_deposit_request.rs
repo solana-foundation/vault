@@ -70,8 +70,11 @@ impl<'info> CancelQueuedDepositRequest<'info> {
 
         let share_mint = self.share_mint.key();
         let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
-        let cpi_ctx =
-            CpiContext::new_with_signer(self.asset_token_program.to_account_info(), cpi_accounts, seeds);
+        let cpi_ctx = CpiContext::new_with_signer(
+            self.asset_token_program.to_account_info(),
+            cpi_accounts,
+            seeds,
+        );
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
 }

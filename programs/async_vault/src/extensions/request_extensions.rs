@@ -82,8 +82,12 @@ pub fn read_request_extension<E: RequestExtension>(account_data: &[u8]) -> Resul
         return Ok(None);
     }
     let tlv_data = &account_data[REQUEST_TLV_START..];
-    Ok(get_extension_bytes_raw(tlv_data, E::EXTENSION_TYPE as u16)
-        .map(|bytes| bytemuck::pod_read_unaligned::<E>(bytes)))
+    get_extension_bytes_raw(tlv_data, E::EXTENSION_TYPE as u16)
+        .map(|bytes| {
+            bytemuck::try_pod_read_unaligned::<E>(bytes)
+                .map_err(|_| crate::error::AsyncVaultError::InvalidExtensionData.into())
+        })
+        .transpose()
 }
 
 /// Computes the total TLV space required for request extensions based on the vault's

@@ -105,9 +105,10 @@ pub fn next_subscription_request_id(vault_info: &AccountInfo) -> Result<Option<u
     };
 
     // try_from_bytes_mut would avoid the copy but requires 8-byte alignment, which TLV
-    // value offsets don't guarantee. `pod_read_unaligned` + `copy_from_slice` handles any alignment
-    // safely.
-    let mut queue: SubscriptionQueue = bytemuck::pod_read_unaligned(value_bytes);
+    // value offsets don't guarantee. `try_pod_read_unaligned` + `copy_from_slice` handles any
+    // alignment safely.
+    let mut queue: SubscriptionQueue = bytemuck::try_pod_read_unaligned(value_bytes)
+        .map_err(|_| AsyncVaultError::InvalidExtensionData)?;
     queue.all_time_total_subscription_requests = queue
         .all_time_total_subscription_requests
         .checked_add(1)
