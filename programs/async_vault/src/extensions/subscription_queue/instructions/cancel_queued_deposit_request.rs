@@ -102,7 +102,6 @@ pub fn handler(ctx: Context<CancelQueuedDepositRequest>) -> Result<()> {
     );
     ctx.accounts.validate_has_subscription_queue_extension()?;
 
-
     let refund_amount = ctx.accounts.request.amount;
     ctx.accounts.transfer_assets_to_user(refund_amount)?;
 
