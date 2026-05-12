@@ -77,6 +77,18 @@ impl<'info> CancelQueuedDepositRequest<'info> {
         );
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
+
+    /// Validate that the SubscriptionQueue Request Extension is present.
+    pub fn validate_has_subscription_queue_extension(&self) -> Result<()> {
+        let request_info = self.request.to_account_info();
+        let request_data = request_info
+            .data
+            .try_borrow()
+            .map_err(|_| ProgramError::AccountBorrowFailed)?;
+        let has_queue_ext = has_request_extension::<SubscriptionQueueRequest>(&request_data);
+        require!(has_queue_ext, AsyncVaultError::UninitializedExtension);
+        Ok(())
+    }
 }
 
 /// Cancels a pending queued deposit request. Assets are refunded immediately. The request
@@ -88,14 +100,8 @@ pub fn handler(ctx: Context<CancelQueuedDepositRequest>) -> Result<()> {
         ctx.accounts.request.request_state == RequestState::Pending,
         AsyncVaultError::RequestIsNotPending,
     );
-    let request_info = ctx.accounts.request.to_account_info();
-    let request_data = request_info
-        .data
-        .try_borrow()
-        .map_err(|_| ProgramError::AccountBorrowFailed)?;
-    let has_queue_ext = has_request_extension::<SubscriptionQueueRequest>(&request_data);
-    require!(has_queue_ext, AsyncVaultError::UninitializedExtension);
-    drop(request_data);
+    ctx.accounts.validate_has_subscription_queue_extension()?;
+
 
     let refund_amount = ctx.accounts.request.amount;
     ctx.accounts.transfer_assets_to_user(refund_amount)?;

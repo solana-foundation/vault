@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use crate::{
     error::AsyncVaultError,
     extensions::subscription_queue::processor::check_and_advance_subscription_queue,
-    state::{Request, RequestState, RequestType, Vault},
+    state::{Request, RequestState, Vault},
 };
 
 #[derive(Accounts)]

@@ -28,7 +28,7 @@ As a corollary, the program will not initialize token accounts nor enforce ATAs.
 
 The primary vault implementation supporting asynchronous deposit and redemption flows, where requests are queued and settled by a vault authority. This program is intended to be used across a wide variety of applications with the most influence from Real World Asset (RWA) issuers, teams implmenting offchain strategies, and others where regulatory compliance is required.
 
-- [Sequence Diagrams](programs/async_vault/SEQUENCES.md)
+- [Sequence Diagrams](programs/async_vault/docs/SEQUENCES.md)
 
 ### **Vault (Atomic Vault)**
 

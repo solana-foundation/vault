@@ -928,10 +928,12 @@ fn test_cancel_middle_request_queue_unblocks_after_skip() {
 
 // ── Failure tests ─────────────────────────────────────────────────────────────
 
-#[test_case(true, 6031, "MustUseCancelQueuedDepositRequest" ; "cancel_request_rejected_for_queued_deposit")]
-#[test_case(false, 6029, "SubscriptionQueueOutOfOrder" ; "skip_out_of_order_fails")]
+#[test_case(true,  true,  6031, "MustUseCancelQueuedDepositRequest" ; "cancel_request_rejected_for_queued_deposit")]
+#[test_case(false, true,  6029, "SubscriptionQueueOutOfOrder"        ; "skip_out_of_order_fails")]
+#[test_case(false, false, 6006, "UninitializedExtension"             ; "cancel_queued_no_subscription_queue")]
 fn test_cancel_and_skip_failure_cases(
     use_cancel_request: bool,
+    with_queue: bool,
     expected_code: u32,
     expected_name: &str,
 ) {
@@ -946,19 +948,9 @@ fn test_cancel_and_skip_failure_cases(
         _reserve_pubkey,
         pending_vault_pubkey,
         user_token_account,
-    ) = setup(true);
+    ) = setup(with_queue);
 
     let request_1 = create_deposit_request(
-        &mut svm,
-        &user,
-        asset_mint.pubkey(),
-        share_mint.pubkey(),
-        vault_pubkey,
-        user_token_account,
-        pending_vault_pubkey,
-        100_000,
-    );
-    let request_2 = create_deposit_request(
         &mut svm,
         &user,
         asset_mint.pubkey(),
@@ -986,7 +978,17 @@ fn test_cancel_and_skip_failure_cases(
             .send_transaction(&mut svm, &user.pubkey(), &[&user])
             .unwrap_err();
         assert_error_code(&err, expected_code, expected_name);
-    } else {
+    } else if with_queue {
+        let request_2 = create_deposit_request(
+            &mut svm,
+            &user,
+            asset_mint.pubkey(),
+            share_mint.pubkey(),
+            vault_pubkey,
+            user_token_account,
+            pending_vault_pubkey,
+            100_000,
+        );
         // skip out of order: cancel #2 (tombstone), then try to skip #2 before #1 is processed
         cancel_queued_deposit_request(
             &mut svm,
@@ -1007,6 +1009,21 @@ fn test_cancel_and_skip_failure_cases(
             vault_pubkey,
             request_2.pubkey(),
             user.pubkey(),
+        )
+        .unwrap_err();
+        assert_error_code(&err, expected_code, expected_name);
+    } else {
+        // vault has no subscription queue, so the request has no SubscriptionQueueRequest
+        // extension — cancel_queued_deposit_request must return UninitializedExtension
+        let err = cancel_queued_deposit_request(
+            &mut svm,
+            &user,
+            asset_mint.pubkey(),
+            share_mint.pubkey(),
+            vault_pubkey,
+            user_token_account,
+            pending_vault_pubkey,
+            request_1.pubkey(),
         )
         .unwrap_err();
         assert_error_code(&err, expected_code, expected_name);
