@@ -22,7 +22,7 @@ pub struct SkipCanceledSubscriptionRequest<'info> {
     /// CHECK: receives rent from the closed request account; must be the original request owner
     #[account(
         mut,
-        constraint = owner.key() == request.owner @ AsyncVaultError::UnauthorizedSigner
+        constraint = owner.key() == request.owner @ AsyncVaultError::InvalidRequest
     )]
     pub owner: UncheckedAccount<'info>,
 
