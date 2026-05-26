@@ -288,11 +288,10 @@ fn test_create_deposit_request_increments_counter_and_sets_request_id() {
         "last_processed unchanged"
     );
 
-    let id_1 = subscription_queue::get_request_state(
-        svm.get_account(&request_1.pubkey()).unwrap().data(),
-    )
-    .expect("request 1 should have SubscriptionQueueRequest extension")
-    .id;
+    let id_1 =
+        subscription_queue::get_request_state(svm.get_account(&request_1.pubkey()).unwrap().data())
+            .expect("request 1 should have SubscriptionQueueRequest extension")
+            .id;
     assert_eq!(id_1, 1, "first request should have id=1");
 
     let request_2 = create_deposit_request(
@@ -317,11 +316,10 @@ fn test_create_deposit_request_increments_counter_and_sets_request_id() {
         "last_processed still unchanged"
     );
 
-    let id_2 = subscription_queue::get_request_state(
-        svm.get_account(&request_2.pubkey()).unwrap().data(),
-    )
-    .expect("request 2 should have SubscriptionQueueRequest extension")
-    .id;
+    let id_2 =
+        subscription_queue::get_request_state(svm.get_account(&request_2.pubkey()).unwrap().data())
+            .expect("request 2 should have SubscriptionQueueRequest extension")
+            .id;
     assert_eq!(id_2, 2, "second request should have id=2");
 
     // Cleanup: ensure vault state is consistent

@@ -36,9 +36,7 @@ pub struct SubscriptionQueueRequest {
 /// Returns the [`SubscriptionQueueRequest`] extension from raw request account data,
 /// or `None` if the extension is not present.
 pub fn get_request_state(request_data: &[u8]) -> Option<SubscriptionQueueRequest> {
-    let bytes = get_request_extension_bytes(
-        request_data,
-        RequestExtensionType::SubscriptionQueueRequest,
-    )?;
+    let bytes =
+        get_request_extension_bytes(request_data, RequestExtensionType::SubscriptionQueueRequest)?;
     SubscriptionQueueRequest::try_from_slice(bytes).ok()
 }
