@@ -93,7 +93,7 @@ impl<'info> CancelQueuedDepositRequest<'info> {
 
 /// Cancels a pending queued deposit request. Assets are refunded immediately. The request
 /// account remains open as a tombstone so the subscription queue can advance past it via
-/// `skip_canceled_subscription_request`.
+/// `skip_canceled_queue_request`.
 pub fn handler(ctx: Context<CancelQueuedDepositRequest>) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
     require!(

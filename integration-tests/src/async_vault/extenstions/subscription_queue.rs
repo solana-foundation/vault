@@ -711,7 +711,7 @@ fn test_cancel_queued_deposit_then_new_request_can_be_approved() {
         request_1.pubkey(),
         user.pubkey(),
     )
-    .expect("skip_canceled_subscription_request should succeed");
+    .expect("skip_canceled_queue_request should succeed");
 
     // Tombstone account must be closed
     assert!(

@@ -172,7 +172,7 @@ pub mod async_vault {
 
     /// Cancels a pending queued deposit request. Assets are refunded immediately. The request
     /// account remains open as a tombstone so the subscription queue can advance past it via
-    /// `skip_canceled_subscription_request`. Only valid for vaults with SubscriptionQueue active.
+    /// `skip_canceled_queue_request`. Only valid for vaults with SubscriptionQueue active.
     pub fn cancel_queued_deposit_request(ctx: Context<CancelQueuedDepositRequest>) -> Result<()> {
         extensions::subscription_queue::instructions::cancel_queued_deposit_request::handler(ctx)
     }
