@@ -83,7 +83,7 @@ impl<'info> CancelQueuedRedemptionRequest<'info> {
 
 /// Cancels a pending queued redeem request. Shares are minted back to the user immediately.
 /// The request account remains open as a tombstone so the redemption queue can advance past
-/// it via `skip_canceled_redemption_request`.
+/// it via `skip_canceled_queue_request`.
 pub fn handler(ctx: Context<CancelQueuedRedemptionRequest>) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
     require!(

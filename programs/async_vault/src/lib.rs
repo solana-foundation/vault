@@ -186,7 +186,7 @@ pub mod async_vault {
 
     /// Cancels a pending queued redeem request. Shares are minted back to the user immediately.
     /// The request account remains open as a tombstone so the redemption queue can advance past
-    /// it via `skip_canceled_redemption_request`. Only valid for vaults with RedemptionQueue
+    /// it via `skip_canceled_queue_request`. Only valid for vaults with RedemptionQueue
     /// active.
     pub fn cancel_queued_redemption_request(
         ctx: Context<CancelQueuedRedemptionRequest>,
