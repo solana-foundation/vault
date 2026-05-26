@@ -37,7 +37,7 @@ pub struct RejectRequest<'info> {
         mut,
         close = user,
         constraint = request.owner == user.key() @ AsyncVaultError::UnauthorizedSigner,
-        has_one = vault.key(),
+        has_one = vault,
     )]
     pub request: Box<Account<'info, Request>>,
 
