@@ -2,8 +2,9 @@ use crate::{
     error::AsyncVaultError,
     extensions::{
         self,
+        fifo_queue::next_queue_request_id,
         request_extensions::{compute_request_extension_space, init_request_extension},
-        subscription_queue::processor::{next_subscription_request_id, SubscriptionQueueRequest},
+        subscription_queue::processor::{SubscriptionQueue, SubscriptionQueueRequest},
     },
     utils::validate_asset_mint_extensions_from_acct_info,
 };
@@ -34,7 +35,7 @@ pub struct CreateDepositRequest<'info> {
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump = vault.bump
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     // Space is extended conditionally: if SubscriptionQueue is active on the vault,
     // extra bytes are reserved for the SubscriptionQueueRequest TLV extension.
@@ -116,7 +117,9 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         .ok_or(VaultProgramError::ArithmeticError)?;
 
     // Extension: SubscriptionQueue — increment counter and tag the request with its ID.
-    if let Some(id) = next_subscription_request_id(&ctx.accounts.vault.to_account_info())? {
+    if let Some(id) =
+        next_queue_request_id::<SubscriptionQueue>(&ctx.accounts.vault.to_account_info())?
+    {
         init_request_extension(
             &ctx.accounts.request.to_account_info(),
             &SubscriptionQueueRequest { id },

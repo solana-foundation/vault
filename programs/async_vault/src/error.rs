@@ -66,4 +66,8 @@ pub enum AsyncVaultError {
     RequestIsNotCanceled,
     #[msg("Queued deposit requests must be canceled via cancel_queued_deposit_request.")]
     MustUseCancelQueuedDepositRequest,
+    #[msg("Redeem request is not next in the redemption queue")]
+    RedemptionQueueOutOfOrder,
+    #[msg("Queued redeem requests must be canceled via cancel_queued_redemption_request.")]
+    MustUseCancelQueuedRedemptionRequest,
 }

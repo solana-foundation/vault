@@ -177,15 +177,29 @@ pub mod async_vault {
         extensions::subscription_queue::instructions::cancel_queued_deposit_request::handler(ctx)
     }
 
-    /// Permissionless instruction that advances the subscription queue past a canceled deposit
-    /// request, closes the request account, and returns rent to the original owner. Must be
-    /// called in ascending request ID order for consecutive tombstones.
-    pub fn skip_canceled_subscription_request(
-        ctx: Context<SkipCanceledSubscriptionRequest>,
+    /// Adds a RedemptionQueue TLV extension to the vault, enabling FIFO ordering
+    /// for redeem requests. Must be called before vault initialization. Requires authority
+    /// signature.
+    pub fn initialize_redemption_queue(ctx: Context<InitializeRedemptionQueue>) -> Result<()> {
+        extensions::redemption_queue::instructions::initialize_redemption_queue::handler(ctx)
+    }
+
+    /// Cancels a pending queued redeem request. Shares are minted back to the user immediately.
+    /// The request account remains open as a tombstone so the redemption queue can advance past
+    /// it via `skip_canceled_redemption_request`. Only valid for vaults with RedemptionQueue
+    /// active.
+    pub fn cancel_queued_redemption_request(
+        ctx: Context<CancelQueuedRedemptionRequest>,
     ) -> Result<()> {
-        extensions::subscription_queue::instructions::skip_canceled_subscription_request::handler(
-            ctx,
-        )
+        extensions::redemption_queue::instructions::cancel_queued_redemption_request::handler(ctx)
+    }
+
+    /// Permissionless instruction that advances the queue past a canceled request, closes the
+    /// request account, and returns rent to the original owner. Works for both subscription and
+    /// redemption queues; queue type is inferred from the request's type. Must be called in
+    /// ascending request ID order for consecutive tombstones.
+    pub fn skip_canceled_queue_request(ctx: Context<SkipCanceledQueueRequest>) -> Result<()> {
+        extensions::fifo_queues::skip_canceled_queue_request::handler(ctx)
     }
 
     /* USER INSTRUCTIONS */

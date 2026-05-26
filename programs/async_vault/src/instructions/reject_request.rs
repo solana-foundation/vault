@@ -6,7 +6,11 @@ use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
-    extensions::subscription_queue::processor::check_and_advance_subscription_queue,
+    extensions::{
+        fifo_queue::check_and_advance_queue,
+        redemption_queue::processor::{RedemptionQueue, RedemptionQueueRequest},
+        subscription_queue::processor::{SubscriptionQueue, SubscriptionQueueRequest},
+    },
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
 };
 
@@ -35,14 +39,11 @@ pub struct RejectRequest<'info> {
         constraint = request.owner == user.key() @ AsyncVaultError::UnauthorizedSigner,
         has_one = vault.key(),
     )]
-    pub request: Account<'info, Request>,
+    pub request: Box<Account<'info, Request>>,
 
     /// CHECK: Validated against request.owner. Receives rent on account close.
-    #[account(
-        mut,
-        constraint = user.key() == request.owner @ AsyncVaultError::UnauthorizedSigner,
-    )]
-    pub user: AccountInfo<'info>,
+    #[account(mut)]
+    pub user: UncheckedAccount<'info>,
 
     #[account(
         mut,
@@ -74,6 +75,7 @@ pub struct RejectRequest<'info> {
 }
 
 impl<'info> RejectRequest<'info> {
+    #[inline(never)]
     pub fn transfer_assets_to_user(&self, amount: u64) -> Result<()> {
         let pending_vault = self
             .asset_pending_vault
@@ -102,6 +104,25 @@ impl<'info> RejectRequest<'info> {
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
 
+    /// Enforces FIFO ordering for queued deposit and redeem requests.
+    #[inline(never)]
+    pub fn check_fifo_ordering(&self) -> Result<()> {
+        if matches!(self.request.request_type, RequestType::Deposit) {
+            check_and_advance_queue::<SubscriptionQueue, SubscriptionQueueRequest>(
+                &self.vault.to_account_info(),
+                &self.request.to_account_info(),
+            )?;
+        }
+        if matches!(self.request.request_type, RequestType::Redeem) {
+            check_and_advance_queue::<RedemptionQueue, RedemptionQueueRequest>(
+                &self.vault.to_account_info(),
+                &self.request.to_account_info(),
+            )?;
+        }
+        Ok(())
+    }
+
+    #[inline(never)]
     pub fn mint_shares(&self, amount: u64) -> Result<()> {
         let user_share_account = self
             .user_share_account
@@ -135,13 +156,7 @@ pub fn handler(ctx: Context<RejectRequest>) -> Result<()> {
         AsyncVaultError::RequestInvalidState
     );
 
-    // Extension: SubscriptionQueue — enforce FIFO ordering for deposit requests.
-    if matches!(ctx.accounts.request.request_type, RequestType::Deposit) {
-        check_and_advance_subscription_queue(
-            &ctx.accounts.vault.to_account_info(),
-            &ctx.accounts.request.to_account_info(),
-        )?;
-    }
+    ctx.accounts.check_fifo_ordering()?;
 
     match ctx.accounts.request.request_type {
         RequestType::Deposit => {

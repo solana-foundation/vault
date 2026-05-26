@@ -6,7 +6,9 @@ use crate::{
     error::AsyncVaultError,
     extensions::{
         fee::processor::{get_deposit_fee_and_net, get_withdrawal_fee_and_net},
-        subscription_queue::processor::check_and_advance_subscription_queue,
+        fifo_queue::check_and_advance_queue,
+        redemption_queue::processor::{RedemptionQueue, RedemptionQueueRequest},
+        subscription_queue::processor::{SubscriptionQueue, SubscriptionQueueRequest},
     },
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
     utils::{calculate_assets, calculate_shares, validate_token_account_owner},
@@ -27,13 +29,13 @@ pub struct ApproveRequest<'info> {
         has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
         has_one = share_mint @ AsyncVaultError::InvalidShareMint,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(
         mut,
         has_one = vault @ AsyncVaultError::InvalidRequest,
     )]
-    pub request: Account<'info, Request>,
+    pub request: Box<Account<'info, Request>>,
 
     #[account(
         mut,
@@ -145,7 +147,15 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
 
     // Extension: SubscriptionQueue — enforce FIFO ordering for deposit requests.
     if is_deposit {
-        check_and_advance_subscription_queue(
+        check_and_advance_queue::<SubscriptionQueue, SubscriptionQueueRequest>(
+            &ctx.accounts.vault.to_account_info(),
+            &ctx.accounts.request.to_account_info(),
+        )?;
+    }
+
+    // Extension: RedemptionQueue — enforce FIFO ordering for redeem requests.
+    if !is_deposit {
+        check_and_advance_queue::<RedemptionQueue, RedemptionQueueRequest>(
             &ctx.accounts.vault.to_account_info(),
             &ctx.accounts.request.to_account_info(),
         )?;

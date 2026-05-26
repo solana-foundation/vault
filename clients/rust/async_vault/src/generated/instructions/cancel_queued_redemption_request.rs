@@ -6,22 +6,30 @@
 
 use borsh::{BorshDeserialize, BorshSerialize};
 
-pub const SKIP_CANCELED_SUBSCRIPTION_REQUEST_DISCRIMINATOR: [u8; 8] =
-    [108, 241, 15, 100, 12, 223, 243, 165];
+pub const CANCEL_QUEUED_REDEMPTION_REQUEST_DISCRIMINATOR: [u8; 8] =
+    [133, 45, 244, 133, 86, 35, 66, 14];
 
 /// Accounts.
 #[derive(Debug)]
-pub struct SkipCanceledSubscriptionRequest {
+pub struct CancelQueuedRedemptionRequest {
+    pub user: solana_pubkey::Pubkey,
+
+    pub asset_mint: solana_pubkey::Pubkey,
+
+    pub share_mint: solana_pubkey::Pubkey,
+
     pub vault: solana_pubkey::Pubkey,
 
     pub request: solana_pubkey::Pubkey,
 
-    pub owner: solana_pubkey::Pubkey,
+    pub user_share_account: solana_pubkey::Pubkey,
+
+    pub share_token_program: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
 }
 
-impl SkipCanceledSubscriptionRequest {
+impl CancelQueuedRedemptionRequest {
     pub fn instruction(&self) -> solana_instruction::Instruction {
         self.instruction_with_remaining_accounts(&[])
     }
@@ -32,16 +40,29 @@ impl SkipCanceledSubscriptionRequest {
         &self,
         remaining_accounts: &[solana_instruction::AccountMeta],
     ) -> solana_instruction::Instruction {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        accounts.push(solana_instruction::AccountMeta::new(self.user, true));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.asset_mint,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(self.share_mint, false));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new(self.request, false));
-        accounts.push(solana_instruction::AccountMeta::new(self.owner, false));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.user_share_account,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.share_token_program,
+            false,
+        ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.system_program,
             false,
         ));
         accounts.extend_from_slice(remaining_accounts);
-        let data = SkipCanceledSubscriptionRequestInstructionData::new()
+        let data = CancelQueuedRedemptionRequestInstructionData::new()
             .try_to_vec()
             .unwrap();
 
@@ -55,14 +76,14 @@ impl SkipCanceledSubscriptionRequest {
 
 #[derive(BorshSerialize, BorshDeserialize, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct SkipCanceledSubscriptionRequestInstructionData {
+pub struct CancelQueuedRedemptionRequestInstructionData {
     discriminator: [u8; 8],
 }
 
-impl SkipCanceledSubscriptionRequestInstructionData {
+impl CancelQueuedRedemptionRequestInstructionData {
     pub fn new() -> Self {
         Self {
-            discriminator: [108, 241, 15, 100, 12, 223, 243, 165],
+            discriminator: [133, 45, 244, 133, 86, 35, 66, 14],
         }
     }
 
@@ -71,32 +92,58 @@ impl SkipCanceledSubscriptionRequestInstructionData {
     }
 }
 
-impl Default for SkipCanceledSubscriptionRequestInstructionData {
+impl Default for CancelQueuedRedemptionRequestInstructionData {
     fn default() -> Self {
         Self::new()
     }
 }
 
-/// Instruction builder for `SkipCanceledSubscriptionRequest`.
+/// Instruction builder for `CancelQueuedRedemptionRequest`.
 ///
 /// ### Accounts:
 ///
-///   0. `[writable]` vault
-///   1. `[writable]` request
-///   2. `[writable]` owner
-///   3. `[optional]` system_program (default to `11111111111111111111111111111111`)
+///   0. `[writable, signer]` user
+///   1. `[]` asset_mint
+///   2. `[writable]` share_mint
+///   3. `[writable]` vault
+///   4. `[writable]` request
+///   5. `[writable]` user_share_account
+///   6. `[]` share_token_program
+///   7. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
-pub struct SkipCanceledSubscriptionRequestBuilder {
+pub struct CancelQueuedRedemptionRequestBuilder {
+    user: Option<solana_pubkey::Pubkey>,
+    asset_mint: Option<solana_pubkey::Pubkey>,
+    share_mint: Option<solana_pubkey::Pubkey>,
     vault: Option<solana_pubkey::Pubkey>,
     request: Option<solana_pubkey::Pubkey>,
-    owner: Option<solana_pubkey::Pubkey>,
+    user_share_account: Option<solana_pubkey::Pubkey>,
+    share_token_program: Option<solana_pubkey::Pubkey>,
     system_program: Option<solana_pubkey::Pubkey>,
     __remaining_accounts: Vec<solana_instruction::AccountMeta>,
 }
 
-impl SkipCanceledSubscriptionRequestBuilder {
+impl CancelQueuedRedemptionRequestBuilder {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    #[inline(always)]
+    pub fn user(&mut self, user: solana_pubkey::Pubkey) -> &mut Self {
+        self.user = Some(user);
+        self
+    }
+
+    #[inline(always)]
+    pub fn asset_mint(&mut self, asset_mint: solana_pubkey::Pubkey) -> &mut Self {
+        self.asset_mint = Some(asset_mint);
+        self
+    }
+
+    #[inline(always)]
+    pub fn share_mint(&mut self, share_mint: solana_pubkey::Pubkey) -> &mut Self {
+        self.share_mint = Some(share_mint);
+        self
     }
 
     #[inline(always)]
@@ -112,8 +159,14 @@ impl SkipCanceledSubscriptionRequestBuilder {
     }
 
     #[inline(always)]
-    pub fn owner(&mut self, owner: solana_pubkey::Pubkey) -> &mut Self {
-        self.owner = Some(owner);
+    pub fn user_share_account(&mut self, user_share_account: solana_pubkey::Pubkey) -> &mut Self {
+        self.user_share_account = Some(user_share_account);
+        self
+    }
+
+    #[inline(always)]
+    pub fn share_token_program(&mut self, share_token_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.share_token_program = Some(share_token_program);
         self
     }
 
@@ -143,10 +196,18 @@ impl SkipCanceledSubscriptionRequestBuilder {
 
     #[allow(clippy::clone_on_copy)]
     pub fn instruction(&self) -> solana_instruction::Instruction {
-        let accounts = SkipCanceledSubscriptionRequest {
+        let accounts = CancelQueuedRedemptionRequest {
+            user: self.user.expect("user is not set"),
+            asset_mint: self.asset_mint.expect("asset_mint is not set"),
+            share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
             request: self.request.expect("request is not set"),
-            owner: self.owner.expect("owner is not set"),
+            user_share_account: self
+                .user_share_account
+                .expect("user_share_account is not set"),
+            share_token_program: self
+                .share_token_program
+                .expect("share_token_program is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
@@ -156,41 +217,61 @@ impl SkipCanceledSubscriptionRequestBuilder {
     }
 }
 
-/// `skip_canceled_subscription_request` CPI accounts.
-pub struct SkipCanceledSubscriptionRequestCpiAccounts<'a, 'b> {
+/// `cancel_queued_redemption_request` CPI accounts.
+pub struct CancelQueuedRedemptionRequestCpiAccounts<'a, 'b> {
+    pub user: &'b solana_account_info::AccountInfo<'a>,
+
+    pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
+
+    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
+
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub request: &'b solana_account_info::AccountInfo<'a>,
 
-    pub owner: &'b solana_account_info::AccountInfo<'a>,
+    pub user_share_account: &'b solana_account_info::AccountInfo<'a>,
+
+    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
-/// `skip_canceled_subscription_request` CPI instruction.
-pub struct SkipCanceledSubscriptionRequestCpi<'a, 'b> {
+/// `cancel_queued_redemption_request` CPI instruction.
+pub struct CancelQueuedRedemptionRequestCpi<'a, 'b> {
     /// The program to invoke.
     pub __program: &'b solana_account_info::AccountInfo<'a>,
 
+    pub user: &'b solana_account_info::AccountInfo<'a>,
+
+    pub asset_mint: &'b solana_account_info::AccountInfo<'a>,
+
+    pub share_mint: &'b solana_account_info::AccountInfo<'a>,
+
     pub vault: &'b solana_account_info::AccountInfo<'a>,
 
     pub request: &'b solana_account_info::AccountInfo<'a>,
 
-    pub owner: &'b solana_account_info::AccountInfo<'a>,
+    pub user_share_account: &'b solana_account_info::AccountInfo<'a>,
+
+    pub share_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
 
-impl<'a, 'b> SkipCanceledSubscriptionRequestCpi<'a, 'b> {
+impl<'a, 'b> CancelQueuedRedemptionRequestCpi<'a, 'b> {
     pub fn new(
         program: &'b solana_account_info::AccountInfo<'a>,
-        accounts: SkipCanceledSubscriptionRequestCpiAccounts<'a, 'b>,
+        accounts: CancelQueuedRedemptionRequestCpiAccounts<'a, 'b>,
     ) -> Self {
         Self {
             __program: program,
+            user: accounts.user,
+            asset_mint: accounts.asset_mint,
+            share_mint: accounts.share_mint,
             vault: accounts.vault,
             request: accounts.request,
-            owner: accounts.owner,
+            user_share_account: accounts.user_share_account,
+            share_token_program: accounts.share_token_program,
             system_program: accounts.system_program,
         }
     }
@@ -221,13 +302,29 @@ impl<'a, 'b> SkipCanceledSubscriptionRequestCpi<'a, 'b> {
         signers_seeds: &[&[&[u8]]],
         remaining_accounts: &[(&'b solana_account_info::AccountInfo<'a>, bool, bool)],
     ) -> solana_program_error::ProgramResult {
-        let mut accounts = Vec::with_capacity(4 + remaining_accounts.len());
+        let mut accounts = Vec::with_capacity(8 + remaining_accounts.len());
+        accounts.push(solana_instruction::AccountMeta::new(*self.user.key, true));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.asset_mint.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.share_mint.key,
+            false,
+        ));
         accounts.push(solana_instruction::AccountMeta::new(*self.vault.key, false));
         accounts.push(solana_instruction::AccountMeta::new(
             *self.request.key,
             false,
         ));
-        accounts.push(solana_instruction::AccountMeta::new(*self.owner.key, false));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.user_share_account.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.share_token_program.key,
+            false,
+        ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.system_program.key,
             false,
@@ -239,7 +336,7 @@ impl<'a, 'b> SkipCanceledSubscriptionRequestCpi<'a, 'b> {
                 is_writable: remaining_account.2,
             })
         });
-        let data = SkipCanceledSubscriptionRequestInstructionData::new()
+        let data = CancelQueuedRedemptionRequestInstructionData::new()
             .try_to_vec()
             .unwrap();
 
@@ -248,11 +345,15 @@ impl<'a, 'b> SkipCanceledSubscriptionRequestCpi<'a, 'b> {
             accounts,
             data,
         };
-        let mut account_infos = Vec::with_capacity(5 + remaining_accounts.len());
+        let mut account_infos = Vec::with_capacity(9 + remaining_accounts.len());
         account_infos.push(self.__program.clone());
+        account_infos.push(self.user.clone());
+        account_infos.push(self.asset_mint.clone());
+        account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.request.clone());
-        account_infos.push(self.owner.clone());
+        account_infos.push(self.user_share_account.clone());
+        account_infos.push(self.share_token_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -266,30 +367,62 @@ impl<'a, 'b> SkipCanceledSubscriptionRequestCpi<'a, 'b> {
     }
 }
 
-/// Instruction builder for `SkipCanceledSubscriptionRequest` via CPI.
+/// Instruction builder for `CancelQueuedRedemptionRequest` via CPI.
 ///
 /// ### Accounts:
 ///
-///   0. `[writable]` vault
-///   1. `[writable]` request
-///   2. `[writable]` owner
-///   3. `[]` system_program
+///   0. `[writable, signer]` user
+///   1. `[]` asset_mint
+///   2. `[writable]` share_mint
+///   3. `[writable]` vault
+///   4. `[writable]` request
+///   5. `[writable]` user_share_account
+///   6. `[]` share_token_program
+///   7. `[]` system_program
 #[derive(Clone, Debug)]
-pub struct SkipCanceledSubscriptionRequestCpiBuilder<'a, 'b> {
-    instruction: Box<SkipCanceledSubscriptionRequestCpiBuilderInstruction<'a, 'b>>,
+pub struct CancelQueuedRedemptionRequestCpiBuilder<'a, 'b> {
+    instruction: Box<CancelQueuedRedemptionRequestCpiBuilderInstruction<'a, 'b>>,
 }
 
-impl<'a, 'b> SkipCanceledSubscriptionRequestCpiBuilder<'a, 'b> {
+impl<'a, 'b> CancelQueuedRedemptionRequestCpiBuilder<'a, 'b> {
     pub fn new(program: &'b solana_account_info::AccountInfo<'a>) -> Self {
-        let instruction = Box::new(SkipCanceledSubscriptionRequestCpiBuilderInstruction {
+        let instruction = Box::new(CancelQueuedRedemptionRequestCpiBuilderInstruction {
             __program: program,
+            user: None,
+            asset_mint: None,
+            share_mint: None,
             vault: None,
             request: None,
-            owner: None,
+            user_share_account: None,
+            share_token_program: None,
             system_program: None,
             __remaining_accounts: Vec::new(),
         });
         Self { instruction }
+    }
+
+    #[inline(always)]
+    pub fn user(&mut self, user: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
+        self.instruction.user = Some(user);
+        self
+    }
+
+    #[inline(always)]
+    pub fn asset_mint(
+        &mut self,
+        asset_mint: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.asset_mint = Some(asset_mint);
+        self
+    }
+
+    #[inline(always)]
+    pub fn share_mint(
+        &mut self,
+        share_mint: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.share_mint = Some(share_mint);
+        self
     }
 
     #[inline(always)]
@@ -305,8 +438,20 @@ impl<'a, 'b> SkipCanceledSubscriptionRequestCpiBuilder<'a, 'b> {
     }
 
     #[inline(always)]
-    pub fn owner(&mut self, owner: &'b solana_account_info::AccountInfo<'a>) -> &mut Self {
-        self.instruction.owner = Some(owner);
+    pub fn user_share_account(
+        &mut self,
+        user_share_account: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.user_share_account = Some(user_share_account);
+        self
+    }
+
+    #[inline(always)]
+    pub fn share_token_program(
+        &mut self,
+        share_token_program: &'b solana_account_info::AccountInfo<'a>,
+    ) -> &mut Self {
+        self.instruction.share_token_program = Some(share_token_program);
         self
     }
 
@@ -357,14 +502,28 @@ impl<'a, 'b> SkipCanceledSubscriptionRequestCpiBuilder<'a, 'b> {
     #[allow(clippy::clone_on_copy)]
     #[allow(clippy::vec_init_then_push)]
     pub fn invoke_signed(&self, signers_seeds: &[&[&[u8]]]) -> solana_program_error::ProgramResult {
-        let instruction = SkipCanceledSubscriptionRequestCpi {
+        let instruction = CancelQueuedRedemptionRequestCpi {
             __program: self.instruction.__program,
+
+            user: self.instruction.user.expect("user is not set"),
+
+            asset_mint: self.instruction.asset_mint.expect("asset_mint is not set"),
+
+            share_mint: self.instruction.share_mint.expect("share_mint is not set"),
 
             vault: self.instruction.vault.expect("vault is not set"),
 
             request: self.instruction.request.expect("request is not set"),
 
-            owner: self.instruction.owner.expect("owner is not set"),
+            user_share_account: self
+                .instruction
+                .user_share_account
+                .expect("user_share_account is not set"),
+
+            share_token_program: self
+                .instruction
+                .share_token_program
+                .expect("share_token_program is not set"),
 
             system_program: self
                 .instruction
@@ -379,11 +538,15 @@ impl<'a, 'b> SkipCanceledSubscriptionRequestCpiBuilder<'a, 'b> {
 }
 
 #[derive(Clone, Debug)]
-struct SkipCanceledSubscriptionRequestCpiBuilderInstruction<'a, 'b> {
+struct CancelQueuedRedemptionRequestCpiBuilderInstruction<'a, 'b> {
     __program: &'b solana_account_info::AccountInfo<'a>,
+    user: Option<&'b solana_account_info::AccountInfo<'a>>,
+    asset_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
+    share_mint: Option<&'b solana_account_info::AccountInfo<'a>>,
     vault: Option<&'b solana_account_info::AccountInfo<'a>>,
     request: Option<&'b solana_account_info::AccountInfo<'a>>,
-    owner: Option<&'b solana_account_info::AccountInfo<'a>>,
+    user_share_account: Option<&'b solana_account_info::AccountInfo<'a>>,
+    share_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     system_program: Option<&'b solana_account_info::AccountInfo<'a>>,
     /// Additional instruction accounts `(AccountInfo, is_writable, is_signer)`.
     __remaining_accounts: Vec<(&'b solana_account_info::AccountInfo<'a>, bool, bool)>,

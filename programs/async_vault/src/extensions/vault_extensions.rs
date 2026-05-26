@@ -17,6 +17,7 @@ pub enum ExtensionType {
     PausableSubscriptions = 3,
     PausableRedemptions = 4,
     SubscriptionQueue = 5,
+    RedemptionQueue = 6,
 }
 
 impl ExtensionType {
@@ -27,6 +28,7 @@ impl ExtensionType {
             3 => Some(Self::PausableSubscriptions),
             4 => Some(Self::PausableRedemptions),
             5 => Some(Self::SubscriptionQueue),
+            6 => Some(Self::RedemptionQueue),
             _ => None,
         }
     }
@@ -35,7 +37,7 @@ impl ExtensionType {
         match self {
             Self::DepositFee | Self::WithdrawalFee => 9,
             Self::PausableSubscriptions | Self::PausableRedemptions => 1,
-            Self::SubscriptionQueue => 16,
+            Self::SubscriptionQueue | Self::RedemptionQueue => 16,
         }
     }
 

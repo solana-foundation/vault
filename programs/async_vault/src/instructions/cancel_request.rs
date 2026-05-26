@@ -7,6 +7,7 @@ use vault_common::VaultProgramError;
 use crate::{
     error::AsyncVaultError,
     extensions::{
+        redemption_queue::processor::RedemptionQueueRequest,
         request_extensions::has_request_extension,
         subscription_queue::processor::SubscriptionQueueRequest,
     },
@@ -30,7 +31,7 @@ pub struct CancelRequest<'info> {
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump = vault.bump
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(
         mut,
@@ -38,7 +39,7 @@ pub struct CancelRequest<'info> {
         constraint = request.owner == user.key() @ AsyncVaultError::UnauthorizedSigner,
         has_one = vault,
     )]
-    pub request: Account<'info, Request>,
+    pub request: Box<Account<'info, Request>>,
 
     #[account(
         mut,
@@ -72,6 +73,7 @@ pub struct CancelRequest<'info> {
 impl<'info> CancelRequest<'info> {
     /// Transfers deposited assets from the pending vault back to the user's token account,
     /// using the vault's PDA authority to sign the CPI transfer.
+    #[inline(never)]
     pub fn transfer_assets_to_user(&self, amount: u64) -> Result<()> {
         let asset_pending_vault = self
             .asset_pending_vault
@@ -102,6 +104,7 @@ impl<'info> CancelRequest<'info> {
 
     /// Mints share tokens back to the user's share account to reverse a pending redeem request,
     /// using the vault's PDA authority to sign the CPI mint.
+    #[inline(never)]
     pub fn mint_shares(&self, amount: u64) -> Result<()> {
         let user_share_account = self
             .user_share_account
@@ -124,6 +127,33 @@ impl<'info> CancelRequest<'info> {
             CpiContext::new_with_signer(share_token_program.to_account_info(), cpi_accounts, seeds);
         token_interface::mint_to(cpi_ctx, amount)
     }
+
+    /// Validates that the request is not a queued deposit or queued redeem that requires its own
+    /// cancel instruction. Extracted into a separate, non-inlined function to keep the main
+    /// handler's BPF stack frame within the 4096-byte limit.
+    #[inline(never)]
+    pub fn validate_queue_extension_constraints(&self) -> Result<()> {
+        let request_info = self.request.to_account_info();
+        let request_data = request_info
+            .data
+            .try_borrow()
+            .map_err(|_| ProgramError::AccountBorrowFailed)?;
+        if self.request.request_type == RequestType::Deposit {
+            let has_queue_ext = has_request_extension::<SubscriptionQueueRequest>(&request_data);
+            require!(
+                !has_queue_ext,
+                AsyncVaultError::MustUseCancelQueuedDepositRequest,
+            );
+        }
+        if self.request.request_type == RequestType::Redeem {
+            let has_queue_ext = has_request_extension::<RedemptionQueueRequest>(&request_data);
+            require!(
+                !has_queue_ext,
+                AsyncVaultError::MustUseCancelQueuedRedemptionRequest,
+            );
+        }
+        Ok(())
+    }
 }
 
 pub fn handler(ctx: Context<CancelRequest>) -> Result<()> {
@@ -132,21 +162,7 @@ pub fn handler(ctx: Context<CancelRequest>) -> Result<()> {
         ctx.accounts.request.request_state == RequestState::Pending,
         AsyncVaultError::RequestIsNotPending,
     );
-    // Subscription-queue deposits must use cancel_queued_deposit_request so the account
-    // remains open as a tombstone for queue advancement via skip_canceled_subscription_request.
-    if ctx.accounts.request.request_type == RequestType::Deposit {
-        let request_info = ctx.accounts.request.to_account_info();
-        let request_data = request_info
-            .data
-            .try_borrow()
-            .map_err(|_| ProgramError::AccountBorrowFailed)?;
-        let has_queue_ext = has_request_extension::<SubscriptionQueueRequest>(&request_data);
-        require!(
-            !has_queue_ext,
-            AsyncVaultError::MustUseCancelQueuedDepositRequest,
-        );
-        drop(request_data);
-    }
+    ctx.accounts.validate_queue_extension_constraints()?;
     match ctx.accounts.request.request_type {
         RequestType::Deposit => {
             let refund_amount = ctx.accounts.request.amount;

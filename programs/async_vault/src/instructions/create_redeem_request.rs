@@ -4,7 +4,12 @@ use anchor_spl::token_interface::{self, Burn, Mint, TokenAccount, TokenInterface
 use vault_common::VaultProgramError;
 
 use crate::{
-    extensions,
+    extensions::{
+        self,
+        fifo_queue::next_queue_request_id,
+        redemption_queue::processor::{RedemptionQueue, RedemptionQueueRequest},
+        request_extensions::{compute_request_extension_space, init_request_extension},
+    },
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
 };
 
@@ -29,9 +34,11 @@ pub struct CreateRedeemRequest<'info> {
     )]
     pub vault: Account<'info, Vault>,
 
+    // Space is extended conditionally: if RedemptionQueue is active on the vault,
+    // extra bytes are reserved for the RedemptionQueueRequest TLV extension.
     #[account(
         init,
-        space = 8 + Request::INIT_SPACE,
+        space = 8 + Request::INIT_SPACE + compute_request_extension_space(&vault.to_account_info()),
         payer = user,
     )]
     pub request: Account<'info, Request>,
@@ -92,6 +99,16 @@ pub fn handler(ctx: Context<CreateRedeemRequest>, args: RequestArgs) -> Result<(
         .pending_async_requests
         .checked_add(1)
         .ok_or(VaultProgramError::ArithmeticError)?;
+
+    // Extension: RedemptionQueue — increment counter and tag the request with its ID.
+    if let Some(id) =
+        next_queue_request_id::<RedemptionQueue>(&ctx.accounts.vault.to_account_info())?
+    {
+        init_request_extension(
+            &ctx.accounts.request.to_account_info(),
+            &RedemptionQueueRequest { id },
+        )?;
+    }
 
     Ok(())
 }

@@ -22,11 +22,11 @@ pub struct CancelQueuedDepositRequest {
 
     pub request: solana_pubkey::Pubkey,
 
-    pub user_token_account: Option<solana_pubkey::Pubkey>,
+    pub user_token_account: solana_pubkey::Pubkey,
 
-    pub asset_pending_vault: Option<solana_pubkey::Pubkey>,
+    pub asset_pending_vault: solana_pubkey::Pubkey,
 
-    pub asset_token_program: Option<solana_pubkey::Pubkey>,
+    pub asset_token_program: solana_pubkey::Pubkey,
 
     pub system_program: solana_pubkey::Pubkey,
 }
@@ -54,39 +54,18 @@ impl CancelQueuedDepositRequest {
         ));
         accounts.push(solana_instruction::AccountMeta::new(self.vault, false));
         accounts.push(solana_instruction::AccountMeta::new(self.request, false));
-        if let Some(user_token_account) = self.user_token_account {
-            accounts.push(solana_instruction::AccountMeta::new(
-                user_token_account,
-                false,
-            ));
-        } else {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                crate::ASYNC_VAULT_ID,
-                false,
-            ));
-        }
-        if let Some(asset_pending_vault) = self.asset_pending_vault {
-            accounts.push(solana_instruction::AccountMeta::new(
-                asset_pending_vault,
-                false,
-            ));
-        } else {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                crate::ASYNC_VAULT_ID,
-                false,
-            ));
-        }
-        if let Some(asset_token_program) = self.asset_token_program {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                asset_token_program,
-                false,
-            ));
-        } else {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                crate::ASYNC_VAULT_ID,
-                false,
-            ));
-        }
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.user_token_account,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            self.asset_pending_vault,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            self.asset_token_program,
+            false,
+        ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             self.system_program,
             false,
@@ -137,9 +116,9 @@ impl Default for CancelQueuedDepositRequestInstructionData {
 ///   2. `[]` share_mint
 ///   3. `[writable]` vault
 ///   4. `[writable]` request
-///   5. `[writable, optional]` user_token_account
-///   6. `[writable, optional]` asset_pending_vault
-///   7. `[optional]` asset_token_program
+///   5. `[writable]` user_token_account
+///   6. `[writable]` asset_pending_vault
+///   7. `[]` asset_token_program
 ///   8. `[optional]` system_program (default to `11111111111111111111111111111111`)
 #[derive(Clone, Debug, Default)]
 pub struct CancelQueuedDepositRequestBuilder {
@@ -190,33 +169,21 @@ impl CancelQueuedDepositRequestBuilder {
         self
     }
 
-    /// `[optional account]`
     #[inline(always)]
-    pub fn user_token_account(
-        &mut self,
-        user_token_account: Option<solana_pubkey::Pubkey>,
-    ) -> &mut Self {
-        self.user_token_account = user_token_account;
+    pub fn user_token_account(&mut self, user_token_account: solana_pubkey::Pubkey) -> &mut Self {
+        self.user_token_account = Some(user_token_account);
         self
     }
 
-    /// `[optional account]`
     #[inline(always)]
-    pub fn asset_pending_vault(
-        &mut self,
-        asset_pending_vault: Option<solana_pubkey::Pubkey>,
-    ) -> &mut Self {
-        self.asset_pending_vault = asset_pending_vault;
+    pub fn asset_pending_vault(&mut self, asset_pending_vault: solana_pubkey::Pubkey) -> &mut Self {
+        self.asset_pending_vault = Some(asset_pending_vault);
         self
     }
 
-    /// `[optional account]`
     #[inline(always)]
-    pub fn asset_token_program(
-        &mut self,
-        asset_token_program: Option<solana_pubkey::Pubkey>,
-    ) -> &mut Self {
-        self.asset_token_program = asset_token_program;
+    pub fn asset_token_program(&mut self, asset_token_program: solana_pubkey::Pubkey) -> &mut Self {
+        self.asset_token_program = Some(asset_token_program);
         self
     }
 
@@ -252,9 +219,15 @@ impl CancelQueuedDepositRequestBuilder {
             share_mint: self.share_mint.expect("share_mint is not set"),
             vault: self.vault.expect("vault is not set"),
             request: self.request.expect("request is not set"),
-            user_token_account: self.user_token_account,
-            asset_pending_vault: self.asset_pending_vault,
-            asset_token_program: self.asset_token_program,
+            user_token_account: self
+                .user_token_account
+                .expect("user_token_account is not set"),
+            asset_pending_vault: self
+                .asset_pending_vault
+                .expect("asset_pending_vault is not set"),
+            asset_token_program: self
+                .asset_token_program
+                .expect("asset_token_program is not set"),
             system_program: self
                 .system_program
                 .unwrap_or(solana_pubkey::pubkey!("11111111111111111111111111111111")),
@@ -276,11 +249,11 @@ pub struct CancelQueuedDepositRequestCpiAccounts<'a, 'b> {
 
     pub request: &'b solana_account_info::AccountInfo<'a>,
 
-    pub user_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
+    pub user_token_account: &'b solana_account_info::AccountInfo<'a>,
 
-    pub asset_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    pub asset_pending_vault: &'b solana_account_info::AccountInfo<'a>,
 
-    pub asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
+    pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
@@ -300,11 +273,11 @@ pub struct CancelQueuedDepositRequestCpi<'a, 'b> {
 
     pub request: &'b solana_account_info::AccountInfo<'a>,
 
-    pub user_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
+    pub user_token_account: &'b solana_account_info::AccountInfo<'a>,
 
-    pub asset_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+    pub asset_pending_vault: &'b solana_account_info::AccountInfo<'a>,
 
-    pub asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
+    pub asset_token_program: &'b solana_account_info::AccountInfo<'a>,
 
     pub system_program: &'b solana_account_info::AccountInfo<'a>,
 }
@@ -369,39 +342,18 @@ impl<'a, 'b> CancelQueuedDepositRequestCpi<'a, 'b> {
             *self.request.key,
             false,
         ));
-        if let Some(user_token_account) = self.user_token_account {
-            accounts.push(solana_instruction::AccountMeta::new(
-                *user_token_account.key,
-                false,
-            ));
-        } else {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                crate::ASYNC_VAULT_ID,
-                false,
-            ));
-        }
-        if let Some(asset_pending_vault) = self.asset_pending_vault {
-            accounts.push(solana_instruction::AccountMeta::new(
-                *asset_pending_vault.key,
-                false,
-            ));
-        } else {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                crate::ASYNC_VAULT_ID,
-                false,
-            ));
-        }
-        if let Some(asset_token_program) = self.asset_token_program {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                *asset_token_program.key,
-                false,
-            ));
-        } else {
-            accounts.push(solana_instruction::AccountMeta::new_readonly(
-                crate::ASYNC_VAULT_ID,
-                false,
-            ));
-        }
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.user_token_account.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new(
+            *self.asset_pending_vault.key,
+            false,
+        ));
+        accounts.push(solana_instruction::AccountMeta::new_readonly(
+            *self.asset_token_program.key,
+            false,
+        ));
         accounts.push(solana_instruction::AccountMeta::new_readonly(
             *self.system_program.key,
             false,
@@ -429,15 +381,9 @@ impl<'a, 'b> CancelQueuedDepositRequestCpi<'a, 'b> {
         account_infos.push(self.share_mint.clone());
         account_infos.push(self.vault.clone());
         account_infos.push(self.request.clone());
-        if let Some(user_token_account) = self.user_token_account {
-            account_infos.push(user_token_account.clone());
-        }
-        if let Some(asset_pending_vault) = self.asset_pending_vault {
-            account_infos.push(asset_pending_vault.clone());
-        }
-        if let Some(asset_token_program) = self.asset_token_program {
-            account_infos.push(asset_token_program.clone());
-        }
+        account_infos.push(self.user_token_account.clone());
+        account_infos.push(self.asset_pending_vault.clone());
+        account_infos.push(self.asset_token_program.clone());
         account_infos.push(self.system_program.clone());
         remaining_accounts
             .iter()
@@ -460,9 +406,9 @@ impl<'a, 'b> CancelQueuedDepositRequestCpi<'a, 'b> {
 ///   2. `[]` share_mint
 ///   3. `[writable]` vault
 ///   4. `[writable]` request
-///   5. `[writable, optional]` user_token_account
-///   6. `[writable, optional]` asset_pending_vault
-///   7. `[optional]` asset_token_program
+///   5. `[writable]` user_token_account
+///   6. `[writable]` asset_pending_vault
+///   7. `[]` asset_token_program
 ///   8. `[]` system_program
 #[derive(Clone, Debug)]
 pub struct CancelQueuedDepositRequestCpiBuilder<'a, 'b> {
@@ -523,33 +469,30 @@ impl<'a, 'b> CancelQueuedDepositRequestCpiBuilder<'a, 'b> {
         self
     }
 
-    /// `[optional account]`
     #[inline(always)]
     pub fn user_token_account(
         &mut self,
-        user_token_account: Option<&'b solana_account_info::AccountInfo<'a>>,
+        user_token_account: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.user_token_account = user_token_account;
+        self.instruction.user_token_account = Some(user_token_account);
         self
     }
 
-    /// `[optional account]`
     #[inline(always)]
     pub fn asset_pending_vault(
         &mut self,
-        asset_pending_vault: Option<&'b solana_account_info::AccountInfo<'a>>,
+        asset_pending_vault: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.asset_pending_vault = asset_pending_vault;
+        self.instruction.asset_pending_vault = Some(asset_pending_vault);
         self
     }
 
-    /// `[optional account]`
     #[inline(always)]
     pub fn asset_token_program(
         &mut self,
-        asset_token_program: Option<&'b solana_account_info::AccountInfo<'a>>,
+        asset_token_program: &'b solana_account_info::AccountInfo<'a>,
     ) -> &mut Self {
-        self.instruction.asset_token_program = asset_token_program;
+        self.instruction.asset_token_program = Some(asset_token_program);
         self
     }
 
@@ -613,11 +556,20 @@ impl<'a, 'b> CancelQueuedDepositRequestCpiBuilder<'a, 'b> {
 
             request: self.instruction.request.expect("request is not set"),
 
-            user_token_account: self.instruction.user_token_account,
+            user_token_account: self
+                .instruction
+                .user_token_account
+                .expect("user_token_account is not set"),
 
-            asset_pending_vault: self.instruction.asset_pending_vault,
+            asset_pending_vault: self
+                .instruction
+                .asset_pending_vault
+                .expect("asset_pending_vault is not set"),
 
-            asset_token_program: self.instruction.asset_token_program,
+            asset_token_program: self
+                .instruction
+                .asset_token_program
+                .expect("asset_token_program is not set"),
 
             system_program: self
                 .instruction

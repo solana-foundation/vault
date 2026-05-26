@@ -15,19 +15,21 @@ pub const REQUEST_TLV_START: usize = 8 + Request::INIT_SPACE;
 #[repr(u16)]
 pub enum RequestExtensionType {
     SubscriptionQueueRequest = 1,
+    RedemptionQueueRequest = 2,
 }
 
 impl RequestExtensionType {
     pub fn try_from_u16(value: u16) -> Option<Self> {
         match value {
             1 => Some(Self::SubscriptionQueueRequest),
+            2 => Some(Self::RedemptionQueueRequest),
             _ => None,
         }
     }
 
     pub const fn data_len(&self) -> usize {
         match self {
-            Self::SubscriptionQueueRequest => 8,
+            Self::SubscriptionQueueRequest | Self::RedemptionQueueRequest => 8,
         }
     }
 }
@@ -106,6 +108,9 @@ pub fn compute_request_extension_space(vault_info: &AccountInfo) -> usize {
     let mut space = 0;
     if has_extension_raw(tlv, ExtensionType::SubscriptionQueue as u16) {
         space += TLV_HEADER_SIZE + RequestExtensionType::SubscriptionQueueRequest.data_len();
+    }
+    if has_extension_raw(tlv, ExtensionType::RedemptionQueue as u16) {
+        space += TLV_HEADER_SIZE + RequestExtensionType::RedemptionQueueRequest.data_len();
     }
     space
 }

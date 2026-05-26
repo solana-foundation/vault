@@ -8,16 +8,16 @@ use crate::{
     state::Vault,
 };
 
-use super::super::processor::SubscriptionQueue;
+use super::super::processor::RedemptionQueue;
 
 #[derive(Accounts)]
-pub struct InitializeSubscriptionQueue<'info> {
+pub struct InitializeRedemptionQueue<'info> {
     #[account(mut)]
     pub payer: Signer<'info>,
     pub authority: Signer<'info>,
     #[account(
         mut,
-        realloc = vault.to_account_info().data_len() + SubscriptionQueue::TLV_SIZE,
+        realloc = vault.to_account_info().data_len() + RedemptionQueue::TLV_SIZE,
         realloc::payer = payer,
         realloc::zero = false,
         constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
@@ -26,12 +26,12 @@ pub struct InitializeSubscriptionQueue<'info> {
     pub system_program: Program<'info, System>,
 }
 
-/// Adds the SubscriptionQueue TLV extension to the vault, initializing both counters
+/// Adds the RedemptionQueue TLV extension to the vault, initializing both counters
 /// to zero. Must be called before vault initialization.
-pub fn handler(ctx: Context<InitializeSubscriptionQueue>) -> Result<()> {
+pub fn handler(ctx: Context<InitializeRedemptionQueue>) -> Result<()> {
     init_vault_extension(
         &ctx.accounts.vault.to_account_info(),
         &ctx.accounts.vault,
-        &SubscriptionQueue::zeroed(),
+        &RedemptionQueue::zeroed(),
     )
 }

@@ -105,6 +105,12 @@ pub enum AsyncVaultError {
     /// 6031 - Queued deposit requests must be canceled via cancel_queued_deposit_request.
     #[error("Queued deposit requests must be canceled via cancel_queued_deposit_request.")]
     MustUseCancelQueuedDepositRequest = 0x178F,
+    /// 6032 - Redeem request is not next in the redemption queue
+    #[error("Redeem request is not next in the redemption queue")]
+    RedemptionQueueOutOfOrder = 0x1790,
+    /// 6033 - Queued redeem requests must be canceled via cancel_queued_redemption_request.
+    #[error("Queued redeem requests must be canceled via cancel_queued_redemption_request.")]
+    MustUseCancelQueuedRedemptionRequest = 0x1791,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {
