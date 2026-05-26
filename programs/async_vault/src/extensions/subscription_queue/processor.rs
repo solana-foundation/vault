@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
@@ -40,10 +39,8 @@ impl FifoQueue for SubscriptionQueue {
     }
 
     fn increment_total(&mut self) -> Result<u64> {
-        self.all_time_total_subscription_requests = self
-            .all_time_total_subscription_requests
-            .checked_add(1)
-            .ok_or(VaultProgramError::ArithmeticError)?;
+        self.all_time_total_subscription_requests =
+            self.all_time_total_subscription_requests.wrapping_add(1);
         Ok(self.all_time_total_subscription_requests)
     }
 }
@@ -52,8 +49,8 @@ impl FifoQueue for SubscriptionQueue {
 #[derive(bytemuck::Pod, bytemuck::Zeroable, Clone, Copy)]
 #[repr(C)]
 pub struct SubscriptionQueueRequest {
-    /// Monotonically increasing ID matching `all_time_total_subscription_requests`
-    /// at the time this request was created.
+    /// Sequential ID assigned at creation time. Wraps to 0 after `u64::MAX`; uniqueness
+    /// is not guaranteed, but FIFO ordering is preserved within any active request window.
     pub id: u64,
 }
 
@@ -64,5 +61,30 @@ impl RequestExtension for SubscriptionQueueRequest {
 impl QueueRequest for SubscriptionQueueRequest {
     fn id(&self) -> u64 {
         self.id
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_increment_total_normal() {
+        let mut queue = SubscriptionQueue {
+            all_time_total_subscription_requests: 0,
+            last_processed_subscription_request_index: 0,
+        };
+        assert_eq!(queue.increment_total().unwrap(), 1);
+        assert_eq!(queue.all_time_total_subscription_requests, 1);
+    }
+
+    #[test]
+    fn test_increment_total_wraps_at_max() {
+        let mut queue = SubscriptionQueue {
+            all_time_total_subscription_requests: u64::MAX,
+            last_processed_subscription_request_index: 0,
+        };
+        assert_eq!(queue.increment_total().unwrap(), 0);
+        assert_eq!(queue.all_time_total_subscription_requests, 0);
     }
 }

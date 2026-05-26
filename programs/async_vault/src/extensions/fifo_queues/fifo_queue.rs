@@ -1,5 +1,4 @@
 use anchor_lang::prelude::*;
-use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
@@ -88,10 +87,7 @@ pub fn check_and_advance_queue<Q: FifoQueue, R: QueueRequest>(
         .ok_or(AsyncVaultError::UninitializedExtension)?;
     drop(request_data);
 
-    let expected = queue
-        .last_processed()
-        .checked_add(1)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+    let expected = queue.last_processed().wrapping_add(1);
 
     require!(req_ext.id() == expected, Q::OUT_OF_ORDER_ERROR);
 
