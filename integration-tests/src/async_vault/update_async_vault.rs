@@ -6,7 +6,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, set_up_async_vault};
+use crate::async_helper_functions::{assert_error_code, set_up_async_vault};
 
 #[test_case(Some(true), false; "pause vault")]
 #[test_case(Some(false), false; "unpause vault")]

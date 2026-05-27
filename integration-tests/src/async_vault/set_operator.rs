@@ -7,7 +7,7 @@ use async_vault_client::{
 use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 
-use crate::helper_functions::set_up_async_vault;
+use crate::async_helper_functions::set_up_async_vault;
 
 #[test]
 fn test_set_operator_succeeds() {

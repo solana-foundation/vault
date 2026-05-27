@@ -10,7 +10,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{
+use crate::async_helper_functions::{
     assert_error_code, helper_mint_to, set_share_balance, set_up_async_vault,
     set_vault_total_asset_balance,
 };
@@ -581,7 +581,7 @@ fn test_fifo_ordering_approve_then_reject() {
     );
 
     // Reject request 2 — shares minted back, account closed
-    let share_balance_before = crate::helper_functions::get_token_account_amount(
+    let share_balance_before = crate::async_helper_functions::get_token_account_amount(
         &svm.get_account(&user_share_account).unwrap(),
     );
     reject_redemption_request(
@@ -602,7 +602,7 @@ fn test_fifo_ordering_approve_then_reject() {
         2
     );
     assert_eq!(
-        crate::helper_functions::get_token_account_amount(
+        crate::async_helper_functions::get_token_account_amount(
             &svm.get_account(&user_share_account).unwrap()
         ),
         share_balance_before + 100_000,
@@ -656,7 +656,7 @@ fn test_cancel_queued_redemption_then_new_request_can_be_approved() {
         user_share_account,
     ) = setup(true);
 
-    let initial_share_balance = crate::helper_functions::get_token_account_amount(
+    let initial_share_balance = crate::async_helper_functions::get_token_account_amount(
         &svm.get_account(&user_share_account).unwrap(),
     );
 
@@ -796,7 +796,7 @@ fn test_cancel_middle_request_queue_unblocks_after_skip() {
         100_000,
     );
 
-    let share_balance_before_cancel = crate::helper_functions::get_token_account_amount(
+    let share_balance_before_cancel = crate::async_helper_functions::get_token_account_amount(
         &svm.get_account(&user_share_account).unwrap(),
     );
 
@@ -819,7 +819,7 @@ fn test_cancel_middle_request_queue_unblocks_after_skip() {
         RequestState::Canceled
     );
     assert_eq!(
-        crate::helper_functions::get_token_account_amount(
+        crate::async_helper_functions::get_token_account_amount(
             &svm.get_account(&user_share_account).unwrap()
         ),
         share_balance_before_cancel + 100_000,

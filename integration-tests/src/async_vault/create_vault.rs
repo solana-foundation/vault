@@ -12,7 +12,7 @@ use solana_sdk::{
 };
 use test_case::test_case;
 
-use crate::helper_functions::{
+use crate::async_helper_functions::{
     assert_error_code, create_mint, create_mint_with_transfer_fee, PENDING_VAULT_SEED,
     RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
 };

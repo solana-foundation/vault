@@ -8,7 +8,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, set_share_balance, set_up_async_vault};
+use crate::async_helper_functions::{assert_error_code, set_share_balance, set_up_async_vault};
 
 const NAV: u128 = 1_000_000_000;
 const THRESHOLD: u64 = 1_000_000;
@@ -180,7 +180,7 @@ fn test_create_redeem_request_at_threshold() {
     let share_account = svm
         .get_account(&user_share_account)
         .expect("share account exists");
-    let before_shares = crate::helper_functions::get_token_account_amount(&share_account);
+    let before_shares = crate::async_helper_functions::get_token_account_amount(&share_account);
 
     create_redeem_request(
         &mut svm,
@@ -196,7 +196,7 @@ fn test_create_redeem_request_at_threshold() {
     let share_account_after = svm
         .get_account(&user_share_account)
         .expect("share account exists");
-    let after_shares = crate::helper_functions::get_token_account_amount(&share_account_after);
+    let after_shares = crate::async_helper_functions::get_token_account_amount(&share_account_after);
     assert_eq!(before_shares - after_shares, THRESHOLD);
 }
 

@@ -62,9 +62,6 @@ pub enum VaultProgramError {
     #[msg("The vault NAV is stale. Please update the NAV value before depositing.")]
     StaleVaultNav,
 
-    #[msg("This instruction needs the hook extension to be initialized.")]
-    HookExtensionNotInitialized,
-
     #[msg("The provided optional account is empty.")]
     OptionalAccountIsEmpty,
 
@@ -73,9 +70,6 @@ pub enum VaultProgramError {
 
     #[msg("The provided extra meta accounts pubkey does not match")]
     InvalidAccountData,
-
-    #[msg("This instruction is not available when a hook extension is active. Use the hook-aware instruction instead.")]
-    HookExtensionActive,
 
     #[msg("Mints should be different.")]
     MintsShouldBeDifferent,

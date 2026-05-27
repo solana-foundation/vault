@@ -2,7 +2,7 @@
 
 # Summary
 
-We aim to create a standard factory program that handles many of the same use cases as ERC 4626 and 7540. This is an important primitive that would make it easier and safer for others to develop on top of. By handling the subscription/redemption process within a standard implementation, we can promote more lindiness of critical Solana infrastructure, while still allowing innovation on top.
+We aim to create a standard factory program that handles many of the same use cases as ERC 7540. This is an important primitive that would make it easier and safer for others to develop on top of. By handling the subscription/redemption process within a standard implementation, we can promote more lindiness of critical Solana infrastructure, while still allowing innovation on top.
 
 ## [Glossary](./GLOSSARY.md)
 
@@ -16,7 +16,7 @@ Institutions and enterprises that want to manage tokenized funds and other asset
 
 ## **Proposal**
 
-A new program that takes inspiration from [ERC4626](https://eips.ethereum.org/EIPS/eip-4626) and other vault standards as well as the lessons from Token2022, with the intent to be highly customizable by supporting the most common use cases available as extensions.
+A new program that takes inspiration from [ERC7540](https://eips.ethereum.org/EIPS/eip-7540) and other vault standards as well as the lessons from Token2022, with the intent to be highly customizable by supporting the most common use cases available as extensions.
 
 The creation of a Vault does not create a new Mint for the share token, but rather accepts a pre-configured mint as the share token. This decouples the Vault program from future Mint configuration combinations significantly reducing complexity during Vault creation as well as reducing the likelihood of required program upgrades with new Token Extensions in the future.
 
@@ -29,10 +29,6 @@ As a corollary, the program will not initialize token accounts nor enforce ATAs.
 The primary vault implementation supporting asynchronous deposit and redemption flows, where requests are queued and settled by a vault authority. This program is intended to be used across a wide variety of applications with the most influence from Real World Asset (RWA) issuers, teams implmenting offchain strategies, and others where regulatory compliance is required.
 
 - [Sequence Diagrams](programs/async_vault/docs/SEQUENCES.md)
-
-### **Vault (Atomic Vault)**
-
-This is a MVP, it's not production ready since we have decided to focus on the Async Vault implementation.
 
 ## Feedback
 

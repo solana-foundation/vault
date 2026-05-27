@@ -10,7 +10,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, set_up_async_vault};
+use crate::async_helper_functions::{assert_error_code, set_up_async_vault};
 
 const NAV: u128 = 1_000_000_000;
 
@@ -642,7 +642,7 @@ fn test_cancel_queued_deposit_then_new_request_can_be_approved() {
         user_token_account,
     ) = setup(true);
 
-    let initial_balance = crate::helper_functions::get_token_account_amount(
+    let initial_balance = crate::async_helper_functions::get_token_account_amount(
         &svm.get_account(&user_token_account).unwrap(),
     );
 
@@ -682,14 +682,14 @@ fn test_cancel_queued_deposit_then_new_request_can_be_approved() {
 
     // Assets must be refunded
     assert_eq!(
-        crate::helper_functions::get_token_account_amount(
+        crate::async_helper_functions::get_token_account_amount(
             &svm.get_account(&user_token_account).unwrap()
         ),
         initial_balance,
         "assets must be fully refunded after cancel"
     );
     assert_eq!(
-        crate::helper_functions::get_token_account_amount(
+        crate::async_helper_functions::get_token_account_amount(
             &svm.get_account(&pending_vault_pubkey).unwrap()
         ),
         0,

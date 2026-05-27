@@ -7,7 +7,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{
+use crate::async_helper_functions::{
     assert_error_code, create_ata, get_token_account_amount, helper_mint_to, set_up_async_vault,
 };
 

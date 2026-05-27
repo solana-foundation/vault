@@ -13,7 +13,7 @@ use solana_sdk::{
 };
 use test_case::test_case;
 
-use crate::helper_functions::{
+use crate::async_helper_functions::{
     assert_error_code, get_token_account_amount, helper_mint_to, set_share_balance,
     set_up_async_vault, set_vault_total_asset_balance,
 };

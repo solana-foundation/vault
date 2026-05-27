@@ -7,7 +7,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, set_up_async_vault};
+use crate::async_helper_functions::{assert_error_code, set_up_async_vault};
 
 #[test_case(true, false ; "succeeds and preserves other fields")]
 #[test_case(true, true ; "already initialized fails")]

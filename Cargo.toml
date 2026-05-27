@@ -1,9 +1,6 @@
 [workspace]
 members = [
-    "clients/rust/dummy",
-    "clients/rust/hook",
-    "clients/rust/vault",
-    "clients/rust/async_vault",
+    "clients/rust/*",
     "integration-tests",
     "libs/vault_common",
     "programs/*"

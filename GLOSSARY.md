@@ -4,8 +4,6 @@
 
 **Share**: Token representing ownership in the vault that is transferred to the user after a successful deposit.
 
-**Atomic Vault:** A vault with core functionality that handles synchronous deposit/withdraw instructions.
-
 **Async Vault:** A vault where shares are not atomically distributed to a user during a deposit OR assets are not transferred to a user atomically during a withdrawal. The vault authority must update the NAV of the vault before pending deposits/withdrawals are claimable.
 
 **Extension:** Additional data structure that is appended to the vault account, which may include separate conditional logic during core instruction execution.

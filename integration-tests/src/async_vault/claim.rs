@@ -9,7 +9,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction};
 use test_case::test_case;
 
-use crate::helper_functions::{
+use crate::async_helper_functions::{
     assert_error_code, get_mint_supply, get_token_account_amount, helper_mint_to,
     set_share_balance, set_up_async_vault, set_vault_total_asset_balance,
 };

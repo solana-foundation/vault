@@ -4,7 +4,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::set_up_async_vault;
+use crate::async_helper_functions::set_up_async_vault;
 
 #[test_case(200 ; "update nav succeeds")]
 #[test_case(0 ; "update nav to zero succeeds")]

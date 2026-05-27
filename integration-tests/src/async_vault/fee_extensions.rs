@@ -10,7 +10,7 @@ use litesvm::{
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::helper_functions::{assert_error_code, set_up_async_vault};
+use crate::async_helper_functions::{assert_error_code, set_up_async_vault};
 
 #[derive(Clone, Copy)]
 enum FeeKind {
