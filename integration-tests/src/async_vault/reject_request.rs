@@ -8,7 +8,9 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::async_helper_functions::{get_token_account_amount, set_share_balance, set_up_async_vault};
+use crate::async_helper_functions::{
+    get_token_account_amount, set_share_balance, set_up_async_vault,
+};
 
 #[test_case(1_000_000 ; "reject deposit request refunds user")]
 #[test_case(0 ; "reject zero amount deposit succeeds")]

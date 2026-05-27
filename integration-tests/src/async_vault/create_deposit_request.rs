@@ -13,7 +13,9 @@ use solana_sdk::{
 };
 use test_case::test_case;
 
-use crate::async_helper_functions::{assert_error_code, get_token_account_amount, set_up_async_vault};
+use crate::async_helper_functions::{
+    assert_error_code, get_token_account_amount, set_up_async_vault,
+};
 
 #[test_case(1_000_000, false ; "deposit request succeeds")]
 #[test_case(1_000_000, true ; "deposit with operator succeeds")]

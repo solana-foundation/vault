@@ -196,7 +196,8 @@ fn test_create_redeem_request_at_threshold() {
     let share_account_after = svm
         .get_account(&user_share_account)
         .expect("share account exists");
-    let after_shares = crate::async_helper_functions::get_token_account_amount(&share_account_after);
+    let after_shares =
+        crate::async_helper_functions::get_token_account_amount(&share_account_after);
     assert_eq!(before_shares - after_shares, THRESHOLD);
 }
 
