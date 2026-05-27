@@ -111,6 +111,12 @@ pub enum AsyncVaultError {
     /// 6033 - Queued redeem requests must be canceled via cancel_queued_redemption_request.
     #[error("Queued redeem requests must be canceled via cancel_queued_redemption_request.")]
     MustUseCancelQueuedRedemptionRequest = 0x1791,
+    /// 6034 - Deposit amount is below the minimum subscription threshold
+    #[error("Deposit amount is below the minimum subscription threshold")]
+    SubscriptionAmountBelowMinimum = 0x1792,
+    /// 6035 - Redemption amount is below the minimum redemption threshold
+    #[error("Redemption amount is below the minimum redemption threshold")]
+    RedemptionAmountBelowMinimum = 0x1793,
 }
 
 impl From<AsyncVaultError> for solana_program_error::ProgramError {

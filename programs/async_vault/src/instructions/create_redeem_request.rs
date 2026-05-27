@@ -75,6 +75,11 @@ pub fn handler(ctx: Context<CreateRedeemRequest>, args: RequestArgs) -> Result<(
         &ctx.accounts.vault.to_account_info(),
     )?;
 
+    extensions::min_redemption::check_min_redemption_amount(
+        &ctx.accounts.vault.to_account_info(),
+        args.amount,
+    )?;
+
     require!(args.amount > 0, VaultProgramError::InsufficientRedeemAmount);
 
     ctx.accounts.burn_shares(args.amount)?;

@@ -1,4 +1,6 @@
 pub mod fee;
+pub mod min_redemption;
+pub mod min_subscription;
 pub mod pausable_redemptions;
 pub mod pausable_subscriptions;
 pub mod redemption_queue;
@@ -19,6 +21,8 @@ pub enum ExtensionType {
     PausableRedemptions = 4,
     SubscriptionQueue = 5,
     RedemptionQueue = 6,
+    MinSubscription = 7,
+    MinRedemption = 8,
 }
 
 #[derive(Clone, Copy)]

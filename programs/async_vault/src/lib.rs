@@ -163,6 +163,44 @@ pub mod async_vault {
         )
     }
 
+    /// Adds MinSubscription extension to the vault. Must be called before vault
+    /// initialization. When active, deposit requests below the threshold are rejected.
+    /// Requires authority signature.
+    pub fn initialize_min_subscription(
+        ctx: Context<InitMinSubscription>,
+        args: InitMinSubscriptionArgs,
+    ) -> Result<()> {
+        extensions::min_subscription::instructions::initialize_min_subscription::handler(ctx, args)
+    }
+
+    /// Updates the threshold of an existing MinSubscription extension.
+    /// Requires authority signature.
+    pub fn update_min_subscription(
+        ctx: Context<BasicExtensionAccounts>,
+        args: UpdateMinSubscriptionArgs,
+    ) -> Result<()> {
+        extensions::min_subscription::instructions::update_min_subscription::handler(ctx, args)
+    }
+
+    /// Adds MinRedemption extension to the vault. Must be called before vault
+    /// initialization. When active, redemption requests below the threshold are rejected.
+    /// Requires authority signature.
+    pub fn initialize_min_redemption(
+        ctx: Context<InitMinRedemption>,
+        args: InitMinRedemptionArgs,
+    ) -> Result<()> {
+        extensions::min_redemption::instructions::initialize_min_redemption::handler(ctx, args)
+    }
+
+    /// Updates the threshold of an existing MinRedemption extension.
+    /// Requires authority signature.
+    pub fn update_min_redemption(
+        ctx: Context<BasicExtensionAccounts>,
+        args: UpdateMinRedemptionArgs,
+    ) -> Result<()> {
+        extensions::min_redemption::instructions::update_min_redemption::handler(ctx, args)
+    }
+
     /// Adds a SubscriptionQueue TLV extension to the vault, enabling FIFO ordering
     /// for deposit requests. Must be called before vault initialization. Requires authority
     /// signature.

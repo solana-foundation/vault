@@ -18,6 +18,8 @@ pub enum ExtensionType {
     PausableRedemptions = 4,
     SubscriptionQueue = 5,
     RedemptionQueue = 6,
+    MinSubscription = 7,
+    MinRedemption = 8,
 }
 
 impl ExtensionType {
@@ -29,6 +31,8 @@ impl ExtensionType {
             4 => Some(Self::PausableRedemptions),
             5 => Some(Self::SubscriptionQueue),
             6 => Some(Self::RedemptionQueue),
+            7 => Some(Self::MinSubscription),
+            8 => Some(Self::MinRedemption),
             _ => None,
         }
     }
@@ -38,6 +42,7 @@ impl ExtensionType {
             Self::DepositFee | Self::WithdrawalFee => 9,
             Self::PausableSubscriptions | Self::PausableRedemptions => 1,
             Self::SubscriptionQueue | Self::RedemptionQueue => 16,
+            Self::MinSubscription | Self::MinRedemption => 8,
         }
     }
 

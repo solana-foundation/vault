@@ -14,6 +14,8 @@ pub(crate) mod r#create_deposit_request;
 pub(crate) mod r#create_redeem_request;
 pub(crate) mod r#create_vault;
 pub(crate) mod r#initialize_deposit_fee;
+pub(crate) mod r#initialize_min_redemption;
+pub(crate) mod r#initialize_min_subscription;
 pub(crate) mod r#initialize_pausable_redemptions;
 pub(crate) mod r#initialize_pausable_subscriptions;
 pub(crate) mod r#initialize_redemption_queue;
@@ -25,6 +27,8 @@ pub(crate) mod r#reject_request;
 pub(crate) mod r#set_operator;
 pub(crate) mod r#skip_canceled_queue_request;
 pub(crate) mod r#update_deposit_fee;
+pub(crate) mod r#update_min_redemption;
+pub(crate) mod r#update_min_subscription;
 pub(crate) mod r#update_pausable_redemptions;
 pub(crate) mod r#update_pausable_subscriptions;
 pub(crate) mod r#update_vault;
@@ -36,11 +40,12 @@ pub use self::{
     r#accept_authority_invitation::*, r#approve_request::*, r#cancel_queued_deposit_request::*,
     r#cancel_queued_redemption_request::*, r#cancel_request::*, r#claim::*,
     r#create_deposit_request::*, r#create_redeem_request::*, r#create_vault::*,
-    r#initialize_deposit_fee::*, r#initialize_pausable_redemptions::*,
-    r#initialize_pausable_subscriptions::*, r#initialize_redemption_queue::*,
-    r#initialize_subscription_queue::*, r#initialize_vault::*, r#initialize_withdrawal_fee::*,
-    r#invite_new_authority::*, r#reject_request::*, r#set_operator::*,
-    r#skip_canceled_queue_request::*, r#update_deposit_fee::*, r#update_pausable_redemptions::*,
+    r#initialize_deposit_fee::*, r#initialize_min_redemption::*, r#initialize_min_subscription::*,
+    r#initialize_pausable_redemptions::*, r#initialize_pausable_subscriptions::*,
+    r#initialize_redemption_queue::*, r#initialize_subscription_queue::*, r#initialize_vault::*,
+    r#initialize_withdrawal_fee::*, r#invite_new_authority::*, r#reject_request::*,
+    r#set_operator::*, r#skip_canceled_queue_request::*, r#update_deposit_fee::*,
+    r#update_min_redemption::*, r#update_min_subscription::*, r#update_pausable_redemptions::*,
     r#update_pausable_subscriptions::*, r#update_vault::*, r#update_vault_nav::*,
     r#update_withdrawal_fee::*, r#withdraw_assets::*,
 };

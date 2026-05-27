@@ -70,4 +70,8 @@ pub enum AsyncVaultError {
     RedemptionQueueOutOfOrder,
     #[msg("Queued redeem requests must be canceled via cancel_queued_redemption_request.")]
     MustUseCancelQueuedRedemptionRequest,
+    #[msg("Deposit amount is below the minimum subscription threshold")]
+    SubscriptionAmountBelowMinimum,
+    #[msg("Redemption amount is below the minimum redemption threshold")]
+    RedemptionAmountBelowMinimum,
 }

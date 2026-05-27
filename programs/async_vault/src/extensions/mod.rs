@@ -1,6 +1,8 @@
 pub mod constants;
 pub mod fee;
 pub mod fifo_queues;
+pub mod min_redemption;
+pub mod min_subscription;
 pub mod pausable_redemptions;
 pub mod pausable_subscriptions;
 pub mod redemption_queue;
@@ -12,6 +14,8 @@ pub mod vault_extensions;
 pub use constants::*;
 pub use fee::*;
 pub use fifo_queues::*;
+pub use min_redemption::*;
+pub use min_subscription::*;
 pub use pausable_redemptions::*;
 pub use pausable_subscriptions::*;
 pub use redemption_queue::*;

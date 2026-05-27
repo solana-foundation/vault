@@ -89,6 +89,11 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         &ctx.accounts.vault.to_account_info(),
     )?;
 
+    extensions::min_subscription::check_min_subscription_amount(
+        &ctx.accounts.vault.to_account_info(),
+        args.amount,
+    )?;
+
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
     // SAFETY: TransferFees are required to be 0, therefore using args.amount is safe.
