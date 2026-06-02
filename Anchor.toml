@@ -1,5 +1,6 @@
 [toolchain]
 package_manager = "pnpm"
+solana_version = "2.2.20"
 
 [features]
 resolution = true
