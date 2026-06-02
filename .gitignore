@@ -2,9 +2,19 @@
 .DS_Store
 target
 **/*.rs.bk
+
+# Javascript / Typescript
 node_modules
+**/dist/
+
+# Solana
 test-ledger
+/keypairs
+.keypairs/
+
+# Tooling
 .yarn
 .agents
 .claude
 skills-lock.json
+.env*.local

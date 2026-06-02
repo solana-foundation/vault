@@ -1,39 +1,100 @@
 # Vault Standard Suite
 
-# Summary
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Built with Anchor](https://img.shields.io/badge/Built%20with-Anchor-blue)](https://www.anchor-lang.com/)
+[![Solana](https://img.shields.io/badge/Solana-Localnet-green)](https://solana.com)
 
-We aim to create a standard factory program that handles many of the same use cases as ERC 7540. This is an important primitive that would make it easier and safer for others to develop on top of. By handling the subscription/redemption process within a standard implementation, we can promote more lindiness of critical Solana infrastructure, while still allowing innovation on top.
+A standard factory program for tokenized vaults on Solana, inspired by [ERC-7540](https://eips.ethereum.org/EIPS/eip-7540). It standardizes the subscription (deposit) and redemption (withdrawal) flow so teams can build on a shared, audited primitive instead of deploying bespoke vault programs.
 
-## [Glossary](./GLOSSARY.md)
+## Program ID
 
-## **Background**
+```
+2kUpRoU8oGpstygkk3ZE51upGSq9UpkjNoEUiiQ88MMY
+```
 
-RWA issuers build custom smart contracts and infrastructure to support their tokenization efforts on Solana. Every product is slightly different, but the high level requirements are all very similar. Tokens need KYC checks, products should have role based access control, and investors should be able to subscribe and redeem from the RWA. This led us to discuss what it would take to build core primitives for these components to make it easier and more secure to deploy on Solana. 
+## Deployments
 
-Vaults are just one piece of the puzzle. [sRFC 37](https://forum.solana.com/t/srfc-37-efficient-block-allow-list-token-standard/4036), the Token Access Control List (ACL), standardizes a pattern for handling KYC of a Token without compromising composability (i.e. an improvement to Transfer Hooks). These initiatives together enable KYC’d tokens with subscription/redemption capabilities without the need to deploy custom smart contracts.
+| Network  | Program ID                                     |
+| -------- | ---------------------------------------------- |
+| Localnet | `2kUpRoU8oGpstygkk3ZE51upGSq9UpkjNoEUiiQ88MMY` |
 
-Institutions and enterprises that want to manage tokenized funds and other assets require functionality akin to vaults. Vaults handle deposits and redemptions into managed strategies, such as depositing stablecoins to receive shares in a fund. As it stands today, Solana has no standardization for vaults and every team has been left to develop their own implementation. This leads to more integration work for clients, more engineering work for those developing the product, and ultimately leads to less secure Solana programs as the surface area for vulnerabilities increases. This is why we are presenting this standardized vault program proposal.
+> Not yet deployed to devnet or mainnet-beta.
 
-## **Proposal**
+## Overview
 
-A new program that takes inspiration from [ERC7540](https://eips.ethereum.org/EIPS/eip-7540) and other vault standards as well as the lessons from Token2022, with the intent to be highly customizable by supporting the most common use cases available as extensions.
+Real World Asset (RWA) issuers and other institutions repeatedly build the same vault primitives — deposits and redemptions into a managed strategy, with role-based access control and KYC. Today every team ships its own implementation, increasing integration work and the surface area for vulnerabilities. The Vault Standard Suite provides a shared, customizable vault program so that critical Solana infrastructure can be reused safely while still allowing innovation on top.
 
-The creation of a Vault does not create a new Mint for the share token, but rather accepts a pre-configured mint as the share token. This decouples the Vault program from future Mint configuration combinations significantly reducing complexity during Vault creation as well as reducing the likelihood of required program upgrades with new Token Extensions in the future.
+The design follows ERC-7540 and the lessons of Token-2022, keeping the core minimal and pushing optional behavior into extensions.
 
-As a corollary, the program will not initialize token accounts nor enforce ATAs. The user/admin must initialize in an instruction prior to interacting with the vault program. This promotes maximum flexibility for those that want to use non ATAs.
+## Key Features
 
-## **Programs:**
+- **Async deposit/redemption** — requests are queued and settled by a vault authority once NAV is updated; shares and assets are not distributed atomically.
+- **Bring-your-own share mint** — a vault accepts a pre-configured mint as its share token rather than creating one, decoupling the program from future mint/extension combinations and reducing the need for upgrades.
+- **No forced ATAs** — the program does not initialize token accounts or enforce ATAs; callers initialize accounts beforehand, preserving flexibility for non-ATA usage.
+- **Extensions** — opt-in modules (fees, min subscription/redemption, pausable flows, subscription/redemption queues) that add conditional logic to core instructions.
+- **Composable with sRFC-37** — designed to pair with the Token Access Control List standard for KYC'd tokens without compromising composability.
 
-### **Async Vault**
+## Programs
 
-The primary vault implementation supporting asynchronous deposit and redemption flows, where requests are queued and settled by a vault authority. This program is intended to be used across a wide variety of applications with the most influence from Real World Asset (RWA) issuers, teams implmenting offchain strategies, and others where regulatory compliance is required.
+### Async Vault
 
-- [Sequence Diagrams](programs/async_vault/docs/SEQUENCES.md)
+The primary implementation, supporting asynchronous deposit and redemption flows where requests are queued and settled by the vault authority. Targeted at RWA issuers, teams running off-chain strategies, and any context requiring regulatory compliance.
 
-## Feedback
+## Documentation
 
-To suggest a feature or modification, please open an issue in the repository with a detailed explanation of what the request feature/change is and the reasoning behind it.
+- [Glossary](GLOSSARY.md) — vault terminology
+- [Sequence Diagrams](programs/async_vault/docs/SEQUENCES.md) — deposit, redeem, and authority withdraw flows
+- [Subscription Queue](programs/async_vault/docs/extensions/SubscriptionQueue.md) — FIFO queue extension mechanics
 
-## Notes
+## Local Development
 
-These programs are unoptimized and written in Anchor simply for the speed of development. Feedback is welcome and optimizations will be implemented once there is consensus that the structure of the program in question is relatively stable.
+### Prerequisites
+
+- Rust (see `rust-toolchain.toml`)
+- Node.js (see `.nvmrc`)
+- pnpm (see `package.json` `packageManager`)
+- Solana CLI
+- Anchor CLI (see `Anchor.toml`)
+
+### Build & Test
+
+```bash
+# Install dependencies
+just install
+
+# Build IDL + clients
+just build
+
+# Run unit + integration tests
+just test
+
+# Format and lint
+just fmt
+```
+
+## Tech Stack
+
+- **[Anchor](https://www.anchor-lang.com/)** — Solana program framework
+- **[Codama](https://github.com/codama-idl)** — IDL-driven Rust + TypeScript client generation
+- **[LiteSVM](https://github.com/LiteSVM/litesvm)** — fast in-process testing
+
+## Security
+
+This program has **not yet been audited**. Do not use in production.
+
+To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+## Contributing
+
+To suggest a feature or change, open an issue with a detailed explanation of the request and the reasoning behind it.
+
+---
+
+Built and maintained by the [Solana Foundation](https://solana.org/).
+
+Licensed under MIT. See [LICENSE](LICENSE) for details.
+
+## Support
+
+- [**Solana StackExchange**](https://solana.stackexchange.com/) — tag `anchor`
+- [**Open an Issue**](https://github.com/solana-program/vault/issues/new)

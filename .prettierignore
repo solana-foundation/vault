@@ -5,3 +5,7 @@ node_modules
 dist
 build
 test-ledger
+idl
+**/generated/
+Cargo.lock
+pnpm-lock.yaml

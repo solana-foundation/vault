@@ -1,72 +1,42 @@
-name: CI
+name: Test
 
 on:
+  workflow_call:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: test-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   CARGO_TERM_COLOR: always
-  RUST_BACKTRACE: 1
-  SOLANA_VERSION: "2.2.20"
-  ANCHOR_VERSION: "0.31.1"
 
 jobs:
-  check_format_and_test:
-    name: Check Formatting and Run Tests
+  unit-tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          install-solana: 'false'
+          install-just: 'false'
+          install-pnpm: 'false'
+          rust-cache-key: 'unit-tests'
+      - run: cargo test -p async_vault
 
-      - name: Install system dependencies
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          install-anchor: 'true'
+          rust-cache-key: 'integration-tests'
+      - name: Build IDL and clients
         run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libudev-dev libssl-dev libc6-dev libcairo2-dev libgdk-pixbuf2.0-dev libffi-dev shared-mime-info protobuf-compiler
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install Rust nightly for formatting
-        run: rustup toolchain install nightly --component rustfmt
-
-      - name: Install Solana
-        uses: exo-tech-xyz/setup-solana@main
-        with:
-          solana-cli-version: ${{ env.SOLANA_VERSION }}
-
-      - name: Cache Anchor CLI
-        id: cache-anchor
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/anchor
-          key: ${{ runner.os }}-anchor-${{ env.ANCHOR_VERSION }}
-
-      - name: Install Anchor CLI
-        if: steps.cache-anchor.outputs.cache-hit != 'true'
-        run: cargo install --git https://github.com/coral-xyz/anchor --tag v${{ env.ANCHOR_VERSION }} anchor-cli --force
-
-      - name: Cache cargo dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-cargo-
-
-      - name: Check formatting
-        run: cargo +nightly fmt --all -- --check
-
-      - name: Build program with Anchor
-        run: anchor build
-
-      - name: Run integration and unit tests
-        run: cargo test
+          pnpm run generate-idl
+          pnpm run generate-clients
+      - name: Run integration tests
+        run: cargo test -p integration-tests

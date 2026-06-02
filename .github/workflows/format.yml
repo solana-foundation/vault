@@ -1,0 +1,36 @@
+name: Format
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  rust-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          install-nightly-rustfmt: 'true'
+          install-solana: 'false'
+          install-just: 'false'
+          install-pnpm: 'false'
+          rust-cache-key: 'format'
+      - name: Check Rust formatting
+        run: cargo +nightly fmt --all -- --check
+      - name: Run Clippy
+        run: cargo clippy -p async_vault
+
+  typescript-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          install-rust: 'false'
+          enable-rust-cache: 'false'
+          install-solana: 'false'
+          install-just: 'false'
+      - run: pnpm run format:check
+      - run: pnpm lint

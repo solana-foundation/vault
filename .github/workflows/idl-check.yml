@@ -1,0 +1,29 @@
+name: IDL Check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check-generated:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup
+        with:
+          install-anchor: 'true'
+          install-just: 'false'
+          rust-cache-key: 'idl-check'
+      - name: Generate IDL and clients
+        run: |
+          pnpm run generate-idl
+          pnpm run generate-clients
+      - name: Check for uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::IDL or generated clients are out of date!"
+            echo "Run: pnpm run generate-idl && pnpm run generate-clients"
+            git diff
+            exit 1
+          fi

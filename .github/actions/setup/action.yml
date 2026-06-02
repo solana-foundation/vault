@@ -1,0 +1,142 @@
+name: 'Setup CI Environment'
+description: 'Shared setup for Rust, nightly rustfmt, Solana, Anchor, pnpm'
+
+inputs:
+  install-rust:
+    description: 'Install Rust toolchain'
+    required: false
+    default: 'true'
+  rust-toolchain:
+    description: 'Rust toolchain to install'
+    required: false
+    default: '1.89.0'
+  rust-components:
+    description: 'Rust components to install'
+    required: false
+    default: 'rustfmt, clippy'
+  install-nightly-rustfmt:
+    description: 'Install nightly toolchain with rustfmt (for unstable rustfmt options)'
+    required: false
+    default: 'false'
+  enable-rust-cache:
+    description: 'Enable Rust caching'
+    required: false
+    default: 'true'
+  rust-cache-key:
+    description: 'Key for the Rust cache'
+    required: false
+    default: 'build'
+  install-solana:
+    description: 'Install Solana CLI'
+    required: false
+    default: 'true'
+  solana-version:
+    description: 'Solana CLI version (e.g. v2.2.20)'
+    required: false
+    default: 'v2.2.20'
+  install-anchor:
+    description: 'Install Anchor CLI'
+    required: false
+    default: 'false'
+  anchor-version:
+    description: 'Anchor CLI version'
+    required: false
+    default: '0.31.1'
+  install-just:
+    description: 'Install just'
+    required: false
+    default: 'true'
+  install-pnpm:
+    description: 'Install pnpm and Node.js'
+    required: false
+    default: 'true'
+  install-pnpm-dependencies:
+    description: 'Install pnpm dependencies'
+    required: false
+    default: 'true'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Rust
+      if: inputs.install-rust == 'true'
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ inputs.rust-toolchain }}
+        components: ${{ inputs.rust-components }}
+
+    - name: Setup nightly rustfmt
+      if: inputs.install-nightly-rustfmt == 'true'
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: nightly
+        components: rustfmt
+
+    - name: Rust cache
+      if: inputs.install-rust == 'true' && inputs.enable-rust-cache == 'true'
+      uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: '. -> target'
+        shared-key: ${{ inputs.rust-cache-key }}
+        cache-on-failure: true
+
+    - name: Cache Solana CLI
+      if: inputs.install-solana == 'true'
+      id: solana-cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.local/share/solana
+          ~/.cache/solana
+        key: ${{ runner.os }}-solana-${{ inputs.solana-version }}
+
+    - name: Install Solana CLI
+      if: inputs.install-solana == 'true' && steps.solana-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: sh -c "$(curl -sSfL https://release.anza.xyz/${{ inputs.solana-version }}/install)"
+
+    - name: Add Solana to PATH
+      if: inputs.install-solana == 'true'
+      shell: bash
+      run: echo "$HOME/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
+
+    - name: Create Solana keypair
+      if: inputs.install-solana == 'true'
+      shell: bash
+      run: |
+        mkdir -p ~/.config/solana
+        [ -f ~/.config/solana/id.json ] || solana-keygen new --no-bip39-passphrase -o ~/.config/solana/id.json
+
+    - name: Cache Anchor CLI
+      if: inputs.install-anchor == 'true'
+      id: anchor-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin/anchor
+        key: ${{ runner.os }}-anchor-${{ inputs.anchor-version }}
+
+    - name: Install Anchor CLI
+      if: inputs.install-anchor == 'true' && steps.anchor-cache.outputs.cache-hit != 'true'
+      shell: bash
+      run: cargo install --git https://github.com/coral-xyz/anchor --tag v${{ inputs.anchor-version }} anchor-cli --force
+
+    - name: Install just
+      if: inputs.install-just == 'true'
+      uses: extractions/setup-just@v4
+      with:
+        just-version: '1.51.0'
+
+    - name: Install pnpm
+      if: inputs.install-pnpm == 'true'
+      uses: pnpm/action-setup@v4
+
+    - name: Setup Node.js
+      if: inputs.install-pnpm == 'true'
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: '.nvmrc'
+
+    - name: Install pnpm dependencies
+      if: inputs.install-pnpm == 'true' && inputs.install-pnpm-dependencies == 'true'
+      shell: bash
+      run: pnpm install --frozen-lockfile

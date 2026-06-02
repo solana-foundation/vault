@@ -1,5 +1,5 @@
 [toolchain]
-package_manager = "yarn"
+package_manager = "pnpm"
 
 [features]
 resolution = true

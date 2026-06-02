@@ -17,10 +17,10 @@ Both extensions use identical queue mechanics. The sections below describe the s
 
 Each extension stores two numbers on the vault account:
 
-| Field | SubscriptionQueue | RedemptionQueue |
-|---|---|---|
-| All-time total requests | `all_time_total_subscription_requests` | `all_time_total_redemption_requests` |
-| Last processed index | `last_processed_subscription_request_index` | `last_processed_redemption_request_index` |
+| Field                   | SubscriptionQueue                           | RedemptionQueue                           |
+| ----------------------- | ------------------------------------------- | ----------------------------------------- |
+| All-time total requests | `all_time_total_subscription_requests`      | `all_time_total_redemption_requests`      |
+| Last processed index    | `last_processed_subscription_request_index` | `last_processed_redemption_request_index` |
 
 When a user submits a request, the vault's counter is incremented and the new value is stamped onto the request account as its **ID**. For example, the first request ever gets ID `1`, the second gets `2`, and so on.
 
@@ -127,22 +127,22 @@ Step 4: Authority approves request #3
 
 ### SubscriptionQueue (deposits)
 
-| Instruction | Who Can Call | What It Does |
-|---|---|---|
-| `initialize_subscription_queue` | Vault authority (before initialization) | Adds the FIFO deposit queue extension to the vault |
-| `create_deposit_request` | Any user | Creates a deposit request, assigns it the next queue ID |
-| `approve_request` | Vault authority | Approves the next deposit in queue order |
-| `reject_request` | Vault authority | Rejects the next deposit in queue order |
-| `cancel_queued_deposit_request` | Request owner | Transfers assets back immediately; leaves tombstone open |
-| `skip_canceled_queue_request` | Anyone | Advances the queue past a tombstone; closes it and returns rent |
+| Instruction                     | Who Can Call                            | What It Does                                                    |
+| ------------------------------- | --------------------------------------- | --------------------------------------------------------------- |
+| `initialize_subscription_queue` | Vault authority (before initialization) | Adds the FIFO deposit queue extension to the vault              |
+| `create_deposit_request`        | Any user                                | Creates a deposit request, assigns it the next queue ID         |
+| `approve_request`               | Vault authority                         | Approves the next deposit in queue order                        |
+| `reject_request`                | Vault authority                         | Rejects the next deposit in queue order                         |
+| `cancel_queued_deposit_request` | Request owner                           | Transfers assets back immediately; leaves tombstone open        |
+| `skip_canceled_queue_request`   | Anyone                                  | Advances the queue past a tombstone; closes it and returns rent |
 
 ### RedemptionQueue (redemptions)
 
-| Instruction | Who Can Call | What It Does |
-|---|---|---|
-| `initialize_redemption_queue` | Vault authority (before initialization) | Adds the FIFO redemption queue extension to the vault |
-| `create_redeem_request` | Any user | Creates a redeem request, assigns it the next queue ID |
-| `approve_request` | Vault authority | Approves the next redeem in queue order |
-| `reject_request` | Vault authority | Rejects the next redeem in queue order |
-| `cancel_queued_redemption_request` | Request owner | Mints burned shares back immediately; leaves tombstone open |
-| `skip_canceled_queue_request` | Anyone | Advances the queue past a tombstone; closes it and returns rent |
+| Instruction                        | Who Can Call                            | What It Does                                                    |
+| ---------------------------------- | --------------------------------------- | --------------------------------------------------------------- |
+| `initialize_redemption_queue`      | Vault authority (before initialization) | Adds the FIFO redemption queue extension to the vault           |
+| `create_redeem_request`            | Any user                                | Creates a redeem request, assigns it the next queue ID          |
+| `approve_request`                  | Vault authority                         | Approves the next redeem in queue order                         |
+| `reject_request`                   | Vault authority                         | Rejects the next redeem in queue order                          |
+| `cancel_queued_redemption_request` | Request owner                           | Mints burned shares back immediately; leaves tombstone open     |
+| `skip_canceled_queue_request`      | Anyone                                  | Advances the queue past a tombstone; closes it and returns rent |
