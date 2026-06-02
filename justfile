@@ -31,7 +31,7 @@ check:
 
 # TypeScript type checking
 typecheck:
-    pnpm --filter @solana-program/async-vault typecheck
+    pnpm --filter @solana/vault typecheck
 
 # Run unit tests
 unit-test:

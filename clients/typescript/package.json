@@ -1,11 +1,11 @@
 {
-    "name": "@solana-program/async-vault",
+    "name": "@solana/vault",
     "version": "0.1.0",
     "description": "TypeScript client for the Async Vault program",
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/solana-program/vault.git",
+        "url": "git+https://github.com/solana-foundation/vault.git",
         "directory": "clients/typescript"
     },
     "type": "module",
@@ -30,9 +30,9 @@
         "vault",
         "async-vault"
     ],
-    "homepage": "https://github.com/solana-program/vault#readme",
+    "homepage": "https://github.com/solana-foundation/vault#readme",
     "bugs": {
-        "url": "https://github.com/solana-program/vault/issues"
+        "url": "https://github.com/solana-foundation/vault/issues"
     },
     "peerDependencies": {
         "@solana/kit": "^6.9.0"

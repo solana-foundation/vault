@@ -97,4 +97,4 @@ Licensed under MIT. See [LICENSE](LICENSE) for details.
 ## Support
 
 - [**Solana StackExchange**](https://solana.stackexchange.com/) — tag `anchor`
-- [**Open an Issue**](https://github.com/solana-program/vault/issues/new)
+- [**Open an Issue**](https://github.com/solana-foundation/vault/issues/new)

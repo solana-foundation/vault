@@ -2,7 +2,7 @@
     "name": "async-vault",
     "version": "0.1.0",
     "description": "Vault Standard Suite",
-    "repository": "git@github.com:solana-program/vault.git",
+    "repository": "git@github.com:solana-foundation/vault.git",
     "license": "MIT",
     "scripts": {
         "build": "cd clients/typescript && tsc",
