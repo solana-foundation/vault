@@ -2,27 +2,28 @@
 install:
     pnpm install
 
-# Generate the Anchor IDL (target/idl/async_vault.json)
+# Build the program and refresh the committed IDL (idl/async_vault.json)
 generate-idl:
     anchor build
+    cp target/idl/async_vault.json idl/async_vault.json
 
-# Generate Rust + TypeScript clients from the IDL
-generate-clients: generate-idl
+# Generate Rust + TypeScript clients from the committed IDL
+generate-clients:
     pnpm run generate-clients
 
 # Full build: IDL + clients
-build: generate-clients
+build: generate-idl generate-clients
 
 # Format and lint everything
 fmt:
-    cargo +nightly fmt --all
+    cargo +nightly fmt -p async_vault -p vault_common -p integration-tests
     cargo clippy -p async_vault
     pnpm format
     pnpm lint:fix
 
 # Verify formatting, lint, and types without modifying files
 check:
-    cargo +nightly fmt --all -- --check
+    cargo +nightly fmt -p async_vault -p vault_common -p integration-tests -- --check
     cargo clippy -p async_vault
     pnpm run format:check
     pnpm lint

@@ -7,6 +7,9 @@ target
 node_modules
 **/dist/
 
+# Generated clients (regenerate from idl/ with `just generate-clients`)
+**/generated/
+
 # Solana
 test-ledger
 /keypairs
@@ -16,5 +19,6 @@ test-ledger
 .yarn
 .agents
 .claude
+.remember
 skills-lock.json
 .env*.local

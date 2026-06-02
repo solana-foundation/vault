@@ -18,7 +18,7 @@ jobs:
           install-pnpm: 'false'
           rust-cache-key: 'format'
       - name: Check Rust formatting
-        run: cargo +nightly fmt --all -- --check
+        run: cargo +nightly fmt -p async_vault -p vault_common -p integration-tests -- --check
       - name: Run Clippy
         run: cargo clippy -p async_vault
 

@@ -10,6 +10,8 @@ export default [
             '**/generated/**',
             'clients/rust/**',
             'clients/typescript/src/generated/**',
+            '.remember/**',
+            '.claude/**',
             'eslint.config.mjs',
             '**/*.mjs',
         ],

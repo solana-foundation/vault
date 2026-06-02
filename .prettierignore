@@ -9,3 +9,5 @@ idl
 **/generated/
 Cargo.lock
 pnpm-lock.yaml
+.remember
+.claude

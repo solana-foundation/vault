@@ -15,7 +15,7 @@ import { createFromRoot, deduplicateIdenticalDefinedTypesVisitor, updateDefinedT
 
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
 
-const idl = JSON.parse(readFileSync(join(projectRoot, 'target/idl/async_vault.json'), 'utf-8')) as AnchorIdl;
+const idl = JSON.parse(readFileSync(join(projectRoot, 'idl/async_vault.json'), 'utf-8')) as AnchorIdl;
 const codama = createFromRoot(rootNodeFromAnchor(idl));
 codama.update(deduplicateIdenticalDefinedTypesVisitor());
 

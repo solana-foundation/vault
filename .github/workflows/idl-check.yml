@@ -6,24 +6,22 @@ on:
   pull_request:
 
 jobs:
-  check-generated:
+  check-idl:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
         with:
           install-anchor: 'true'
-          install-just: 'false'
           rust-cache-key: 'idl-check'
-      - name: Generate IDL and clients
+      - name: Regenerate IDL and clients
         run: |
-          pnpm run generate-idl
-          pnpm run generate-clients
-      - name: Check for uncommitted changes
+          just generate-idl
+          just generate-clients
+      - name: Check the committed IDL is up to date
         run: |
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "::error::IDL or generated clients are out of date!"
-            echo "Run: pnpm run generate-idl && pnpm run generate-clients"
-            git diff
+          if [ -n "$(git status --porcelain idl/)" ]; then
+            echo "::error::idl/async_vault.json is out of date! Run: just generate-idl"
+            git --no-pager diff idl/
             exit 1
           fi

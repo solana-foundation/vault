@@ -1,0 +1,2452 @@
+{
+  "address": "2kUpRoU8oGpstygkk3ZE51upGSq9UpkjNoEUiiQ88MMY",
+  "metadata": {
+    "name": "async_vault",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "accept_authority_invitation",
+      "docs": [
+        "Completes the authority transfer by setting the vault authority to",
+        "the pending authority. Requires both the current and new authority",
+        "to sign."
+      ],
+      "discriminator": [
+        25,
+        46,
+        44,
+        100,
+        108,
+        172,
+        146,
+        180
+      ],
+      "accounts": [
+        {
+          "name": "new_authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "approve_request",
+      "docs": [
+        "Approve a pending request, allowing the User to execute the Claim instruction.",
+        "This sets the Request's claimable NAV to the Vault's current NAV."
+      ],
+      "discriminator": [
+        89,
+        68,
+        167,
+        104,
+        93,
+        25,
+        178,
+        205
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "asset_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "share_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          },
+          "relations": [
+            "request"
+          ]
+        },
+        {
+          "name": "request",
+          "writable": true
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true
+        },
+        {
+          "name": "pending_vault",
+          "writable": true
+        },
+        {
+          "name": "asset_token_program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_queued_deposit_request",
+      "docs": [
+        "Cancels a pending queued deposit request. Assets are refunded immediately. The request",
+        "account remains open as a tombstone so the subscription queue can advance past it via",
+        "`skip_canceled_queue_request`. Only valid for vaults with SubscriptionQueue active."
+      ],
+      "discriminator": [
+        163,
+        192,
+        210,
+        165,
+        116,
+        122,
+        10,
+        155
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "asset_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "share_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          },
+          "relations": [
+            "request"
+          ]
+        },
+        {
+          "name": "request",
+          "writable": true
+        },
+        {
+          "name": "user_token_account",
+          "writable": true
+        },
+        {
+          "name": "asset_pending_vault",
+          "writable": true
+        },
+        {
+          "name": "asset_token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_queued_redemption_request",
+      "docs": [
+        "Cancels a pending queued redeem request. Shares are minted back to the user immediately.",
+        "The request account remains open as a tombstone so the redemption queue can advance past",
+        "it via `skip_canceled_queue_request`. Only valid for vaults with RedemptionQueue",
+        "active."
+      ],
+      "discriminator": [
+        133,
+        45,
+        244,
+        133,
+        86,
+        35,
+        66,
+        14
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "asset_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "share_mint",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          },
+          "relations": [
+            "request"
+          ]
+        },
+        {
+          "name": "request",
+          "writable": true
+        },
+        {
+          "name": "user_share_account",
+          "writable": true
+        },
+        {
+          "name": "share_token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "cancel_request",
+      "docs": [
+        "Cancels a pending request. For deposits, refunds the full amount",
+        "back to the user. For redemptions, mints the shares back."
+      ],
+      "discriminator": [
+        65,
+        196,
+        177,
+        247,
+        83,
+        151,
+        33,
+        130
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "asset_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "share_mint",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          },
+          "relations": [
+            "request"
+          ]
+        },
+        {
+          "name": "request",
+          "writable": true
+        },
+        {
+          "name": "user_token_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "asset_pending_vault",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "user_share_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "share_token_program",
+          "optional": true
+        },
+        {
+          "name": "asset_token_program",
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "claim",
+      "docs": [
+        "User claims their shares or assets from an approved Deposit or Redemption request.",
+        "Request must be Claimable."
+      ],
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "Necessary to send Request owner rent if Operator is claiming."
+          ],
+          "writable": true,
+          "relations": [
+            "request"
+          ]
+        },
+        {
+          "name": "asset_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "share_mint",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          },
+          "relations": [
+            "request"
+          ]
+        },
+        {
+          "name": "request",
+          "writable": true
+        },
+        {
+          "name": "pending_vault",
+          "docs": [
+            "Pending deposit vault — source for Redeem claims"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "user_share_account",
+          "docs": [
+            "User's share TokenAccount — receives minted shares on Deposit (must be owned by",
+            "request.owner)"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "user_asset_account",
+          "docs": [
+            "User's asset TokenAccount — receives transferred assets on Redeem (must be owned by",
+            "request.owner)"
+          ],
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "asset_token_program"
+        },
+        {
+          "name": "share_token_program",
+          "docs": [
+            "Token program for share mint operations — only required for Deposit"
+          ],
+          "optional": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "create_deposit_request",
+      "docs": [
+        "Creates a deposit request with state pending (Pending vault authority acceptance)"
+      ],
+      "discriminator": [
+        143,
+        189,
+        167,
+        78,
+        192,
+        226,
+        23,
+        170
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "asset_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "share_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "request",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_token_account",
+          "writable": true
+        },
+        {
+          "name": "pending_vault",
+          "writable": true
+        },
+        {
+          "name": "asset_token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "RequestArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_redeem_request",
+      "docs": [
+        "Creates a redeem request with state pending (Pending vault authority acceptance)"
+      ],
+      "discriminator": [
+        196,
+        206,
+        84,
+        221,
+        20,
+        219,
+        235,
+        124
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "asset_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "share_mint",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "request",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_share_account",
+          "writable": true
+        },
+        {
+          "name": "share_token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "RequestArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_vault",
+      "docs": [
+        "Creates a new async vault with reserve and pending token accounts,",
+        "transfers share mint authority to the vault PDA, and initializes",
+        "the vault config in a paused + uninitialized state."
+      ],
+      "discriminator": [
+        29,
+        237,
+        247,
+        208,
+        193,
+        82,
+        54,
+        135
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "mint_authority",
+          "signer": true
+        },
+        {
+          "name": "asset_mint"
+        },
+        {
+          "name": "share_mint",
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "reserve",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  101,
+                  115,
+                  101,
+                  114,
+                  118,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "pending_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  101,
+                  110,
+                  100,
+                  105,
+                  110,
+                  103
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "asset_token_program"
+        },
+        {
+          "name": "share_token_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "AsyncVaultArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_deposit_fee",
+      "docs": [
+        "Adds a deposit fee TLV extension to the vault. Must be called",
+        "before vault initialization. Requires authority signature."
+      ],
+      "discriminator": [
+        116,
+        58,
+        55,
+        94,
+        169,
+        138,
+        186,
+        156
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "InitDepositFeeArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_min_redemption",
+      "docs": [
+        "Adds MinRedemption extension to the vault. Must be called before vault",
+        "initialization. When active, redemption requests below the threshold are rejected.",
+        "Requires authority signature."
+      ],
+      "discriminator": [
+        236,
+        96,
+        157,
+        147,
+        172,
+        194,
+        162,
+        206
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "InitMinRedemptionArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_min_subscription",
+      "docs": [
+        "Adds MinSubscription extension to the vault. Must be called before vault",
+        "initialization. When active, deposit requests below the threshold are rejected.",
+        "Requires authority signature."
+      ],
+      "discriminator": [
+        12,
+        252,
+        75,
+        176,
+        141,
+        200,
+        135,
+        22
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "InitMinSubscriptionArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_pausable_redemptions",
+      "docs": [
+        "Adds a PausableRedemptions TLV extension to the vault. Must be called",
+        "before vault initialization. Requires authority signature."
+      ],
+      "discriminator": [
+        212,
+        194,
+        103,
+        78,
+        62,
+        101,
+        125,
+        155
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "InitPausableRedemptionsArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_pausable_subscriptions",
+      "docs": [
+        "Adds a PausableSubscriptions TLV extension to the vault. Must be called",
+        "before vault initialization. Requires authority signature."
+      ],
+      "discriminator": [
+        54,
+        69,
+        88,
+        16,
+        146,
+        253,
+        73,
+        189
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "InitPausableSubscriptionsArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "initialize_redemption_queue",
+      "docs": [
+        "Adds a RedemptionQueue TLV extension to the vault, enabling FIFO ordering",
+        "for redeem requests. Must be called before vault initialization. Requires authority",
+        "signature."
+      ],
+      "discriminator": [
+        171,
+        201,
+        79,
+        69,
+        69,
+        151,
+        7,
+        131
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_subscription_queue",
+      "docs": [
+        "Adds a SubscriptionQueue TLV extension to the vault, enabling FIFO ordering",
+        "for deposit requests. Must be called before vault initialization. Requires authority",
+        "signature."
+      ],
+      "discriminator": [
+        225,
+        59,
+        88,
+        205,
+        208,
+        236,
+        97,
+        112
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_vault",
+      "docs": [
+        "Finalizes vault setup by marking it as initialized. Once initialized,",
+        "no new extensions can be added. Requires authority signature."
+      ],
+      "discriminator": [
+        48,
+        191,
+        163,
+        44,
+        71,
+        129,
+        63,
+        164
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_withdrawal_fee",
+      "docs": [
+        "Adds a withdrawal fee TLV extension to the vault. Must be called",
+        "before vault initialization. Requires authority signature."
+      ],
+      "discriminator": [
+        113,
+        34,
+        243,
+        38,
+        112,
+        66,
+        255,
+        231
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "InitWithdrawalFeeArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "invite_new_authority",
+      "docs": [
+        "Stores a pending authority on the vault without transferring control.",
+        "The new authority must later call `accept_authority_invitation` to",
+        "complete the transfer. Requires current authority signature."
+      ],
+      "discriminator": [
+        133,
+        118,
+        213,
+        2,
+        38,
+        53,
+        126,
+        1
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "InviteNewAuthorityArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "reject_request",
+      "docs": [
+        "Reject a pending request. For deposit requests, the deposited assets are",
+        "refunded to the user. For redeem requests, the shares are minted back to the user.",
+        "The request account is closed and its rent is returned to the user."
+      ],
+      "discriminator": [
+        11,
+        232,
+        75,
+        149,
+        197,
+        137,
+        152,
+        208
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "asset_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "share_mint",
+          "writable": true,
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          },
+          "relations": [
+            "request"
+          ]
+        },
+        {
+          "name": "request",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "writable": true
+        },
+        {
+          "name": "user_token_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "asset_pending_vault",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "user_share_account",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "share_token_program",
+          "optional": true
+        },
+        {
+          "name": "asset_token_program",
+          "optional": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "set_operator",
+      "docs": [
+        "Sets an operator for the Request.",
+        "Requires Request owner signature."
+      ],
+      "discriminator": [
+        238,
+        153,
+        101,
+        169,
+        243,
+        131,
+        36,
+        1
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "operator",
+          "signer": true
+        },
+        {
+          "name": "request",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "skip_canceled_queue_request",
+      "docs": [
+        "Permissionless instruction that advances the queue past a canceled request, closes the",
+        "request account, and returns rent to the original owner. Works for both subscription and",
+        "redemption queues; queue type is inferred from the request's type. Must be called in",
+        "ascending request ID order for consecutive tombstones."
+      ],
+      "discriminator": [
+        57,
+        98,
+        74,
+        205,
+        33,
+        46,
+        89,
+        166
+      ],
+      "accounts": [
+        {
+          "name": "vault",
+          "writable": true,
+          "relations": [
+            "request"
+          ]
+        },
+        {
+          "name": "request",
+          "writable": true
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "relations": [
+            "request"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_deposit_fee",
+      "docs": [
+        "Updates an existing deposit fee extension. The fee must have been",
+        "previously initialized. Requires authority signature."
+      ],
+      "discriminator": [
+        60,
+        169,
+        133,
+        28,
+        78,
+        234,
+        0,
+        31
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "UpdateDepositFeeArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_min_redemption",
+      "docs": [
+        "Updates the threshold of an existing MinRedemption extension.",
+        "Requires authority signature."
+      ],
+      "discriminator": [
+        248,
+        149,
+        70,
+        79,
+        2,
+        251,
+        188,
+        92
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "UpdateMinRedemptionArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_min_subscription",
+      "docs": [
+        "Updates the threshold of an existing MinSubscription extension.",
+        "Requires authority signature."
+      ],
+      "discriminator": [
+        63,
+        126,
+        170,
+        249,
+        163,
+        30,
+        203,
+        167
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "UpdateMinSubscriptionArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_pausable_redemptions",
+      "docs": [
+        "Updates the paused state of an existing PausableRedemptions extension.",
+        "When paused is true, new redeem requests are rejected. Requires authority signature."
+      ],
+      "discriminator": [
+        42,
+        12,
+        92,
+        189,
+        83,
+        1,
+        231,
+        159
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "UpdatePausableRedemptionsArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_pausable_subscriptions",
+      "docs": [
+        "Updates the paused state of an existing PausableSubscriptions extension.",
+        "When paused is true, new deposit requests are rejected. Requires authority signature."
+      ],
+      "discriminator": [
+        93,
+        189,
+        220,
+        109,
+        32,
+        92,
+        97,
+        37
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "UpdatePausableSubscriptionsArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_vault",
+      "docs": [
+        "Updates the async vault configuration. Can modify paused status",
+        "and the fee_recipient. Requires authority signature."
+      ],
+      "discriminator": [
+        67,
+        229,
+        185,
+        188,
+        226,
+        11,
+        210,
+        60
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "share_mint"
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "share_mint"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "UpdateVaultArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_vault_nav",
+      "docs": [
+        "Updates the vault nav and increases nav version by 1",
+        "Requires authority signature."
+      ],
+      "discriminator": [
+        252,
+        12,
+        154,
+        223,
+        213,
+        206,
+        35,
+        233
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "updated_nav",
+          "type": "u128"
+        }
+      ]
+    },
+    {
+      "name": "update_withdrawal_fee",
+      "docs": [
+        "Updates an existing withdrawal fee extension. The fee must have been",
+        "previously initialized. Requires authority signature."
+      ],
+      "discriminator": [
+        165,
+        235,
+        231,
+        25,
+        127,
+        99,
+        244,
+        133
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "vault",
+          "writable": true
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "UpdateWithdrawalFeeArgs"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "withdraw_assets",
+      "docs": [
+        "Withdraws assets from the vault reserve to a specified token account.",
+        "Used for async operations such as deploying assets offchain.",
+        "Requires authority signature."
+      ],
+      "discriminator": [
+        202,
+        105,
+        54,
+        155,
+        56,
+        33,
+        207,
+        254
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "asset_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "vault_token_account",
+          "writable": true
+        },
+        {
+          "name": "recipient_token_account",
+          "writable": true
+        },
+        {
+          "name": "asset_token_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Request",
+      "discriminator": [
+        125,
+        172,
+        150,
+        161,
+        162,
+        115,
+        39,
+        71
+      ]
+    },
+    {
+      "name": "Vault",
+      "discriminator": [
+        211,
+        8,
+        232,
+        43,
+        2,
+        152,
+        117,
+        119
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidInitialPrice",
+      "msg": "Initial price cannot be zero"
+    },
+    {
+      "code": 6001,
+      "name": "UnauthorizedSigner",
+      "msg": "Unauthorized signer"
+    },
+    {
+      "code": 6002,
+      "name": "UninitializedVault",
+      "msg": "Vault is not initialized"
+    },
+    {
+      "code": 6003,
+      "name": "PausedVault",
+      "msg": "Vault is paused"
+    },
+    {
+      "code": 6004,
+      "name": "VaultAlreadyInitialized",
+      "msg": "Vault is already initialized"
+    },
+    {
+      "code": 6005,
+      "name": "ExtensionAlreadyInitialized",
+      "msg": "Extension is already initialized"
+    },
+    {
+      "code": 6006,
+      "name": "UninitializedExtension",
+      "msg": "Extension is not initialized"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidExtensionData",
+      "msg": "Invalid extension data"
+    },
+    {
+      "code": 6008,
+      "name": "FeeBpsExceeded",
+      "msg": "Fee basis points exceed maximum"
+    },
+    {
+      "code": 6009,
+      "name": "ArithmeticError",
+      "msg": "Arithmetic error"
+    },
+    {
+      "code": 6010,
+      "name": "MintsShouldBeDifferent",
+      "msg": "Mints should be different."
+    },
+    {
+      "code": 6011,
+      "name": "ShareMintSupplyShouldBeZero",
+      "msg": "Share mint supply should be zero."
+    },
+    {
+      "code": 6012,
+      "name": "NoPendingAuthority",
+      "msg": "No pending authority invitation"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidPendingVault",
+      "msg": "Pending Vault is not valid."
+    },
+    {
+      "code": 6014,
+      "name": "InvalidPendingSharesVault",
+      "msg": "Pending Shares Vault is not valid."
+    },
+    {
+      "code": 6015,
+      "name": "MissingFeeRecipient",
+      "msg": "Fee recipient account must be provided as a remaining account when fee > 0."
+    },
+    {
+      "code": 6016,
+      "name": "InvalidFeeRecipient",
+      "msg": "Fee recipient account is invalid."
+    },
+    {
+      "code": 6017,
+      "name": "RequestInvalidState",
+      "msg": "Request current state is not valid."
+    },
+    {
+      "code": 6018,
+      "name": "RequestIsNotPending",
+      "msg": "Request is not pending."
+    },
+    {
+      "code": 6019,
+      "name": "InvalidRequestType",
+      "msg": "Invalid request type for this instruction."
+    },
+    {
+      "code": 6020,
+      "name": "MissingRequiredAccount",
+      "msg": "A required optional account was not provided."
+    },
+    {
+      "code": 6021,
+      "name": "InvalidAssetMintExtensions",
+      "msg": "Asset mint has invalid extensions."
+    },
+    {
+      "code": 6022,
+      "name": "InvalidAssetMint",
+      "msg": "Asset mint is not valid."
+    },
+    {
+      "code": 6023,
+      "name": "InvalidShareMint",
+      "msg": "Share mint is not valid."
+    },
+    {
+      "code": 6024,
+      "name": "InvalidRequest",
+      "msg": "Request address is not valid."
+    },
+    {
+      "code": 6025,
+      "name": "RequestNotPending",
+      "msg": "Request is not in a Pending state."
+    },
+    {
+      "code": 6026,
+      "name": "RequestNotClaimable",
+      "msg": "Request is not in a Claimable state."
+    },
+    {
+      "code": 6027,
+      "name": "SubscriptionsPaused",
+      "msg": "Subscriptions are paused"
+    },
+    {
+      "code": 6028,
+      "name": "RedemptionsPaused",
+      "msg": "Redemptions are paused"
+    },
+    {
+      "code": 6029,
+      "name": "SubscriptionQueueOutOfOrder",
+      "msg": "Deposit request is not next in the subscription queue"
+    },
+    {
+      "code": 6030,
+      "name": "RequestIsNotCanceled",
+      "msg": "Request is not in a Canceled state."
+    },
+    {
+      "code": 6031,
+      "name": "MustUseCancelQueuedDepositRequest",
+      "msg": "Queued deposit requests must be canceled via cancel_queued_deposit_request."
+    },
+    {
+      "code": 6032,
+      "name": "RedemptionQueueOutOfOrder",
+      "msg": "Redeem request is not next in the redemption queue"
+    },
+    {
+      "code": 6033,
+      "name": "MustUseCancelQueuedRedemptionRequest",
+      "msg": "Queued redeem requests must be canceled via cancel_queued_redemption_request."
+    },
+    {
+      "code": 6034,
+      "name": "SubscriptionAmountBelowMinimum",
+      "msg": "Deposit amount is below the minimum subscription threshold"
+    },
+    {
+      "code": 6035,
+      "name": "RedemptionAmountBelowMinimum",
+      "msg": "Redemption amount is below the minimum redemption threshold"
+    }
+  ],
+  "types": [
+    {
+      "name": "AsyncVaultArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_recipient",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeType",
+      "docs": [
+        "The fee types:",
+        "FixedAmount: a fixed fee is applied (ex 0.1 asset)",
+        "Percentage: the fee is a % of the transfer amount"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "FixedAmount",
+            "fields": [
+              {
+                "name": "amount",
+                "type": "u64"
+              }
+            ]
+          },
+          {
+            "name": "Percentage",
+            "fields": [
+              {
+                "name": "bps",
+                "type": "u16"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitDepositFeeArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "deposit_fee",
+            "type": {
+              "defined": {
+                "name": "FeeType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitMinRedemptionArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "threshold",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitMinSubscriptionArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "threshold",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitPausableRedemptionsArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitPausableSubscriptionsArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "InitWithdrawalFeeArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "withdrawal_fee",
+            "type": {
+              "defined": {
+                "name": "FeeType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "InviteNewAuthorityArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Request",
+      "docs": [
+        "Request account state for tracking an async deposit/redemption."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "vault",
+            "docs": [
+              "Vault address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "request_type",
+            "docs": [
+              "request type"
+            ],
+            "type": {
+              "defined": {
+                "name": "RequestType"
+              }
+            }
+          },
+          {
+            "name": "request_state",
+            "docs": [
+              "request state"
+            ],
+            "type": {
+              "defined": {
+                "name": "RequestState"
+              }
+            }
+          },
+          {
+            "name": "owner",
+            "docs": [
+              "User that made the request"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "RequestType::Deposit - amount of assets being deposited",
+              "RequestType::Redeem - amount of shares being redeemed"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "price",
+            "docs": [
+              "NAV at which the assets (deposit) or shares (redeem) are being converted"
+            ],
+            "type": "u128"
+          },
+          {
+            "name": "asset_mint_address",
+            "docs": [
+              "mint address for deposit request (7575)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "created_at",
+            "docs": [
+              "timestamp, slot or epoch"
+            ],
+            "type": "i64"
+          },
+          {
+            "name": "nav_update_version",
+            "docs": [
+              "nav update version (for permissionless actions)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "operator",
+            "docs": [
+              "Operator allowed to claim on behalf of user (delegated controller)"
+            ],
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RequestArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "operator",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "RequestState",
+      "docs": [
+        "Pending: neither approved nor rejected by the vault authority",
+        "Claimable: approved by the vault authority",
+        "Canceled: deposit/redemption request was refunded; account is kept open as a tombstone until the",
+        "subscription/redemption queue advances past this request's ID via",
+        "`skip_canceled_{subscription|redemption}_request`"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Pending"
+          },
+          {
+            "name": "Claimable"
+          },
+          {
+            "name": "Canceled"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RequestType",
+      "docs": [
+        "The request types:",
+        "Deposit: the user wants to add assets to the vault",
+        "Redeem: the user wants to withdraw assets from the vault"
+      ],
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Deposit"
+          },
+          {
+            "name": "Redeem"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateDepositFeeArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_deposit_fee",
+            "type": {
+              "defined": {
+                "name": "FeeType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateMinRedemptionArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "threshold",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateMinSubscriptionArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "threshold",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdatePausableRedemptionsArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdatePausableSubscriptionsArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": "bool"
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateVaultArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "paused",
+            "type": {
+              "option": "bool"
+            }
+          },
+          {
+            "name": "fee_recipient",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "UpdateWithdrawalFeeArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_withdrawal_fee",
+            "type": {
+              "defined": {
+                "name": "FeeType"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Vault",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "asset_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "share_mint",
+            "docs": [
+              "share mint address"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "vault_token_account",
+            "docs": [
+              "token account holding confirmed vault assets"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "authority",
+            "docs": [
+              "authority that can sign permissioned instructions"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_recipient",
+            "docs": [
+              "pubkey that is required to own the TokenAccount fees are sent to"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "paused",
+            "docs": [
+              "paused"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "initialized",
+            "docs": [
+              "once a vault is initialized, no extensions can be added"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "pending_vault",
+            "docs": [
+              "token account holding assets from deposits awaiting share issuance"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "nav",
+            "docs": [
+              "net asset value (assets per share), default 0 until first NAV update"
+            ],
+            "type": "u128"
+          },
+          {
+            "name": "nav_version",
+            "docs": [
+              "nav version, incremented on each NAV update"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "pending_async_requests",
+            "docs": [
+              "count of pending async deposit/withdrawal requests"
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "total_asset_balance",
+            "docs": [
+              "virtual vault asset balance, accounts for tokens that may",
+              "have been withdrawn by the vault authority"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "reserve_bump",
+            "type": "u8"
+          },
+          {
+            "name": "pending_vault_bump",
+            "type": "u8"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "pending_authority",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

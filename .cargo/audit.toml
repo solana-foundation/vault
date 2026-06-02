@@ -1,0 +1,14 @@
+# cargo-audit configuration.
+#
+# The advisories below are dev-dependency-only, reachable solely through the
+# litesvm test harness (litesvm -> agave-precompiles -> ed25519-dalek 1.0.1 ->
+# curve25519-dalek 3.2.0). They are NOT present in the on-chain async_vault
+# program build (verified: `cargo tree -p async_vault` contains neither crate).
+# The vulnerable versions are pinned by the Solana toolchain; they cannot be
+# upgraded from this repo until litesvm/agave bump ed25519-dalek to 2.x.
+# Re-evaluate when litesvm is upgraded.
+[advisories]
+ignore = [
+    "RUSTSEC-2022-0093", # ed25519-dalek 1.0.1 (litesvm/agave-precompiles, dev-only)
+    "RUSTSEC-2024-0344", # curve25519-dalek 3.2.0 (via ed25519-dalek 1.0.1, dev-only)
+]
