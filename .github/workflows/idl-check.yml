@@ -13,6 +13,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           install-anchor: 'true'
+          install-nightly-rustfmt: 'true'
           rust-cache-key: 'idl-check'
       - name: Regenerate IDL and clients
         run: |

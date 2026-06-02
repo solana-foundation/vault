@@ -33,6 +33,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           install-anchor: 'true'
+          install-nightly-rustfmt: 'true'
           rust-cache-key: 'integration-tests'
       - name: Build IDL and clients
         run: |
