@@ -17,7 +17,7 @@ solana-account-info = "2.0"
 solana-cpi = "2.0"
 solana-instruction = "2.0"
 solana-program-error = "2.0"
-solana-pubkey = { version = "2.0", features = ["borsh"] }
+solana-pubkey = { version = "4.2", features = ["borsh"] }
 serde = { version = "1.0", features = ["derive"], optional = true }
 solana-sdk = { workspace = true, optional = true }
 num-derive.workspace = true

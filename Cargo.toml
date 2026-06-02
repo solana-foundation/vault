@@ -22,7 +22,7 @@ solana-instruction = "2.0"
 spl-discriminator = "0.4.0"
 spl-tlv-account-resolution = "0.10.0"
 solana-account-info = "2.0"
-solana-pubkey = { version = "2.0", features = ["borsh"] }
+solana-pubkey = { version = "4.2", features = ["borsh"] }
 spl-token = "8.0.0"
 vault_common = { path = "libs/vault_common" }
 num-derive = "0.4.2"
