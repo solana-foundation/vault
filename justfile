@@ -17,14 +17,14 @@ build: generate-idl generate-clients
 # Format and lint everything
 fmt:
     cargo +nightly fmt -p async_vault -p vault_common -p integration-tests
-    cargo clippy -p async_vault
+    cargo clippy -p async_vault -p vault_common
     pnpm format
     pnpm lint:fix
 
 # Verify formatting, lint, and types without modifying files
 check:
     cargo +nightly fmt -p async_vault -p vault_common -p integration-tests -- --check
-    cargo clippy -p async_vault
+    cargo clippy -p async_vault -p vault_common
     pnpm run format:check
     pnpm lint
     just typecheck

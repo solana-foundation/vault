@@ -20,7 +20,7 @@ jobs:
       - name: Check Rust formatting
         run: cargo +nightly fmt -p async_vault -p vault_common -p integration-tests -- --check
       - name: Run Clippy
-        run: cargo clippy -p async_vault
+        run: cargo clippy -p async_vault -p vault_common
 
   typescript-format:
     runs-on: ubuntu-latest
