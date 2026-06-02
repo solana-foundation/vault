@@ -35,7 +35,7 @@ typecheck:
 
 # Run unit tests
 unit-test:
-    cargo test -p async_vault
+    cargo test -p async_vault -p vault_common
 
 # Run integration tests (LiteSVM)
 integration-test *args:
