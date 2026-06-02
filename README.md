@@ -32,7 +32,7 @@ The design follows ERC-7540 and the lessons of Token-2022, keeping the core mini
 - **Bring-your-own share mint** — a vault accepts a pre-configured mint as its share token rather than creating one, decoupling the program from future mint/extension combinations and reducing the need for upgrades.
 - **No forced ATAs** — the program does not initialize token accounts or enforce ATAs; callers initialize accounts beforehand, preserving flexibility for non-ATA usage.
 - **Extensions** — opt-in modules (fees, min subscription/redemption, pausable flows, subscription/redemption queues) that add conditional logic to core instructions.
-- **Composable with sRFC-37** — designed to pair with the Token Access Control List standard for KYC'd tokens without compromising composability.
+- **Composable with [sRFC-37](https://forum.solana.com/t/srfc-37-efficient-block-allow-list-token-standard/4036)** — designed to pair with the Token Access Control List (ACL) standard, an improvement to Transfer Hooks, for KYC'd tokens without compromising composability.
 
 ## Programs
 
@@ -83,6 +83,10 @@ just fmt
 This program has **not yet been audited**. Do not use in production.
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+## Notes
+
+These programs are unoptimized and written in Anchor simply for the speed of development. Feedback is welcome and optimizations will be implemented once there is consensus that the structure of the program in question is relatively stable.
 
 ## Contributing
 
