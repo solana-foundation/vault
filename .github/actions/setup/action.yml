@@ -115,6 +115,11 @@ runs:
         path: ~/.cargo/bin/anchor
         key: ${{ runner.os }}-anchor-${{ inputs.anchor-version }}
 
+    - name: Install libudev (required by anchor-cli's hidapi dep)
+      if: inputs.install-anchor == 'true' && steps.anchor-cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y libudev-dev pkg-config
+
     - name: Install Anchor CLI
       if: inputs.install-anchor == 'true' && steps.anchor-cache.outputs.cache-hit != 'true'
       shell: bash

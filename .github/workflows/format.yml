@@ -33,4 +33,9 @@ jobs:
           install-solana: 'false'
           install-just: 'false'
       - run: pnpm run format:check
+      - run: pnpm run generate-clients
       - run: pnpm lint
+      - run: pnpm --filter @vault-suite/demo lint
+      - run: pnpm --filter @vault-suite/demo build
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
