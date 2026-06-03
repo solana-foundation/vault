@@ -30,8 +30,10 @@ export const EXTENSION_DESCRIPTIONS: Record<ExtensionTypeValue, string> = {
     [ExtensionType.WithdrawalFee]: 'Charges a fee on every approved redemption, paid to the fee recipient.',
     [ExtensionType.PausableSubscriptions]: 'Authority can pause/unpause new deposit requests at any time.',
     [ExtensionType.PausableRedemptions]: 'Authority can pause/unpause new redemption requests at any time.',
-    [ExtensionType.SubscriptionQueue]: 'Deposit requests are processed in FIFO order; supports cancellation tombstones.',
-    [ExtensionType.RedemptionQueue]: 'Redemption requests are processed in FIFO order; supports cancellation tombstones.',
+    [ExtensionType.SubscriptionQueue]:
+        'Deposit requests are processed in FIFO order; supports cancellation tombstones.',
+    [ExtensionType.RedemptionQueue]:
+        'Redemption requests are processed in FIFO order; supports cancellation tombstones.',
     [ExtensionType.MinSubscription]: 'Reject deposits below a configured minimum asset amount.',
     [ExtensionType.MinRedemption]: 'Reject redemptions below a configured minimum share amount.',
 };

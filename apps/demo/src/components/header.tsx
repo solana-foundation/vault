@@ -9,10 +9,9 @@ import { Github } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { CLUSTER } from '@/lib/env';
 
-const WalletMultiButton = dynamic(
-    () => import('@solana/wallet-adapter-react-ui').then((m) => m.WalletMultiButton),
-    { ssr: false },
-);
+const WalletMultiButton = dynamic(() => import('@solana/wallet-adapter-react-ui').then(m => m.WalletMultiButton), {
+    ssr: false,
+});
 
 const NAV = [
     { href: '/', label: 'Home' },
@@ -33,7 +32,7 @@ export function Header() {
                     </div>
                 </Link>
                 <nav className="ml-4 hidden items-center gap-1 md:flex">
-                    {NAV.map((n) => {
+                    {NAV.map(n => {
                         const active = pathname === n.href || (n.href !== '/' && pathname?.startsWith(n.href));
                         return (
                             <Link

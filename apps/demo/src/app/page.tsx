@@ -58,8 +58,8 @@ export default function HomePage() {
                     </h1>
                     <p className="max-w-2xl text-pretty text-base text-muted-foreground md:text-lg">
                         Walk through the entire deposit → approve → claim lifecycle of the Solana Foundation{' '}
-                        <code className="font-mono text-foreground">async_vault</code> program — including
-                        every extension — without writing a single line of code.
+                        <code className="font-mono text-foreground">async_vault</code> program — including every
+                        extension — without writing a single line of code.
                     </p>
                     <div className="flex flex-wrap items-center gap-3">
                         <Link href="/create">
@@ -102,7 +102,7 @@ export default function HomePage() {
                     </div>
                 </div>
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {FEATURES.map((f) => (
+                    {FEATURES.map(f => (
                         <Card key={f.title} className="bg-card/40">
                             <CardContent className="p-6">
                                 <f.icon className="size-6 text-primary" />
@@ -121,15 +121,18 @@ export default function HomePage() {
                         <p className="mt-3 text-sm text-muted-foreground">
                             Real-world asset issuers and institutions repeatedly build the same vault primitives.
                             <code className="mx-1 font-mono text-foreground">async_vault</code> standardizes
-                            subscription / redemption flows so teams can innovate on top instead of forking yet
-                            another implementation.
+                            subscription / redemption flows so teams can innovate on top instead of forking yet another
+                            implementation.
                         </p>
                     </div>
                     <ul className="space-y-3 text-sm">
                         <FeatureRow label="Composable with sRFC-37" value="Token Access Control List for KYC'd RWAs" />
                         <FeatureRow label="No forced ATAs" value="Caller pre-initializes any token accounts" />
                         <FeatureRow label="Token-2022 ready" value="Asset & share mints can use either token program" />
-                        <FeatureRow label="LiteSVM tested" value="Rust-only integration suite covers each instruction" />
+                        <FeatureRow
+                            label="LiteSVM tested"
+                            value="Rust-only integration suite covers each instruction"
+                        />
                     </ul>
                 </div>
             </section>

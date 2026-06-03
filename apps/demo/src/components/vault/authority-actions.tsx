@@ -26,12 +26,7 @@ import {
     buildWithdrawAssetsIx,
 } from '@/lib/program';
 import { sendIxs } from '@/lib/tx';
-import {
-    buildMintToInstruction,
-    getAtaAddress,
-    tokenProgramId,
-    type TokenProgramKind,
-} from '@/lib/token';
+import { buildMintToInstruction, getAtaAddress, tokenProgramId, type TokenProgramKind } from '@/lib/token';
 import type { VaultRequest, VaultState } from '@/lib/hooks/use-vault';
 import { RequestList } from './request-list';
 import { updateKnownVault } from '@/lib/vault-storage';
@@ -57,25 +52,32 @@ export function AuthorityActions({
     const [feeRecipient, setFeeRecipient] = React.useState(vault.base.feeRecipient as unknown as string);
     const [demoMintAmount, setDemoMintAmount] = React.useState('1000');
 
-    const hasPausableSubs = vault.extensions.some((e) => e.type === ExtensionType.PausableSubscriptions);
-    const hasPausableRedeems = vault.extensions.some((e) => e.type === ExtensionType.PausableRedemptions);
+    const hasPausableSubs = vault.extensions.some(e => e.type === ExtensionType.PausableSubscriptions);
+    const hasPausableRedeems = vault.extensions.some(e => e.type === ExtensionType.PausableRedemptions);
 
-    const isAuthority =
-        wallet.publicKey?.toBase58() === (vault.base.authority as unknown as string);
+    const isAuthority = wallet.publicKey?.toBase58() === (vault.base.authority as unknown as string);
     const isPendingAuthority =
         vault.base.pendingAuthority.__option === 'Some' &&
         wallet.publicKey?.toBase58() === (vault.base.pendingAuthority.value as unknown as string);
 
-    const subsExt = vault.extensions.find(
-        (e) => e.type === ExtensionType.PausableSubscriptions,
-    ) as { type: typeof ExtensionType.PausableSubscriptions; paused: boolean } | undefined;
-    const redeemsExt = vault.extensions.find(
-        (e) => e.type === ExtensionType.PausableRedemptions,
-    ) as { type: typeof ExtensionType.PausableRedemptions; paused: boolean } | undefined;
+    const subsExt = vault.extensions.find(e => e.type === ExtensionType.PausableSubscriptions) as
+        | { type: typeof ExtensionType.PausableSubscriptions; paused: boolean }
+        | undefined;
+    const redeemsExt = vault.extensions.find(e => e.type === ExtensionType.PausableRedemptions) as
+        | { type: typeof ExtensionType.PausableRedemptions; paused: boolean }
+        | undefined;
 
-    const sendTx = async (label: string, ixs: Awaited<ReturnType<typeof buildUpdateNavIx>>[] | Parameters<typeof sendIxs>[0]['instructions']) => {
+    const sendTx = async (
+        label: string,
+        ixs: Awaited<ReturnType<typeof buildUpdateNavIx>>[] | Parameters<typeof sendIxs>[0]['instructions'],
+    ) => {
         if (!wallet.publicKey) return;
-        await sendIxs({ connection, wallet, instructions: ixs as Parameters<typeof sendIxs>[0]['instructions'], label });
+        await sendIxs({
+            connection,
+            wallet,
+            instructions: ixs as Parameters<typeof sendIxs>[0]['instructions'],
+            label,
+        });
         onRefresh();
     };
 
@@ -117,9 +119,7 @@ export function AuthorityActions({
         if (!wallet.publicKey) return;
         try {
             const userAta = getAtaAddress(
-                req.type === 'deposit'
-                    ? new PublicKey(vault.base.assetMint as unknown as string)
-                    : vault.shareMint,
+                req.type === 'deposit' ? new PublicKey(vault.base.assetMint as unknown as string) : vault.shareMint,
                 req.owner,
                 req.type === 'deposit' ? vault.assetTokenProgram : vault.shareTokenProgram,
             );
@@ -291,7 +291,7 @@ export function AuthorityActions({
         }
     };
 
-    const pendingRequests = requests.filter((r) => r.state === 'pending');
+    const pendingRequests = requests.filter(r => r.state === 'pending');
 
     return (
         <div className="space-y-6">
@@ -299,8 +299,8 @@ export function AuthorityActions({
                 <Card className="border-warning/40 bg-warning/5">
                     <CardContent className="p-4 text-sm">
                         Connected wallet is{' '}
-                        <span className="font-mono">{wallet.publicKey?.toBase58().slice(0, 8)}…</span> — not the
-                        current authority. Authority-only actions will be disabled.
+                        <span className="font-mono">{wallet.publicKey?.toBase58().slice(0, 8)}…</span> — not the current
+                        authority. Authority-only actions will be disabled.
                         {isPendingAuthority ? (
                             <Button onClick={handleAccept} variant="gradient" size="sm" className="ml-3">
                                 Accept authority invitation
@@ -316,7 +316,7 @@ export function AuthorityActions({
                 requests={pendingRequests}
                 vault={vault}
                 emptyLabel="No pending requests."
-                actions={(req) => (
+                actions={req => (
                     <>
                         <Button
                             size="sm"
@@ -326,12 +326,7 @@ export function AuthorityActions({
                         >
                             Approve
                         </Button>
-                        <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={!isAuthority}
-                            onClick={() => handleReject(req)}
-                        >
+                        <Button size="sm" variant="outline" disabled={!isAuthority} onClick={() => handleReject(req)}>
                             Reject
                         </Button>
                     </>
@@ -355,7 +350,7 @@ export function AuthorityActions({
                                     inputMode="decimal"
                                     className="mt-1.5"
                                     value={navInput}
-                                    onChange={(e) => setNavInput(e.target.value)}
+                                    onChange={e => setNavInput(e.target.value)}
                                 />
                             </div>
                             <Button onClick={handleUpdateNav} disabled={!isAuthority}>
@@ -436,8 +431,8 @@ export function AuthorityActions({
                         <CardTitle className="text-base">Withdraw vault assets</CardTitle>
                         <CardDescription>
                             Move assets out of the vault reserve — typically to deploy them off-chain.{' '}
-                            <code className="font-mono">total_asset_balance</code> still tracks the virtual balance
-                            for NAV math.
+                            <code className="font-mono">total_asset_balance</code> still tracks the virtual balance for
+                            NAV math.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
@@ -447,7 +442,7 @@ export function AuthorityActions({
                                 inputMode="decimal"
                                 className="mt-1.5"
                                 value={withdrawAmount}
-                                onChange={(e) => setWithdrawAmount(e.target.value)}
+                                onChange={e => setWithdrawAmount(e.target.value)}
                             />
                         </div>
                         <div>
@@ -455,15 +450,11 @@ export function AuthorityActions({
                             <Input
                                 className="mt-1.5"
                                 value={withdrawTo}
-                                onChange={(e) => setWithdrawTo(e.target.value)}
+                                onChange={e => setWithdrawTo(e.target.value)}
                                 placeholder="Defaults to your wallet"
                             />
                         </div>
-                        <Button
-                            onClick={handleWithdraw}
-                            disabled={!isAuthority || !withdrawAmount}
-                            className="w-full"
-                        >
+                        <Button onClick={handleWithdraw} disabled={!isAuthority || !withdrawAmount} className="w-full">
                             <Send className="size-4" /> Withdraw
                         </Button>
                     </CardContent>
@@ -482,7 +473,7 @@ export function AuthorityActions({
                         <Input
                             className="mt-1.5"
                             value={newAuthority}
-                            onChange={(e) => setNewAuthority(e.target.value)}
+                            onChange={e => setNewAuthority(e.target.value)}
                             placeholder="So1AnAa…"
                         />
                         <div className="flex flex-wrap gap-2">
@@ -518,7 +509,7 @@ export function AuthorityActions({
                                     inputMode="decimal"
                                     className="mt-1.5"
                                     value={demoMintAmount}
-                                    onChange={(e) => setDemoMintAmount(e.target.value)}
+                                    onChange={e => setDemoMintAmount(e.target.value)}
                                 />
                             </div>
                             <Button onClick={handleAirdropDemo} className="w-full" variant="outline">

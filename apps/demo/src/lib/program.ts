@@ -160,10 +160,7 @@ export function buildInviteAuthorityIx(args: {
     );
 }
 
-export function buildAcceptAuthorityIx(args: {
-    newAuthority: PublicKey;
-    vault: PublicKey;
-}): TransactionInstruction {
+export function buildAcceptAuthorityIx(args: { newAuthority: PublicKey; vault: PublicKey }): TransactionInstruction {
     return kitIxToWeb3(
         getAcceptAuthorityInvitationInstruction(
             { newAuthority: noop(args.newAuthority), vault: addr(args.vault) },
@@ -463,8 +460,7 @@ export function buildClaimIx(p: ClaimParams): TransactionInstruction {
                 userShareAccount: p.userShareAccount ? addr(p.userShareAccount) : undefined,
                 userAssetAccount: p.userAssetAccount ? addr(p.userAssetAccount) : undefined,
                 assetTokenProgram: addr(tokenProgramId(p.assetTokenProgram)),
-                shareTokenProgram:
-                    p.requestType === 'deposit' ? addr(tokenProgramId(p.shareTokenProgram)) : undefined,
+                shareTokenProgram: p.requestType === 'deposit' ? addr(tokenProgramId(p.shareTokenProgram)) : undefined,
             },
             { programAddress: PROGRAM_ADDRESS },
         ),

@@ -20,11 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
-import {
-    DEFAULT_EXT_CONFIG,
-    ExtensionConfigForm,
-    type ExtensionsConfig,
-} from '@/components/vault/extension-config';
+import { DEFAULT_EXT_CONFIG, ExtensionConfigForm, type ExtensionsConfig } from '@/components/vault/extension-config';
 import { parseTokenAmount } from '@/lib/format';
 import {
     buildCreateVaultIx,
@@ -232,23 +228,14 @@ export default function CreateVaultPage() {
                 );
             }
             if (extensions.subscriptionQueue.enabled) {
-                extensionIxs.push(
-                    buildInitSubscriptionQueueIx({ payer, authority: payer, vault: pdas.vault }),
-                );
+                extensionIxs.push(buildInitSubscriptionQueueIx({ payer, authority: payer, vault: pdas.vault }));
             }
             if (extensions.redemptionQueue.enabled) {
-                extensionIxs.push(
-                    buildInitRedemptionQueueIx({ payer, authority: payer, vault: pdas.vault }),
-                );
+                extensionIxs.push(buildInitRedemptionQueueIx({ payer, authority: payer, vault: pdas.vault }));
             }
             const initVaultIx = buildInitializeVaultIx(payer, pdas.vault);
 
-            const allIxs = [
-                ...shareMintCreate.instructions,
-                createVaultIx,
-                ...extensionIxs,
-                initVaultIx,
-            ];
+            const allIxs = [...shareMintCreate.instructions, createVaultIx, ...extensionIxs, initVaultIx];
 
             const sig = await sendIxs({
                 connection,
@@ -297,9 +284,12 @@ export default function CreateVaultPage() {
             {!wallet.connected ? (
                 <Card>
                     <CardContent className="p-6 text-sm text-muted-foreground">
-                        Connect a wallet (top right) to begin. You&apos;ll need a tiny bit of devnet SOL — request
-                        an airdrop with{' '}
-                        <code className="font-mono text-foreground">solana airdrop 2 &lt;your-pubkey&gt; --url devnet</code>.
+                        Connect a wallet (top right) to begin. You&apos;ll need a tiny bit of devnet SOL — request an
+                        airdrop with{' '}
+                        <code className="font-mono text-foreground">
+                            solana airdrop 2 &lt;your-pubkey&gt; --url devnet
+                        </code>
+                        .
                     </CardContent>
                 </Card>
             ) : null}
@@ -342,7 +332,7 @@ export default function CreateVaultPage() {
                             <Label>Vault label (saved locally)</Label>
                             <Input
                                 value={label}
-                                onChange={(e) => setLabel(e.target.value)}
+                                onChange={e => setLabel(e.target.value)}
                                 className="mt-1.5"
                                 placeholder="My demo vault"
                             />
@@ -363,8 +353,8 @@ export default function CreateVaultPage() {
                                     <p className="font-medium">Synthetic demo asset</p>
                                 </div>
                                 <p className="mt-2 text-xs text-muted-foreground">
-                                    Mints a fake stablecoin you control + airdrops some to your wallet so you can deposit
-                                    immediately.
+                                    Mints a fake stablecoin you control + airdrops some to your wallet so you can
+                                    deposit immediately.
                                 </p>
                             </button>
                             <button
@@ -391,7 +381,7 @@ export default function CreateVaultPage() {
                                     <select
                                         className="mt-1.5 flex h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                         value={tokenProgram}
-                                        onChange={(e) => setTokenProgram(e.target.value as TokenProgramKind)}
+                                        onChange={e => setTokenProgram(e.target.value as TokenProgramKind)}
                                     >
                                         <option value="spl">SPL Token</option>
                                         <option value="token-2022">Token-2022</option>
@@ -404,7 +394,7 @@ export default function CreateVaultPage() {
                                         min={0}
                                         max={9}
                                         value={assetDecimals}
-                                        onChange={(e) => setAssetDecimals(Number(e.target.value))}
+                                        onChange={e => setAssetDecimals(Number(e.target.value))}
                                         className="mt-1.5"
                                     />
                                 </div>
@@ -413,7 +403,7 @@ export default function CreateVaultPage() {
                                     <Input
                                         inputMode="decimal"
                                         value={demoMintAmount}
-                                        onChange={(e) => setDemoMintAmount(e.target.value)}
+                                        onChange={e => setDemoMintAmount(e.target.value)}
                                         className="mt-1.5"
                                     />
                                 </div>
@@ -423,7 +413,7 @@ export default function CreateVaultPage() {
                                 <Label>Asset mint address</Label>
                                 <Input
                                     value={assetMintInput}
-                                    onChange={(e) => setAssetMintInput(e.target.value)}
+                                    onChange={e => setAssetMintInput(e.target.value)}
                                     className="mt-1.5"
                                     placeholder="So1AnAa..."
                                 />
@@ -440,7 +430,7 @@ export default function CreateVaultPage() {
                                     min={0}
                                     max={9}
                                     value={shareDecimals}
-                                    onChange={(e) => setShareDecimals(Number(e.target.value))}
+                                    onChange={e => setShareDecimals(Number(e.target.value))}
                                     className="mt-1.5"
                                 />
                                 <p className="mt-1 text-xs text-muted-foreground">
@@ -452,7 +442,7 @@ export default function CreateVaultPage() {
                                 <Label>Fee recipient (optional)</Label>
                                 <Input
                                     value={feeRecipientInput}
-                                    onChange={(e) => setFeeRecipientInput(e.target.value)}
+                                    onChange={e => setFeeRecipientInput(e.target.value)}
                                     className="mt-1.5"
                                     placeholder="Defaults to your wallet"
                                 />
@@ -518,17 +508,17 @@ export default function CreateVaultPage() {
                             <ReviewRow label="Share mint" value={`Fresh keypair · decimals=${shareDecimals}`} />
                             <ReviewRow
                                 label="Authority / payer"
-                                value={
-                                    wallet.publicKey ? (
-                                        <AddressPill value={wallet.publicKey.toBase58()} />
-                                    ) : (
-                                        '—'
-                                    )
-                                }
+                                value={wallet.publicKey ? <AddressPill value={wallet.publicKey.toBase58()} /> : '—'}
                             />
                             <ReviewRow
                                 label="Fee recipient"
-                                value={feeRecipientInput.trim() ? <AddressPill value={feeRecipientInput.trim()} /> : 'Wallet'}
+                                value={
+                                    feeRecipientInput.trim() ? (
+                                        <AddressPill value={feeRecipientInput.trim()} />
+                                    ) : (
+                                        'Wallet'
+                                    )
+                                }
                             />
                             <Separator />
                             <div>
@@ -541,7 +531,7 @@ export default function CreateVaultPage() {
                                                 {k}
                                             </Badge>
                                         ))}
-                                    {Object.values(extensions).every((v) => !(v as { enabled: boolean }).enabled) ? (
+                                    {Object.values(extensions).every(v => !(v as { enabled: boolean }).enabled) ? (
                                         <span className="text-xs text-muted-foreground">No extensions selected</span>
                                     ) : null}
                                 </div>

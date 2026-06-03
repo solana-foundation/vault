@@ -37,10 +37,7 @@ export interface VaultRequest {
     raw: Request;
 }
 
-async function fetchVaultRequests(
-    connection: Connection,
-    vault: PublicKey,
-): Promise<VaultRequest[]> {
+async function fetchVaultRequests(connection: Connection, vault: PublicKey): Promise<VaultRequest[]> {
     const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
         filters: [
             { memcmp: { offset: 0, bytes: bs58.encode(REQUEST_DISCRIMINATOR) } },
@@ -79,7 +76,7 @@ export function useVault(shareMintAddress: string | null | undefined) {
     const [loading, setLoading] = React.useState(false);
     const [refreshKey, setRefreshKey] = React.useState(0);
 
-    const refresh = React.useCallback(() => setRefreshKey((k) => k + 1), []);
+    const refresh = React.useCallback(() => setRefreshKey(k => k + 1), []);
 
     React.useEffect(() => {
         if (!shareMintAddress) {
@@ -99,14 +96,13 @@ export function useVault(shareMintAddress: string | null | undefined) {
                 const data = new Uint8Array(vaultAcc.data);
                 const base = decodeVaultData(data);
                 const extensions = parseExtensions(data);
-                const [assetMint, shareMintInfo, reserveBalance, pendingBalance, vaultRequests] =
-                    await Promise.all([
-                        fetchMint(connection, new PublicKey(base.assetMint)),
-                        fetchMint(connection, shareMint),
-                        fetchTokenAccountBalance(connection, pdas.reserve),
-                        fetchTokenAccountBalance(connection, pdas.pendingVault),
-                        fetchVaultRequests(connection, pdas.vault),
-                    ]);
+                const [assetMint, shareMintInfo, reserveBalance, pendingBalance, vaultRequests] = await Promise.all([
+                    fetchMint(connection, new PublicKey(base.assetMint)),
+                    fetchMint(connection, shareMint),
+                    fetchTokenAccountBalance(connection, pdas.reserve),
+                    fetchTokenAccountBalance(connection, pdas.pendingVault),
+                    fetchVaultRequests(connection, pdas.vault),
+                ]);
                 if (cancelled) return;
                 setState({
                     shareMint,
@@ -141,7 +137,7 @@ export function useTokenBalance(address: string | null | undefined) {
     const { connection } = useConnection();
     const [balance, setBalance] = React.useState<bigint | null>(null);
     const [refreshKey, setRefreshKey] = React.useState(0);
-    const refresh = React.useCallback(() => setRefreshKey((k) => k + 1), []);
+    const refresh = React.useCallback(() => setRefreshKey(k => k + 1), []);
 
     React.useEffect(() => {
         if (!address) {

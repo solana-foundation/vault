@@ -9,7 +9,7 @@ export function kitIxToWeb3(ix: Instruction): TransactionInstruction {
     const accounts = (ix.accounts ?? []) as readonly AccountMeta[];
     return new TransactionInstruction({
         programId: new PublicKey(ix.programAddress),
-        keys: accounts.map((a) => ({
+        keys: accounts.map(a => ({
             pubkey: new PublicKey(a.address),
             isSigner: a.role === AccountRole.READONLY_SIGNER || a.role === AccountRole.WRITABLE_SIGNER,
             isWritable: a.role === AccountRole.WRITABLE || a.role === AccountRole.WRITABLE_SIGNER,

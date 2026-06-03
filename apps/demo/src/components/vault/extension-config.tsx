@@ -70,7 +70,7 @@ export function ExtensionConfigForm({
             <Row
                 type={ExtensionType.DepositFee}
                 enabled={config.depositFee.enabled}
-                onToggle={(enabled) => set('depositFee', { ...config.depositFee, enabled })}
+                onToggle={enabled => set('depositFee', { ...config.depositFee, enabled })}
             >
                 <Label className="mb-1 block text-xs text-muted-foreground">Fee (basis points · 100 = 1%)</Label>
                 <Input
@@ -78,13 +78,13 @@ export function ExtensionConfigForm({
                     min={0}
                     max={10000}
                     value={config.depositFee.bps}
-                    onChange={(e) => set('depositFee', { ...config.depositFee, bps: Number(e.target.value) })}
+                    onChange={e => set('depositFee', { ...config.depositFee, bps: Number(e.target.value) })}
                 />
             </Row>
             <Row
                 type={ExtensionType.WithdrawalFee}
                 enabled={config.withdrawalFee.enabled}
-                onToggle={(enabled) => set('withdrawalFee', { ...config.withdrawalFee, enabled })}
+                onToggle={enabled => set('withdrawalFee', { ...config.withdrawalFee, enabled })}
             >
                 <Label className="mb-1 block text-xs text-muted-foreground">Fee (basis points)</Label>
                 <Input
@@ -92,23 +92,19 @@ export function ExtensionConfigForm({
                     min={0}
                     max={10000}
                     value={config.withdrawalFee.bps}
-                    onChange={(e) =>
-                        set('withdrawalFee', { ...config.withdrawalFee, bps: Number(e.target.value) })
-                    }
+                    onChange={e => set('withdrawalFee', { ...config.withdrawalFee, bps: Number(e.target.value) })}
                 />
             </Row>
             <Row
                 type={ExtensionType.PausableSubscriptions}
                 enabled={config.pausableSubscriptions.enabled}
-                onToggle={(enabled) =>
-                    set('pausableSubscriptions', { ...config.pausableSubscriptions, enabled })
-                }
+                onToggle={enabled => set('pausableSubscriptions', { ...config.pausableSubscriptions, enabled })}
             >
                 <div className="flex items-center justify-between">
                     <Label className="text-xs text-muted-foreground">Start paused</Label>
                     <Switch
                         checked={config.pausableSubscriptions.paused}
-                        onCheckedChange={(paused) =>
+                        onCheckedChange={paused =>
                             set('pausableSubscriptions', { ...config.pausableSubscriptions, paused })
                         }
                     />
@@ -117,15 +113,13 @@ export function ExtensionConfigForm({
             <Row
                 type={ExtensionType.PausableRedemptions}
                 enabled={config.pausableRedemptions.enabled}
-                onToggle={(enabled) =>
-                    set('pausableRedemptions', { ...config.pausableRedemptions, enabled })
-                }
+                onToggle={enabled => set('pausableRedemptions', { ...config.pausableRedemptions, enabled })}
             >
                 <div className="flex items-center justify-between">
                     <Label className="text-xs text-muted-foreground">Start paused</Label>
                     <Switch
                         checked={config.pausableRedemptions.paused}
-                        onCheckedChange={(paused) =>
+                        onCheckedChange={paused =>
                             set('pausableRedemptions', { ...config.pausableRedemptions, paused })
                         }
                     />
@@ -134,40 +128,36 @@ export function ExtensionConfigForm({
             <Row
                 type={ExtensionType.MinSubscription}
                 enabled={config.minSubscription.enabled}
-                onToggle={(enabled) => set('minSubscription', { ...config.minSubscription, enabled })}
+                onToggle={enabled => set('minSubscription', { ...config.minSubscription, enabled })}
             >
                 <Label className="mb-1 block text-xs text-muted-foreground">Minimum deposit (asset units)</Label>
                 <Input
                     inputMode="decimal"
                     value={config.minSubscription.threshold}
-                    onChange={(e) =>
-                        set('minSubscription', { ...config.minSubscription, threshold: e.target.value })
-                    }
+                    onChange={e => set('minSubscription', { ...config.minSubscription, threshold: e.target.value })}
                 />
             </Row>
             <Row
                 type={ExtensionType.MinRedemption}
                 enabled={config.minRedemption.enabled}
-                onToggle={(enabled) => set('minRedemption', { ...config.minRedemption, enabled })}
+                onToggle={enabled => set('minRedemption', { ...config.minRedemption, enabled })}
             >
                 <Label className="mb-1 block text-xs text-muted-foreground">Minimum redeem (share units)</Label>
                 <Input
                     inputMode="decimal"
                     value={config.minRedemption.threshold}
-                    onChange={(e) =>
-                        set('minRedemption', { ...config.minRedemption, threshold: e.target.value })
-                    }
+                    onChange={e => set('minRedemption', { ...config.minRedemption, threshold: e.target.value })}
                 />
             </Row>
             <Row
                 type={ExtensionType.SubscriptionQueue}
                 enabled={config.subscriptionQueue.enabled}
-                onToggle={(enabled) => set('subscriptionQueue', { enabled })}
+                onToggle={enabled => set('subscriptionQueue', { enabled })}
             />
             <Row
                 type={ExtensionType.RedemptionQueue}
                 enabled={config.redemptionQueue.enabled}
-                onToggle={(enabled) => set('redemptionQueue', { enabled })}
+                onToggle={enabled => set('redemptionQueue', { enabled })}
             />
         </div>
     );

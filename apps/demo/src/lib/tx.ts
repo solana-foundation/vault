@@ -46,10 +46,7 @@ export async function sendIxs(args: SendIxsArgs): Promise<string> {
             skipPreflight: false,
             preflightCommitment: COMMITMENT,
         });
-        await connection.confirmTransaction(
-            { signature: sig, blockhash, lastValidBlockHeight },
-            COMMITMENT,
-        );
+        await connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, COMMITMENT);
         if (!silent) {
             toast.success('Transaction confirmed', {
                 id: toastId,

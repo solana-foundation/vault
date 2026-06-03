@@ -3,10 +3,7 @@
 import * as React from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { Keypair, PublicKey } from '@solana/web3.js';
-import {
-    ASSOCIATED_TOKEN_PROGRAM_ID,
-    createAssociatedTokenAccountIdempotentInstruction,
-} from '@solana/spl-token';
+import { ASSOCIATED_TOKEN_PROGRAM_ID, createAssociatedTokenAccountIdempotentInstruction } from '@solana/spl-token';
 import { ArrowDownToLine, ArrowUpFromLine, Hand, ShieldQuestion, X } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -54,21 +51,16 @@ export function UserActions({
     );
 
     const userAssetAta = owner ? getAtaAddress(assetMintPk, owner, vault.assetTokenProgram) : null;
-    const userShareAta = owner
-        ? getAtaAddress(vault.shareMint, owner, vault.shareTokenProgram)
-        : null;
+    const userShareAta = owner ? getAtaAddress(vault.shareMint, owner, vault.shareTokenProgram) : null;
 
     const { balance: assetBalance, refresh: refreshAsset } = useTokenBalance(userAssetAta?.toBase58());
     const { balance: shareBalance, refresh: refreshShare } = useTokenBalance(userShareAta?.toBase58());
 
-    const hasSubQueue = vault.extensions.some((e) => e.type === ExtensionType.SubscriptionQueue);
-    const hasRedeemQueue = vault.extensions.some((e) => e.type === ExtensionType.RedemptionQueue);
+    const hasSubQueue = vault.extensions.some(e => e.type === ExtensionType.SubscriptionQueue);
+    const hasRedeemQueue = vault.extensions.some(e => e.type === ExtensionType.RedemptionQueue);
 
     const myRequests = React.useMemo(
-        () =>
-            requests.filter(
-                (r) => owner && r.owner.toBase58() === owner.toBase58() && r.state !== 'canceled',
-            ),
+        () => requests.filter(r => owner && r.owner.toBase58() === owner.toBase58() && r.state !== 'canceled'),
         [requests, owner],
     );
 
@@ -232,8 +224,7 @@ export function UserActions({
         try {
             const userAta = getAtaAddress(assetMintPk, req.owner, vault.assetTokenProgram);
             const userShare = getAtaAddress(vault.shareMint, req.owner, vault.shareTokenProgram);
-            const useQueue =
-                (req.type === 'deposit' && hasSubQueue) || (req.type === 'redeem' && hasRedeemQueue);
+            const useQueue = (req.type === 'deposit' && hasSubQueue) || (req.type === 'redeem' && hasRedeemQueue);
             const ix = useQueue
                 ? req.type === 'deposit'
                     ? buildCancelQueuedDepositIx({
@@ -325,14 +316,12 @@ export function UserActions({
                                 inputMode="decimal"
                                 className="mt-1.5"
                                 value={depositAmount}
-                                onChange={(e) => setDepositAmount(e.target.value)}
+                                onChange={e => setDepositAmount(e.target.value)}
                                 placeholder="100"
                             />
                             <p className="mt-1 text-xs text-muted-foreground">
                                 Wallet balance:{' '}
-                                {assetBalance != null
-                                    ? formatTokenAmount(assetBalance, vault.assetMint.decimals)
-                                    : '—'}{' '}
+                                {assetBalance != null ? formatTokenAmount(assetBalance, vault.assetMint.decimals) : '—'}{' '}
                                 · {vault.assetMint.decimals} dec
                             </p>
                         </div>
@@ -365,7 +354,7 @@ export function UserActions({
                                 inputMode="decimal"
                                 className="mt-1.5"
                                 value={redeemAmount}
-                                onChange={(e) => setRedeemAmount(e.target.value)}
+                                onChange={e => setRedeemAmount(e.target.value)}
                                 placeholder="10"
                             />
                             <p className="mt-1 text-xs text-muted-foreground">
@@ -388,7 +377,7 @@ export function UserActions({
                 requests={myRequests}
                 vault={vault}
                 emptyLabel="You have no active requests."
-                actions={(req) => (
+                actions={req => (
                     <>
                         {req.state === 'claimable' ? (
                             <Button
@@ -421,19 +410,13 @@ export function UserActions({
                 <CardContent className="grid gap-3 p-4 md:grid-cols-3">
                     <Stat
                         label="Asset wallet"
-                        value={
-                            assetBalance != null
-                                ? formatTokenAmount(assetBalance, vault.assetMint.decimals)
-                                : '—'
-                        }
+                        value={assetBalance != null ? formatTokenAmount(assetBalance, vault.assetMint.decimals) : '—'}
                         addr={userAssetAta?.toBase58()}
                     />
                     <Stat
                         label="Share wallet"
                         value={
-                            shareBalance != null
-                                ? formatTokenAmount(shareBalance, vault.shareMintInfo.decimals)
-                                : '—'
+                            shareBalance != null ? formatTokenAmount(shareBalance, vault.shareMintInfo.decimals) : '—'
                         }
                         addr={userShareAta?.toBase58()}
                     />

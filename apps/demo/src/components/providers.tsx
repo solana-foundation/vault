@@ -7,10 +7,9 @@ import { Toaster } from 'sonner';
 
 import { CLUSTER, RPC_URL } from '@/lib/env';
 
-const WalletModalProvider = dynamic(
-    () => import('@solana/wallet-adapter-react-ui').then((m) => m.WalletModalProvider),
-    { ssr: false },
-);
+const WalletModalProvider = dynamic(() => import('@solana/wallet-adapter-react-ui').then(m => m.WalletModalProvider), {
+    ssr: false,
+});
 
 import '@solana/wallet-adapter-react-ui/styles.css';
 
@@ -38,12 +37,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 }
 
 function ClusterBadge({ cluster }: { cluster: string }) {
-    const color =
-        cluster === 'mainnet-beta'
-            ? 'bg-red-500'
-            : cluster === 'devnet'
-              ? 'bg-amber-500'
-              : 'bg-blue-500';
+    const color = cluster === 'mainnet-beta' ? 'bg-red-500' : cluster === 'devnet' ? 'bg-amber-500' : 'bg-blue-500';
     return (
         <div className="fixed bottom-4 left-4 z-50 hidden items-center gap-2 rounded-full bg-card/80 px-3 py-1 text-xs font-mono shadow-lg backdrop-blur md:flex">
             <span className={`size-2 rounded-full ${color}`} />

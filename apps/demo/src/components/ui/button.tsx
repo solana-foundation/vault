@@ -10,13 +10,11 @@ const buttonVariants = cva(
             variant: {
                 default: 'bg-primary text-primary-foreground hover:bg-primary/90',
                 destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-                outline:
-                    'border border-border bg-background hover:bg-accent hover:text-accent-foreground',
+                outline: 'border border-border bg-background hover:bg-accent hover:text-accent-foreground',
                 secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
                 ghost: 'hover:bg-accent hover:text-accent-foreground',
                 link: 'text-primary underline-offset-4 hover:underline',
-                gradient:
-                    'bg-gradient-to-r from-solana-purple to-solana-green text-white hover:opacity-90',
+                gradient: 'bg-gradient-to-r from-solana-purple to-solana-green text-white hover:opacity-90',
             },
             size: {
                 default: 'h-10 px-4 py-2',
@@ -33,8 +31,7 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-    extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-        VariantProps<typeof buttonVariants> {
+    extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
     loading?: boolean;
 }
 
@@ -54,18 +51,8 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
                         fill="none"
                         xmlns="http://www.w3.org/2000/svg"
                     >
-                        <circle
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="3"
-                            opacity="0.25"
-                        />
-                        <path
-                            fill="currentColor"
-                            d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2Z"
-                        />
+                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" opacity="0.25" />
+                        <path fill="currentColor" d="M12 2a10 10 0 0 1 10 10h-3a7 7 0 0 0-7-7V2Z" />
                     </svg>
                 ) : null}
                 {children}

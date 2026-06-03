@@ -11,13 +11,7 @@ import {
     getMint,
     getMinimumBalanceForRentExemptMint,
 } from '@solana/spl-token';
-import {
-    Keypair,
-    PublicKey,
-    SystemProgram,
-    type Connection,
-    type TransactionInstruction,
-} from '@solana/web3.js';
+import { Keypair, PublicKey, SystemProgram, type Connection, type TransactionInstruction } from '@solana/web3.js';
 
 export type TokenProgramKind = 'spl' | 'token-2022';
 
@@ -95,7 +89,14 @@ export function buildMintToInstruction(args: {
     amount: bigint;
     kind: TokenProgramKind;
 }): TransactionInstruction {
-    return createMintToInstruction(args.mint, args.destination, args.authority, args.amount, [], tokenProgramId(args.kind));
+    return createMintToInstruction(
+        args.mint,
+        args.destination,
+        args.authority,
+        args.amount,
+        [],
+        tokenProgramId(args.kind),
+    );
 }
 
 export interface MintInfo {
@@ -120,10 +121,7 @@ export async function fetchMint(connection: Connection, mint: PublicKey): Promis
     };
 }
 
-export async function fetchTokenAccountBalance(
-    connection: Connection,
-    address: PublicKey,
-): Promise<bigint | null> {
+export async function fetchTokenAccountBalance(connection: Connection, address: PublicKey): Promise<bigint | null> {
     try {
         const acc = await connection.getAccountInfo(address);
         if (!acc) return null;

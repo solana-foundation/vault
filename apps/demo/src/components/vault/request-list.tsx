@@ -32,12 +32,10 @@ export function RequestList({
             </CardHeader>
             <CardContent>
                 {requests.length === 0 ? (
-                    <p className="py-4 text-center text-sm text-muted-foreground">
-                        {emptyLabel ?? 'No requests yet.'}
-                    </p>
+                    <p className="py-4 text-center text-sm text-muted-foreground">{emptyLabel ?? 'No requests yet.'}</p>
                 ) : (
                     <ul className="space-y-2">
-                        {requests.map((r) => (
+                        {requests.map(r => (
                             <li key={r.address.toBase58()}>
                                 <RequestRow req={r} vault={vault} actions={actions?.(r)} />
                             </li>
@@ -55,15 +53,7 @@ function stateBadge(state: VaultRequest['state']) {
     return <Badge variant="muted">Canceled</Badge>;
 }
 
-function RequestRow({
-    req,
-    vault,
-    actions,
-}: {
-    req: VaultRequest;
-    vault: VaultState;
-    actions?: React.ReactNode;
-}) {
+function RequestRow({ req, vault, actions }: { req: VaultRequest; vault: VaultState; actions?: React.ReactNode }) {
     const decimals = req.type === 'deposit' ? vault.assetMint.decimals : vault.shareMintInfo.decimals;
     const symbol = req.type === 'deposit' ? 'asset' : 'shares';
     const amount = formatTokenAmount(req.amount, decimals);
@@ -86,9 +76,7 @@ function RequestRow({
                 <AddressPill value={req.address.toBase58()} chars={4} />
                 <ChevronRight className="size-3 text-muted-foreground" />
                 <AddressPill label="owner" value={req.owner.toBase58()} chars={4} />
-                {req.operator ? (
-                    <AddressPill label="op" value={req.operator.toBase58()} chars={4} />
-                ) : null}
+                {req.operator ? <AddressPill label="op" value={req.operator.toBase58()} chars={4} /> : null}
                 {req.state === 'claimable' && req.price > 0n ? (
                     <span className="text-xs text-muted-foreground">
                         @ NAV {formatTokenAmount(req.price, vault.assetMint.decimals)}

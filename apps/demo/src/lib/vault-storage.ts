@@ -29,20 +29,20 @@ export function getKnownVaults(): KnownVault[] {
 
 export function saveKnownVault(v: KnownVault): void {
     if (typeof window === 'undefined') return;
-    const existing = getKnownVaults().filter((x) => x.shareMint !== v.shareMint);
+    const existing = getKnownVaults().filter(x => x.shareMint !== v.shareMint);
     const next = [v, ...existing].slice(0, 50);
     window.localStorage.setItem(KEY, JSON.stringify(next));
 }
 
 export function removeKnownVault(shareMint: string): void {
     if (typeof window === 'undefined') return;
-    const next = getKnownVaults().filter((x) => x.shareMint !== shareMint);
+    const next = getKnownVaults().filter(x => x.shareMint !== shareMint);
     window.localStorage.setItem(KEY, JSON.stringify(next));
 }
 
 export function updateKnownVault(shareMint: string, patch: Partial<KnownVault>): void {
     const list = getKnownVaults();
-    const next = list.map((v) => (v.shareMint === shareMint ? { ...v, ...patch } : v));
+    const next = list.map(v => (v.shareMint === shareMint ? { ...v, ...patch } : v));
     if (typeof window !== 'undefined') {
         window.localStorage.setItem(KEY, JSON.stringify(next));
     }

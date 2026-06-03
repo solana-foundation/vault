@@ -23,10 +23,7 @@ export default function VaultDetailPage() {
     const { state, requests, loading, error, refresh } = useVault(params.shareMint);
     const [tab, setTab] = React.useState<'overview' | 'authority' | 'user'>('overview');
 
-    const known = React.useMemo(
-        () => getKnownVaults().find((v) => v.shareMint === params.shareMint),
-        [params.shareMint],
-    );
+    const known = React.useMemo(() => getKnownVaults().find(v => v.shareMint === params.shareMint), [params.shareMint]);
 
     if (error) {
         return (
@@ -55,8 +52,7 @@ export default function VaultDetailPage() {
         );
     }
 
-    const isAuthority =
-        wallet.publicKey?.toBase58() === (state.base.authority as unknown as string);
+    const isAuthority = wallet.publicKey?.toBase58() === (state.base.authority as unknown as string);
 
     return (
         <div className="space-y-6">
@@ -76,7 +72,7 @@ export default function VaultDetailPage() {
 
             <VaultSummary vault={state} label={known?.label} />
 
-            <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
+            <Tabs value={tab} onValueChange={v => setTab(v as typeof tab)}>
                 <TabsList>
                     <TabsTrigger value="overview">Overview</TabsTrigger>
                     <TabsTrigger value="user">User portal</TabsTrigger>
@@ -92,9 +88,9 @@ export default function VaultDetailPage() {
                         shareDecimals={state.shareMintInfo.decimals}
                     />
                     <RequestList
-                        title={`Open requests (${requests.filter((r) => r.state !== 'canceled').length})`}
+                        title={`Open requests (${requests.filter(r => r.state !== 'canceled').length})`}
                         description="A live view of every async request currently held by this vault."
-                        requests={requests.filter((r) => r.state !== 'canceled')}
+                        requests={requests.filter(r => r.state !== 'canceled')}
                         vault={state}
                         emptyLabel="No open requests."
                     />

@@ -40,8 +40,8 @@ export default function VaultsPage() {
                 <div>
                     <h1 className="text-3xl font-semibold">My vaults</h1>
                     <p className="mt-2 text-sm text-muted-foreground">
-                        Vaults you&apos;ve created or opened on this device. Stored locally — clear browser data
-                        wipes the list.
+                        Vaults you&apos;ve created or opened on this device. Stored locally — clear browser data wipes
+                        the list.
                     </p>
                 </div>
                 <Link href="/create">
@@ -63,7 +63,7 @@ export default function VaultsPage() {
                             <Input
                                 className="mt-1.5"
                                 value={lookup}
-                                onChange={(e) => setLookup(e.target.value)}
+                                onChange={e => setLookup(e.target.value)}
                                 placeholder="So1AnAa…"
                             />
                             {error ? <p className="mt-1 text-xs text-destructive">{error}</p> : null}
@@ -87,7 +87,7 @@ export default function VaultsPage() {
                 </Card>
             ) : (
                 <div className="grid gap-3 md:grid-cols-2">
-                    {vaults.map((v) => (
+                    {vaults.map(v => (
                         <Card key={v.shareMint} className="bg-card/40">
                             <CardContent className="flex flex-col gap-3 p-5">
                                 <div className="flex items-start justify-between gap-2">
