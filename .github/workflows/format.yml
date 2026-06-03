@@ -28,10 +28,10 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup
         with:
-          install-rust: 'false'
-          enable-rust-cache: 'false'
+          install-nightly-rustfmt: 'true'
           install-solana: 'false'
           install-just: 'false'
+          rust-cache-key: 'typescript-format'
       - run: pnpm run format:check
       - run: pnpm run generate-clients
       - run: pnpm lint
