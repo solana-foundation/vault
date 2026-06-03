@@ -1945,6 +1945,16 @@
       "code": 6035,
       "name": "RedemptionAmountBelowMinimum",
       "msg": "Redemption amount is below the minimum redemption threshold"
+    },
+    {
+      "code": 6036,
+      "name": "NavIsNotSet",
+      "msg": "Nav is not set."
+    },
+    {
+      "code": 6037,
+      "name": "InsufficientRedeemAmount",
+      "msg": "Redeem shares amount too small."
     }
   ],
   "types": [
