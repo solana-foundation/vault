@@ -126,6 +126,11 @@ runs:
         avm install ${{ inputs.anchor-version }}
         avm use ${{ inputs.anchor-version }}
 
+    - name: Add Cargo bin to PATH (anchor)
+      if: inputs.install-anchor == 'true'
+      shell: bash
+      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
     - name: Install just
       if: inputs.install-just == 'true'
       uses: extractions/setup-just@v4
