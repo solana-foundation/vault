@@ -32,7 +32,7 @@ pub struct InitDepositFee<'info> {
 }
 
 pub fn handler(ctx: Context<InitDepositFee>, args: InitDepositFeeArgs) -> Result<()> {
-    args.deposit_fee.validate()?;
+    args.deposit_fee.validate().map_err(AsyncVaultError::from)?;
     init_vault_extension(
         &ctx.accounts.vault.to_account_info(),
         &ctx.accounts.vault,

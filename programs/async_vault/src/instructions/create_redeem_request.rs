@@ -1,7 +1,6 @@
 use crate::error::AsyncVaultError;
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Burn, Mint, TokenAccount, TokenInterface};
-use vault_common::VaultProgramError;
 
 use crate::{
     extensions::{
@@ -80,7 +79,7 @@ pub fn handler(ctx: Context<CreateRedeemRequest>, args: RequestArgs) -> Result<(
         args.amount,
     )?;
 
-    require!(args.amount > 0, VaultProgramError::InsufficientRedeemAmount);
+    require!(args.amount > 0, AsyncVaultError::InsufficientRedeemAmount);
 
     ctx.accounts.burn_shares(args.amount)?;
 
@@ -103,7 +102,7 @@ pub fn handler(ctx: Context<CreateRedeemRequest>, args: RequestArgs) -> Result<(
         .vault
         .pending_async_requests
         .checked_add(1)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        .ok_or(AsyncVaultError::ArithmeticError)?;
 
     // Extension: RedemptionQueue — increment counter and tag the request with its ID.
     if let Some(id) =
