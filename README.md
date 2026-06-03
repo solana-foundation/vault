@@ -6,20 +6,6 @@
 
 A standard factory program for tokenized vaults on Solana, inspired by [ERC-7540](https://eips.ethereum.org/EIPS/eip-7540). It standardizes the subscription (deposit) and redemption (withdrawal) flow so teams can build on a shared, audited primitive instead of deploying bespoke vault programs.
 
-## Program ID
-
-```
-2kUpRoU8oGpstygkk3ZE51upGSq9UpkjNoEUiiQ88MMY
-```
-
-## Deployments
-
-| Network  | Program ID                                     |
-| -------- | ---------------------------------------------- |
-| Localnet | `2kUpRoU8oGpstygkk3ZE51upGSq9UpkjNoEUiiQ88MMY` |
-
-> Not yet deployed to devnet or mainnet-beta.
-
 ## Overview
 
 Real World Asset (RWA) issuers and other institutions repeatedly build the same vault primitives — deposits and redemptions into a managed strategy, with role-based access control and KYC. Today every team ships its own implementation, increasing integration work and the surface area for vulnerabilities. The Vault Standard Suite provides a shared, customizable vault program so that critical Solana infrastructure can be reused safely while still allowing innovation on top.
