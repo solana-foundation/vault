@@ -8,22 +8,18 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-anchor-lang = { version = "0.31.1", features = ["init-if-needed"] }
-anchor-spl = "0.31.1"
-borsh = "1.5"
-litesvm = "0.7.1"
-solana-sdk = "2.2.1"
+anchor-lang = { version = "=1.0.2", features = ["init-if-needed"] }
+anchor-spl = "=1.0.2"
+borsh = "1.5.7"
+litesvm = "0.12"
+solana-sdk = "3"
 sha2 = "0.10"
 sha2-const-stable = "0.1"
-# Pin blake3 to fix edition error
-blake3 = "=1.5.5"
 test-case = "3.3.1"
-solana-instruction = "2.0"
-spl-discriminator = "0.4.0"
-spl-tlv-account-resolution = "0.10.0"
-solana-account-info = "2.0"
-solana-pubkey = { version = "2.0", features = ["borsh"] }
-spl-token = "8.0.0"
+solana-instruction = "3"
+solana-account-info = "3"
+solana-pubkey = { version = "3", features = ["borsh"] }
+spl-token = "9"
 vault_common = { path = "libs/vault_common" }
 num-derive = "0.4.2"
 num-traits = "0.2.19"

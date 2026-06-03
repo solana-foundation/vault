@@ -90,7 +90,7 @@ impl<'info> Claim<'info> {
 
         token_interface::mint_to(
             CpiContext::new_with_signer(
-                share_token_program.to_account_info(),
+                share_token_program.key(),
                 MintTo {
                     mint: self.share_mint.to_account_info(),
                     to: user_share_account.to_account_info(),
@@ -115,7 +115,7 @@ impl<'info> Claim<'info> {
 
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
-                self.asset_token_program.to_account_info(),
+                self.asset_token_program.key(),
                 TransferChecked {
                     from: pending_vault.to_account_info(),
                     mint: self.asset_mint.to_account_info(),

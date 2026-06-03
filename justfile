@@ -4,7 +4,7 @@ install:
 
 # Build the program and refresh the committed IDL (idl/async_vault.json)
 generate-idl:
-    anchor build
+    anchor build --ignore-keys
     cp target/idl/async_vault.json idl/async_vault.json
 
 # Generate Rust + TypeScript clients from the committed IDL

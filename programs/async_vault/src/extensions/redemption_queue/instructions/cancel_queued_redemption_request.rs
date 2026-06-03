@@ -60,7 +60,7 @@ impl<'info> CancelQueuedRedemptionRequest<'info> {
         let share_mint = self.share_mint.key();
         let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
         let cpi_ctx = CpiContext::new_with_signer(
-            self.share_token_program.to_account_info(),
+            self.share_token_program.key(),
             cpi_accounts,
             seeds,
         );

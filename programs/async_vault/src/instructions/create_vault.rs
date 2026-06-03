@@ -73,7 +73,7 @@ impl<'info> CreateVault<'info> {
             current_authority: self.mint_authority.to_account_info(),
             account_or_mint: self.share_mint.to_account_info(),
         };
-        let cpi_ctx = CpiContext::new(self.share_token_program.to_account_info(), cpi_accounts);
+        let cpi_ctx = CpiContext::new(self.share_token_program.key(), cpi_accounts);
         set_authority(cpi_ctx, AuthorityType::MintTokens, Some(new_authority))
     }
 }

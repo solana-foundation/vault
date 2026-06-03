@@ -69,7 +69,7 @@ impl<'info> CreateDepositRequest<'info> {
     /// Transfers assets from the User's TokenAccount to the pending vault (aka escrow)
     pub fn transfer_assets_from_user_to_pending_vault(&self, amount: u64) -> Result<()> {
         let cpi_ctx = CpiContext::new(
-            self.asset_token_program.to_account_info(),
+            self.asset_token_program.key(),
             TransferChecked {
                 from: self.user_token_account.to_account_info(),
                 mint: self.asset_mint.to_account_info(),

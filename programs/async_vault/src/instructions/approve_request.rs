@@ -72,7 +72,7 @@ impl<'info> ApproveRequest<'info> {
     ) -> Result<()> {
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
-                self.asset_token_program.to_account_info(),
+                self.asset_token_program.key(),
                 TransferChecked {
                     from: self.pending_vault.to_account_info(),
                     mint: self.asset_mint.to_account_info(),
@@ -95,7 +95,7 @@ impl<'info> ApproveRequest<'info> {
     ) -> Result<()> {
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
-                self.asset_token_program.to_account_info(),
+                self.asset_token_program.key(),
                 TransferChecked {
                     from: self.vault_token_account.to_account_info(),
                     mint: self.asset_mint.to_account_info(),
@@ -126,7 +126,7 @@ impl<'info> ApproveRequest<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) -> Result<()> {
+pub fn handler<'info>(ctx: Context<'info, ApproveRequest<'info>>) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
     require!(

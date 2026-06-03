@@ -61,7 +61,7 @@ impl<'info> CreateRedeemRequest<'info> {
             from: self.user_share_account.to_account_info(),
             authority: self.user.to_account_info(),
         };
-        let cpi_ctx = CpiContext::new(self.share_token_program.to_account_info(), cpi_accounts);
+        let cpi_ctx = CpiContext::new(self.share_token_program.key(), cpi_accounts);
         token_interface::burn(cpi_ctx, amount)
     }
 }
