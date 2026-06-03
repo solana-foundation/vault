@@ -1873,6 +1873,7 @@ dependencies = [
  "borsh",
  "litesvm",
  "solana-sdk",
+ "solana-system-interface 3.2.0",
  "spl-token",
  "test-case",
 ]

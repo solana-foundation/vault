@@ -32,7 +32,9 @@ pub struct InitWithdrawalFee<'info> {
 }
 
 pub fn handler(ctx: Context<InitWithdrawalFee>, args: InitWithdrawalFeeArgs) -> Result<()> {
-    args.withdrawal_fee.validate().map_err(AsyncVaultError::from)?;
+    args.withdrawal_fee
+        .validate()
+        .map_err(AsyncVaultError::from)?;
     init_vault_extension(
         &ctx.accounts.vault.to_account_info(),
         &ctx.accounts.vault,

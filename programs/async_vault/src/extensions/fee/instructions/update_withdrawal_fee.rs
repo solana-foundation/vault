@@ -12,7 +12,9 @@ pub struct UpdateWithdrawalFeeArgs {
 }
 
 pub fn handler(ctx: Context<BasicExtensionAccounts>, args: UpdateWithdrawalFeeArgs) -> Result<()> {
-    args.new_withdrawal_fee.validate().map_err(AsyncVaultError::from)?;
+    args.new_withdrawal_fee
+        .validate()
+        .map_err(AsyncVaultError::from)?;
     update_vault_extension(
         &ctx.accounts.vault.to_account_info(),
         &WithdrawalFee::from_fee_type(args.new_withdrawal_fee),

@@ -8,8 +8,9 @@ use async_vault_client::{
 use litesvm::LiteSVM;
 use solana_sdk::{
     account::ReadableAccount, program_pack::Pack, pubkey::Pubkey, signature::Keypair,
-    signer::Signer, system_instruction::create_account, transaction::Transaction,
+    signer::Signer, transaction::Transaction,
 };
+use solana_system_interface::instruction::create_account;
 use test_case::test_case;
 
 use crate::async_helper_functions::{

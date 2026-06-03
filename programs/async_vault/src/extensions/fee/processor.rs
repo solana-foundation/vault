@@ -102,7 +102,10 @@ pub fn get_deposit_fee(vault_info: &AccountInfo, amount: u64) -> Result<u64> {
         .try_borrow()
         .map_err(|_| ProgramError::AccountBorrowFailed)?;
     match read_vault_extension::<DepositFee>(&data)? {
-        Some(ext) => Ok(ext.fee_type()?.get_fee(amount).map_err(AsyncVaultError::from)?),
+        Some(ext) => Ok(ext
+            .fee_type()?
+            .get_fee(amount)
+            .map_err(AsyncVaultError::from)?),
         None => Ok(0),
     }
 }
@@ -113,7 +116,10 @@ pub fn get_withdrawal_fee(vault_info: &AccountInfo, amount: u64) -> Result<u64> 
         .try_borrow()
         .map_err(|_| ProgramError::AccountBorrowFailed)?;
     match read_vault_extension::<WithdrawalFee>(&data)? {
-        Some(ext) => Ok(ext.fee_type()?.get_fee(amount).map_err(AsyncVaultError::from)?),
+        Some(ext) => Ok(ext
+            .fee_type()?
+            .get_fee(amount)
+            .map_err(AsyncVaultError::from)?),
         None => Ok(0),
     }
 }

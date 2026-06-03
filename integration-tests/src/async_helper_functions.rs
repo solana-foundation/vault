@@ -5,9 +5,9 @@ use solana_sdk::{
     pubkey::Pubkey,
     signature::Keypair,
     signer::Signer,
-    system_instruction::create_account,
     transaction::Transaction,
 };
+use solana_system_interface::instruction::create_account;
 
 use async_vault_client::{
     lite::SendTransaction, sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder,

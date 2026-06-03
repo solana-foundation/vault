@@ -18,10 +18,10 @@ pub struct Claim<'info> {
     #[account(mut)]
     pub owner: UncheckedAccount<'info>,
 
-    pub asset_mint: InterfaceAccount<'info, Mint>,
+    pub asset_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(mut)]
-    pub share_mint: InterfaceAccount<'info, Mint>,
+    pub share_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         mut,
@@ -30,7 +30,7 @@ pub struct Claim<'info> {
         has_one = asset_mint @ AsyncVaultError::InvalidAssetMint,
         has_one = share_mint @ AsyncVaultError::InvalidShareMint,
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     // Owner|Operator check in handler.
     #[account(
@@ -39,7 +39,7 @@ pub struct Claim<'info> {
         has_one = owner @ AsyncVaultError::InvalidRequest,
         has_one = vault @ AsyncVaultError::InvalidRequest,
     )]
-    pub request: Account<'info, Request>,
+    pub request: Box<Account<'info, Request>>,
 
     /// Pending deposit vault — source for Redeem claims
     #[account(
@@ -49,7 +49,7 @@ pub struct Claim<'info> {
         token::authority = vault,
         token::token_program = asset_token_program,
     )]
-    pub pending_vault: Option<InterfaceAccount<'info, TokenAccount>>,
+    pub pending_vault: Option<Box<InterfaceAccount<'info, TokenAccount>>>,
 
     /// User's share TokenAccount — receives minted shares on Deposit (must be owned by
     /// request.owner)
