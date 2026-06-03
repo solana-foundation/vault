@@ -1,7 +1,6 @@
 use anchor_lang::prelude::*;
-use vault_common::VaultProgramError;
 
-use crate::state::Vault;
+use crate::{error::AsyncVaultError, state::Vault};
 
 #[derive(Accounts)]
 pub struct UpdateVaultNav<'info> {
@@ -9,7 +8,7 @@ pub struct UpdateVaultNav<'info> {
 
     #[account(
         mut,
-        constraint = authority.key() == vault.authority @ VaultProgramError::UnauthorizedSigner,
+        constraint = authority.key() == vault.authority @ AsyncVaultError::UnauthorizedSigner,
     )]
     pub vault: Account<'info, Vault>,
 }
@@ -21,6 +20,6 @@ pub fn handler(ctx: Context<UpdateVaultNav>, updated_nav: u128) -> Result<()> {
         .vault
         .nav_version
         .checked_add(1)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        .ok_or(AsyncVaultError::ArithmeticError)?;
     Ok(())
 }

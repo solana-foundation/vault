@@ -2,7 +2,6 @@ use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{
     self, Mint, MintTo, TokenAccount, TokenInterface, TransferChecked,
 };
-use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
@@ -174,7 +173,7 @@ pub fn handler(ctx: Context<RejectRequest>) -> Result<()> {
         .vault
         .pending_async_requests
         .checked_sub(1)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        .ok_or(AsyncVaultError::ArithmeticError)?;
 
     Ok(())
 }

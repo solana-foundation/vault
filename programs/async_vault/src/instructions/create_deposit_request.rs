@@ -10,7 +10,6 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
-use vault_common::VaultProgramError;
 
 use crate::state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED};
 
@@ -119,7 +118,7 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         .vault
         .pending_async_requests
         .checked_add(1)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        .ok_or(AsyncVaultError::ArithmeticError)?;
 
     // Extension: SubscriptionQueue — increment counter and tag the request with its ID.
     if let Some(id) =

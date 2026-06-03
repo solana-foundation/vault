@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
-use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
@@ -134,7 +133,7 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
         matches!(ctx.accounts.request.request_state, RequestState::Pending),
         AsyncVaultError::RequestNotPending
     );
-    require!(ctx.accounts.vault.nav > 0, VaultProgramError::NavIsNotSet);
+    require!(ctx.accounts.vault.nav > 0, AsyncVaultError::NavIsNotSet);
 
     let nav = ctx.accounts.vault.nav;
     let decimals = ctx.accounts.share_mint.decimals;
