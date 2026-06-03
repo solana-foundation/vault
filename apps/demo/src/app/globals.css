@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 240 10% 4%;
+        --foreground: 0 0% 98%;
+        --card: 240 6% 10%;
+        --card-foreground: 0 0% 98%;
+        --popover: 240 6% 10%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 263 80% 60%;
+        --primary-foreground: 0 0% 100%;
+        --secondary: 240 5% 16%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 240 5% 14%;
+        --muted-foreground: 240 5% 64%;
+        --accent: 240 5% 16%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 72% 51%;
+        --destructive-foreground: 0 0% 98%;
+        --success: 152 70% 45%;
+        --success-foreground: 0 0% 98%;
+        --warning: 35 92% 55%;
+        --warning-foreground: 0 0% 6%;
+        --border: 240 6% 18%;
+        --input: 240 6% 18%;
+        --ring: 263 80% 60%;
+        --radius: 0.6rem;
+    }
+
+    html {
+        color-scheme: dark;
+    }
+
+    body {
+        @apply bg-background text-foreground antialiased;
+        background-image:
+            radial-gradient(ellipse 80% 60% at 50% -20%, hsl(263 80% 30% / 0.35), transparent 70%),
+            radial-gradient(ellipse 60% 50% at 100% 100%, hsl(152 80% 25% / 0.25), transparent 70%);
+        background-attachment: fixed;
+    }
+
+    * {
+        @apply border-border;
+    }
+}
+
+/* Wallet adapter overrides */
+.wallet-adapter-button {
+    @apply !rounded-md !bg-primary !text-primary-foreground !font-medium !text-sm hover:!bg-primary/90;
+    transition: background 150ms ease;
+}
+.wallet-adapter-button-trigger {
+    @apply !bg-gradient-to-r !from-solana-purple !to-solana-green !text-white;
+}
+.wallet-adapter-modal-wrapper {
+    @apply !bg-card !text-card-foreground !rounded-xl !border !border-border;
+}
+.wallet-adapter-modal-button-close {
+    @apply !bg-muted;
+}
+.wallet-adapter-dropdown-list {
+    @apply !bg-card !border !border-border !rounded-md;
+}
+.wallet-adapter-dropdown-list-item {
+    @apply !text-foreground hover:!bg-accent;
+}
