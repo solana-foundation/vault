@@ -1974,11 +1974,6 @@
   "types": [
     {
       "name": "ApproveRequestArgs",
-      "docs": [
-        "Immutable identity of the request instance the authority intends to approve.",
-        "Verified against the live `request` so a stale signed approval cannot settle a",
-        "different request that was closed and recreated at the same pubkey."
-      ],
       "type": {
         "kind": "struct",
         "fields": [

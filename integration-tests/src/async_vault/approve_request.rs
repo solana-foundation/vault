@@ -1,4 +1,6 @@
-use anchor_spl::{associated_token::get_associated_token_address_with_program_id, token};
+use anchor_spl::{
+    associated_token::get_associated_token_address_with_program_id, token, token_2022,
+};
 use async_vault_client::{
     lite::SendTransaction, sdk::program_id, ApproveRequestBuilder, CancelRequestBuilder,
     CreateDepositRequestBuilder, CreateRedeemRequestBuilder,
@@ -8,7 +10,7 @@ use async_vault_client::{
 use borsh::BorshSerialize;
 use litesvm::LiteSVM;
 use solana_sdk::{
-    account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer,
+    account::ReadableAccount, clock::Clock, pubkey::Pubkey, signature::Keypair, signer::Signer,
     transaction::Transaction,
 };
 use test_case::test_case;
@@ -548,4 +550,116 @@ fn test_stale_approval_rejected_on_recreated_request() {
         replacement_amount / 200,
         "fresh approval settles the replacement instance, not the stale one"
     );
+}
+
+#[test]
+fn test_approve_rejected_when_transfer_fee_reenabled() {
+    const USER_AMOUNT: u64 = 2_000_000;
+    const DEPOSIT_AMOUNT: u64 = 1_000_000;
+    const NAV: u128 = 1_000_000_000;
+    const FEE_BPS: u16 = 100;
+    const INVALID_ASSET_MINT_EXTENSIONS: u32 = 6021;
+
+    let mut svm = LiteSVM::new();
+    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
+    svm.add_program(program_id(), program_bytes).unwrap();
+
+    let (
+        authority,
+        _payer,
+        mint_authority,
+        asset_mint,
+        share_mint,
+        user,
+        _operator,
+        _fee_recipient,
+        reserve_pubkey,
+        vault_pubkey,
+        pending_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token_2022::ID, Some(0), token::ID, USER_AMOUNT);
+
+    InitializeAsyncVaultBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("initialize vault should succeed");
+
+    UpdateVaultNavBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .updated_nav(NAV)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .expect("update nav should succeed");
+
+    let user_asset_account = get_associated_token_address_with_program_id(
+        &user.pubkey(),
+        &asset_mint.pubkey(),
+        &token_2022::ID,
+    );
+
+    let request_keypair = Keypair::new();
+    CreateDepositRequestBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .request(request_keypair.pubkey())
+        .vault(vault_pubkey)
+        .user_token_account(user_asset_account)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(token_2022::ID)
+        .args(RequestArgs {
+            amount: DEPOSIT_AMOUNT,
+            operator: None,
+        })
+        .instruction()
+        .send_transaction(&mut svm, &user.pubkey(), &[&user, &request_keypair])
+        .expect("create deposit request should succeed while transfer fee is zero");
+
+    let set_fee_ix =
+        token_2022::spl_token_2022::extension::transfer_fee::instruction::set_transfer_fee(
+            &token_2022::ID,
+            &asset_mint.pubkey(),
+            &mint_authority.pubkey(),
+            &[],
+            FEE_BPS,
+            u64::MAX,
+        )
+        .unwrap();
+    let set_fee_tx = Transaction::new_signed_with_payer(
+        &[set_fee_ix],
+        Some(&mint_authority.pubkey()),
+        &[&mint_authority],
+        svm.latest_blockhash(),
+    );
+    svm.send_transaction(set_fee_tx)
+        .expect("set_transfer_fee should succeed");
+
+    let mut clock = svm.get_sysvar::<Clock>();
+    clock.epoch += 2;
+    svm.set_sysvar(&clock);
+
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(&svm, &request_keypair.pubkey());
+    let err = ApproveRequestBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .request(request_keypair.pubkey())
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault_token_account(reserve_pubkey)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(token_2022::ID)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .unwrap_err();
+    assert_error_code(&err, INVALID_ASSET_MINT_EXTENSIONS, "");
 }

@@ -10,7 +10,10 @@ use crate::{
         subscription_queue::processor::{SubscriptionQueue, SubscriptionQueueRequest},
     },
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
-    utils::{calculate_assets, calculate_shares, validate_token_account_owner},
+    utils::{
+        calculate_assets, calculate_shares, validate_asset_mint_extensions_from_acct_info,
+        validate_token_account_owner,
+    },
 };
 
 #[derive(AnchorSerialize, AnchorDeserialize)]
@@ -140,6 +143,8 @@ pub fn handler<'info>(
     args: ApproveRequestArgs,
 ) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
+
+    validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
     require!(
         matches!(ctx.accounts.request.request_state, RequestState::Pending),
