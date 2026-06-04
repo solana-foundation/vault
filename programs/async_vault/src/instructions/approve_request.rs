@@ -195,6 +195,10 @@ pub fn handler<'info>(
         // Check for DepositFee Extension and calculate fee owed
         let (deposit_fee, net_deposit) =
             get_deposit_fee_and_net(&ctx.accounts.vault.to_account_info(), original_amount)?;
+        require!(net_deposit > 0, AsyncVaultError::InsufficientDepositAmount);
+        // Shares to be minted, floored (protocol favorable)
+        let shares = calculate_shares(nav, decimals, net_deposit)?;
+        require!(shares > 0, AsyncVaultError::InsufficientDepositAmount);
         if deposit_fee > 0 {
             // Validate and transfer fees to fee_recipient
             let fee_recipient_token_account_info = remaining
@@ -211,8 +215,6 @@ pub fn handler<'info>(
             )?;
         }
         ctx.accounts.settle_deposit(seeds, net_deposit)?;
-        // Shares to be minted, floored (protocol favorable)
-        let shares = calculate_shares(nav, decimals, net_deposit)?;
         (shares, net_deposit)
     } else {
         // Assets to be transferred, floored (protocol favorable)

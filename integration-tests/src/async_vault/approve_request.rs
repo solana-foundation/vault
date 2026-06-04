@@ -663,3 +663,82 @@ fn test_approve_rejected_when_transfer_fee_reenabled() {
         .unwrap_err();
     assert_error_code(&err, INVALID_ASSET_MINT_EXTENSIONS, "");
 }
+
+#[test]
+fn test_approve_deposit_rejected_when_shares_round_to_zero() {
+    const NAV: u128 = 200_000_000_000;
+    const DUST_DEPOSIT: u64 = 1;
+    const INSUFFICIENT_DEPOSIT_AMOUNT: u32 = 6039;
+
+    let mut svm = LiteSVM::new();
+    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
+    svm.add_program(program_id(), program_bytes).unwrap();
+
+    let (
+        authority,
+        _mint_authority,
+        asset_mint,
+        share_mint,
+        user,
+        reserve_pubkey,
+        vault_pubkey,
+        pending_vault_pubkey,
+        user_asset_account,
+        _user_share_account,
+    ) = setup(&mut svm, NAV);
+
+    let request_keypair = Keypair::new();
+    CreateDepositRequestBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .request(request_keypair.pubkey())
+        .vault(vault_pubkey)
+        .user_token_account(user_asset_account)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(spl_token::ID)
+        .args(RequestArgs {
+            amount: DUST_DEPOSIT,
+            operator: None,
+        })
+        .instruction()
+        .send_transaction(&mut svm, &user.pubkey(), &[&user, &request_keypair])
+        .expect("dust deposit request should succeed");
+
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(&svm, &request_keypair.pubkey());
+    let err = ApproveRequestBuilder::new()
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .request(request_keypair.pubkey())
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .vault_token_account(reserve_pubkey)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(token::ID)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .unwrap_err();
+    assert_error_code(
+        &err,
+        INSUFFICIENT_DEPOSIT_AMOUNT,
+        "Deposit amount too small.",
+    );
+
+    let request_after = Request::from_bytes(
+        svm.get_account(&request_keypair.pubkey())
+            .expect("request should still exist")
+            .data(),
+    )
+    .unwrap();
+    assert_eq!(request_after.request_state, RequestState::Pending);
+    assert_eq!(
+        get_token_account_amount(&svm.get_account(&pending_vault_pubkey).unwrap()),
+        DUST_DEPOSIT
+    );
+}
