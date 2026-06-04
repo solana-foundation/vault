@@ -82,6 +82,8 @@ pub enum AsyncVaultError {
     ApprovalRequestMismatch,
     #[msg("Deposit amount too small.")]
     InsufficientDepositAmount,
+    #[msg("Share mint has invalid extensions.")]
+    InvalidShareMintExtensions,
 }
 
 impl From<vault_common::VaultMathError> for AsyncVaultError {

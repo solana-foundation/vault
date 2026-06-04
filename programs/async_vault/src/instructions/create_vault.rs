@@ -7,7 +7,10 @@ use anchor_spl::{
 use crate::{
     error::AsyncVaultError,
     state::{Vault, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
-    utils::validate_asset_mint_extensions_from_acct_info,
+    utils::{
+        validate_asset_mint_extensions_from_acct_info,
+        validate_share_mint_extensions_from_acct_info,
+    },
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -98,6 +101,7 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
     );
 
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
+    validate_share_mint_extensions_from_acct_info(&ctx.accounts.share_mint.to_account_info())?;
 
     ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
 

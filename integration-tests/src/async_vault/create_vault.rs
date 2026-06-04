@@ -14,8 +14,8 @@ use solana_system_interface::instruction::create_account;
 use test_case::test_case;
 
 use crate::async_helper_functions::{
-    assert_error_code, create_mint, create_mint_with_transfer_fee, PENDING_VAULT_SEED,
-    RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
+    assert_error_code, create_mint, create_mint_with_confidential_mint_burn,
+    create_mint_with_transfer_fee, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED,
 };
 
 #[test_case(true, false, token::ID,token::ID, 0 ; "Token program for both mints")]
@@ -239,4 +239,56 @@ fn test_create_vault_nonzero_share_mint_supply_fails() {
 
     let err_result = &result.unwrap_err();
     assert_error_code(err_result, 6011, "Share mint supply should be zero.");
+}
+
+#[test]
+fn test_create_vault_confidential_mint_burn_share_mint_fails() {
+    let mut svm = LiteSVM::new();
+    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
+    svm.add_program(program_id(), program_bytes).unwrap();
+
+    let authority = Keypair::new();
+    let payer = Keypair::new();
+    let mint_authority = Keypair::new();
+    let asset_mint = Keypair::new();
+    let share_mint = Keypair::new();
+    let fee_recipient = Keypair::new();
+
+    svm.airdrop(&payer.pubkey(), 1_000_000_000).unwrap();
+    svm.airdrop(&mint_authority.pubkey(), 1_000_000_000)
+        .unwrap();
+
+    create_mint(&mut svm, &mint_authority, &asset_mint, &token::ID);
+    create_mint_with_confidential_mint_burn(&mut svm, &share_mint, 9);
+
+    let (reserve_pubkey, _) = Pubkey::find_program_address(
+        &[RESERVE_CONFIG_SEED, share_mint.pubkey().as_ref()],
+        &program_id(),
+    );
+    let (pending_vault_pubkey, _) = Pubkey::find_program_address(
+        &[PENDING_VAULT_SEED, share_mint.pubkey().as_ref()],
+        &program_id(),
+    );
+    let (vault_pubkey, _) = Pubkey::find_program_address(
+        &[VAULT_CONFIG_SEED, share_mint.pubkey().as_ref()],
+        &program_id(),
+    );
+
+    let result = CreateAsyncVaultBuilder::new()
+        .payer(payer.pubkey())
+        .mint_authority(mint_authority.pubkey())
+        .fee_recipient(fee_recipient.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .reserve(reserve_pubkey)
+        .pending_vault(pending_vault_pubkey)
+        .vault(vault_pubkey)
+        .asset_token_program(token::ID)
+        .share_token_program(token_2022::ID)
+        .authority(authority.pubkey())
+        .instruction()
+        .send_transaction(&mut svm, &payer.pubkey(), &[&payer, &mint_authority]);
+
+    let err = result.unwrap_err();
+    assert_error_code(&err, 6040, "Share mint has invalid extensions.");
 }

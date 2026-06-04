@@ -26,8 +26,10 @@ use anchor_spl::{
         spl_token_2022::{
             self,
             extension::{
-                transfer_fee::instruction::initialize_transfer_fee_config, ExtensionType,
-                StateWithExtensions,
+                confidential_mint_burn::ConfidentialMintBurn,
+                transfer_fee::instruction::initialize_transfer_fee_config,
+                BaseStateWithExtensionsMut, ExtensionType, StateWithExtensions,
+                StateWithExtensionsMut,
             },
             state::Mint,
         },
@@ -187,6 +189,37 @@ pub fn create_mint_with_transfer_fee(
 
     svm.send_transaction(tx)
         .expect("create_mint_with_transfer_fee transaction failed");
+}
+
+pub fn create_mint_with_confidential_mint_burn(svm: &mut LiteSVM, mint: &Keypair, decimals: u8) {
+    let space =
+        ExtensionType::try_calculate_account_len::<Mint>(&[ExtensionType::ConfidentialMintBurn])
+            .unwrap();
+    let mut data = vec![0u8; space];
+    {
+        let mut state = StateWithExtensionsMut::<Mint>::unpack_uninitialized(&mut data).unwrap();
+        state.init_extension::<ConfidentialMintBurn>(true).unwrap();
+        state.base = Mint {
+            decimals,
+            is_initialized: true,
+            ..Default::default()
+        };
+        state.pack_base();
+        state.init_account_type().unwrap();
+    }
+
+    let rent = svm.minimum_balance_for_rent_exemption(space);
+    svm.set_account(
+        mint.pubkey(),
+        Account {
+            lamports: rent,
+            data,
+            owner: spl_token_2022::id(),
+            executable: false,
+            rent_epoch: 0,
+        },
+    )
+    .unwrap();
 }
 
 pub fn approve_request_args(

@@ -36,6 +36,26 @@ pub fn validate_asset_mint_extensions_from_acct_info(mint_acct: &AccountInfo) ->
     Ok(())
 }
 
+/// Validates the share mint's extensions against the vault's public mint/burn share lifecycle.
+/// Rejects `ConfidentialMintBurn`, under which public `mint_to`/`burn` fail and would brick
+/// claims and redemptions.
+pub fn validate_share_mint_extensions_from_acct_info(mint_acct: &AccountInfo) -> Result<()> {
+    if mint_acct.owner != &spl_token_2022::ID {
+        return Ok(());
+    }
+    let mint_data = mint_acct.try_borrow_data()?;
+    let mint = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_data)?;
+
+    if mint
+        .get_extension::<spl_token_2022::extension::confidential_mint_burn::ConfidentialMintBurn>()
+        .is_ok()
+    {
+        return Err(AsyncVaultError::InvalidShareMintExtensions.into());
+    }
+
+    Ok(())
+}
+
 /// Read the `owner` Pubkey of a TokenAccount without deserializing the whole account
 /// and validate against an expected owner.
 pub fn validate_token_account_owner(info: &AccountInfo, expected_owner: &Pubkey) -> ProgramResult {

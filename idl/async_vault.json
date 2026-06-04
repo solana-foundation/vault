@@ -1974,6 +1974,11 @@
       "code": 6039,
       "name": "InsufficientDepositAmount",
       "msg": "Deposit amount too small."
+    },
+    {
+      "code": 6040,
+      "name": "InvalidShareMintExtensions",
+      "msg": "Share mint has invalid extensions."
     }
   ],
   "types": [
