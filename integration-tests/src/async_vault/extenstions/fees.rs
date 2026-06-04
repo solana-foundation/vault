@@ -534,3 +534,45 @@ fn test_approve_fee_missing_remaining_account_fails(is_deposit: bool) {
     let err = svm.send_transaction(tx).unwrap_err();
     assert_error_code(&err, 6015, "MissingFeeRecipient");
 }
+
+#[test]
+fn test_create_deposit_below_fixed_fee_rejected() {
+    let (
+        mut svm,
+        _authority,
+        _mint_authority,
+        asset_mint,
+        share_mint,
+        user,
+        _reserve_pubkey,
+        vault_pubkey,
+        pending_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = setup_with_fees(Some(FeeType::FixedAmount { amount: 1_000 }), None);
+
+    let user_asset_account = get_associated_token_address_with_program_id(
+        &user.pubkey(),
+        &asset_mint.pubkey(),
+        &token::ID,
+    );
+
+    let request_keypair = Keypair::new();
+    let err = CreateDepositRequestBuilder::new()
+        .user(user.pubkey())
+        .asset_mint(asset_mint.pubkey())
+        .share_mint(share_mint.pubkey())
+        .request(request_keypair.pubkey())
+        .vault(vault_pubkey)
+        .user_token_account(user_asset_account)
+        .pending_vault(pending_vault_pubkey)
+        .asset_token_program(token::ID)
+        .args(RequestArgs {
+            amount: 500,
+            operator: None,
+        })
+        .instruction()
+        .send_transaction(&mut svm, &user.pubkey(), &[&user, &request_keypair])
+        .unwrap_err();
+    assert_error_code(&err, 6039, "Deposit amount too small.");
+}

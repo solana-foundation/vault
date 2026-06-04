@@ -93,7 +93,14 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         args.amount,
     )?;
 
-    require!(args.amount > 0, AsyncVaultError::InsufficientDepositAmount);
+    let deposit_fee = extensions::fee::processor::get_deposit_fee(
+        &ctx.accounts.vault.to_account_info(),
+        args.amount,
+    )?;
+    require!(
+        args.amount > deposit_fee,
+        AsyncVaultError::InsufficientDepositAmount
+    );
 
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
