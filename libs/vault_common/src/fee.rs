@@ -27,16 +27,57 @@ impl FeeType {
     pub fn get_fee(self, total_amount: u64) -> Result<u64, VaultMathError> {
         match self {
             FeeType::Percentage { bps } => {
-                let fee = total_amount
-                    .checked_mul(bps.into())
+                let fee = u128::from(total_amount)
+                    .checked_mul(u128::from(bps))
                     .ok_or(VaultMathError::ArithmeticError)?
                     .checked_add(9_999)
                     .ok_or(VaultMathError::ArithmeticError)?
                     .checked_div(10_000)
                     .ok_or(VaultMathError::ArithmeticError)?;
-                Ok(fee)
+                u64::try_from(fee).map_err(|_| VaultMathError::ArithmeticError)
             }
             FeeType::FixedAmount { amount } => Ok(amount),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_fee_percentage_rounds_up() {
+        assert_eq!(
+            FeeType::Percentage { bps: 100 }.get_fee(1_000_000).unwrap(),
+            10_000
+        );
+    }
+
+    #[test]
+    fn get_fee_percentage_large_amount_does_not_overflow() {
+        let fee = FeeType::Percentage { bps: 100 }
+            .get_fee(2_000_000_000_000_000_000)
+            .unwrap();
+        assert_eq!(fee, 20_000_000_000_000_000);
+    }
+
+    #[test]
+    fn get_fee_percentage_max_amount_full_bps() {
+        assert_eq!(
+            FeeType::Percentage { bps: MAX_BPS }
+                .get_fee(u64::MAX)
+                .unwrap(),
+            u64::MAX
+        );
+    }
+
+    #[test]
+    fn get_fee_fixed_passes_through() {
+        assert_eq!(
+            FeeType::FixedAmount { amount: 42 }
+                .get_fee(1_000_000)
+                .unwrap(),
+            42
+        );
     }
 }
