@@ -52,6 +52,7 @@ fn setup(
     ) = set_up_async_vault(svm, token::ID, None, token::ID, 1_000_000_000);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -337,6 +338,7 @@ fn test_approve_request_fails(
         _user_share_account,
     ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, user_amount);
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -581,6 +583,7 @@ fn test_approve_rejected_when_transfer_fee_reenabled() {
     ) = set_up_async_vault(&mut svm, token_2022::ID, Some(0), token::ID, USER_AMOUNT);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()

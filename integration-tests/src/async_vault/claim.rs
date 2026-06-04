@@ -49,6 +49,7 @@ fn setup(
     ) = set_up_async_vault(svm, token::ID, None, token::ID, 1_000_000_000);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()

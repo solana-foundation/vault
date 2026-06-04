@@ -80,6 +80,7 @@ fn setup_with_fees(
     }
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()

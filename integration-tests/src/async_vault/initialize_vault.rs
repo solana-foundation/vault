@@ -22,7 +22,7 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
         _payer,
         _mint_authority,
         _asset_mint,
-        _share_mint,
+        share_mint,
         _user,
         _operator,
         _fee_recipient,
@@ -39,6 +39,7 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
 
     if pre_initialize {
         InitializeAsyncVaultBuilder::new()
+            .share_mint(share_mint.pubkey())
             .authority(authority.pubkey())
             .vault(vault_pubkey)
             .instruction()
@@ -57,6 +58,7 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
     };
 
     let result = InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(effective_authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -102,4 +104,42 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
             assert_error_code(err_result, 6001, "UnauthorizedSigner");
         }
     }
+}
+
+#[test]
+fn test_initialize_vault_rejects_mismatched_share_mint_authority() {
+    let mut svm = LiteSVM::new();
+    let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
+    svm.add_program(program_id(), program_bytes).unwrap();
+
+    let (
+        authority,
+        _payer,
+        _mint_authority,
+        _asset_mint,
+        share_mint,
+        _user,
+        _operator,
+        _fee_recipient,
+        _reserve_pubkey,
+        vault_pubkey,
+        _pending_vault_pubkey,
+        _fee_recipient_ata,
+        _user_share_account,
+    ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0);
+
+    let mut mint_account = svm.get_account(&share_mint.pubkey()).unwrap();
+    let attacker = Keypair::new();
+    // SPL mint layout: mint_authority pubkey occupies bytes 4..36.
+    mint_account.data[4..36].copy_from_slice(attacker.pubkey().as_ref());
+    svm.set_account(share_mint.pubkey(), mint_account).unwrap();
+
+    let err = InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
+        .authority(authority.pubkey())
+        .vault(vault_pubkey)
+        .instruction()
+        .send_transaction(&mut svm, &authority.pubkey(), &[&authority])
+        .unwrap_err();
+    assert_error_code(&err, 6023, "Share mint is not valid.");
 }

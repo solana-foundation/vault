@@ -42,6 +42,7 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
     ) = set_up_async_vault(&mut svm, token::ID, Some(0), token::ID, user_amount);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -194,6 +195,7 @@ fn test_create_deposit_request_fails(
     );
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()

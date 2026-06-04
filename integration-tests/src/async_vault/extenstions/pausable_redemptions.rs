@@ -57,6 +57,7 @@ fn setup(
     }
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -156,7 +157,7 @@ fn test_initialize_pausable_redemptions_fails(
         _payer,
         _mint_authority,
         _asset_mint,
-        _share_mint,
+        share_mint,
         _user,
         _operator,
         _fee_recipient,
@@ -169,6 +170,7 @@ fn test_initialize_pausable_redemptions_fails(
 
     if init_vault_first {
         InitializeAsyncVaultBuilder::new()
+            .share_mint(share_mint.pubkey())
             .authority(authority.pubkey())
             .vault(vault_pubkey)
             .instruction()

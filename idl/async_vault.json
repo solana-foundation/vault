@@ -1117,6 +1117,12 @@
           "signer": true
         },
         {
+          "name": "share_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
           "name": "vault",
           "writable": true
         }

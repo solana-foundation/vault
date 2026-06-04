@@ -38,6 +38,7 @@ fn test_reject_deposit_request(deposit_amount: u64) {
     ) = set_up_async_vault(&mut svm, token::ID, Some(0), token::ID, user_amount);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -138,6 +139,7 @@ fn test_reject_redeem_request(share_amount: u64) {
     ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
