@@ -11,7 +11,7 @@ use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, s
 use test_case::test_case;
 
 use crate::async_helper_functions::{
-    assert_error_code, helper_mint_to, set_share_balance, set_up_async_vault,
+    approve_request_args, assert_error_code, helper_mint_to, set_share_balance, set_up_async_vault,
     set_vault_total_asset_balance,
 };
 
@@ -156,10 +156,17 @@ fn approve_redemption_request(
     share_mint: Pubkey,
     request_pubkey: Pubkey,
 ) -> litesvm::types::TransactionResult {
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(svm, &request_pubkey);
     ApproveRequestBuilder::new()
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .request(request_pubkey)
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
         .asset_mint(asset_mint)
         .share_mint(share_mint)
         .vault_token_account(reserve_pubkey)

@@ -10,8 +10,8 @@ use solana_sdk::{
 use solana_system_interface::instruction::create_account;
 
 use async_vault_client::{
-    lite::SendTransaction, sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder,
-    Vault as AsyncVault,
+    lite::SendTransaction, sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder, Request,
+    RequestType, Vault as AsyncVault,
 };
 use borsh::BorshSerialize;
 
@@ -187,6 +187,23 @@ pub fn create_mint_with_transfer_fee(
 
     svm.send_transaction(tx)
         .expect("create_mint_with_transfer_fee transaction failed");
+}
+
+pub fn approve_request_args(
+    svm: &LiteSVM,
+    request: &Pubkey,
+) -> (Pubkey, RequestType, u64, i64, u64) {
+    let account = svm
+        .get_account(request)
+        .expect("request account should exist");
+    let req = Request::from_bytes(account.data()).unwrap();
+    (
+        req.owner,
+        req.request_type,
+        req.amount,
+        req.created_at,
+        req.nav_update_version,
+    )
 }
 
 /// gets the amount of a token account, depending on the account owner

@@ -39,5 +39,4 @@ impl FeeType {
             FeeType::FixedAmount { amount } => Ok(amount),
         }
     }
-
 }

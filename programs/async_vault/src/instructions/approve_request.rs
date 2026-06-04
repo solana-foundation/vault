@@ -13,6 +13,15 @@ use crate::{
     utils::{calculate_assets, calculate_shares, validate_token_account_owner},
 };
 
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct ApproveRequestArgs {
+    pub owner: Pubkey,
+    pub request_type: RequestType,
+    pub amount: u64,
+    pub created_at: i64,
+    pub nav_update_version: u64,
+}
+
 #[derive(Accounts)]
 pub struct ApproveRequest<'info> {
     pub authority: Signer<'info>,
@@ -126,13 +135,27 @@ impl<'info> ApproveRequest<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<'info, ApproveRequest<'info>>) -> Result<()> {
+pub fn handler<'info>(
+    ctx: Context<'info, ApproveRequest<'info>>,
+    args: ApproveRequestArgs,
+) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
 
     require!(
         matches!(ctx.accounts.request.request_state, RequestState::Pending),
         AsyncVaultError::RequestNotPending
     );
+
+    let request = &ctx.accounts.request;
+    require!(
+        request.owner == args.owner
+            && request.request_type == args.request_type
+            && request.amount == args.amount
+            && request.created_at == args.created_at
+            && request.nav_update_version == args.nav_update_version,
+        AsyncVaultError::ApprovalRequestMismatch
+    );
+
     require!(ctx.accounts.vault.nav > 0, AsyncVaultError::NavIsNotSet);
 
     let nav = ctx.accounts.vault.nav;

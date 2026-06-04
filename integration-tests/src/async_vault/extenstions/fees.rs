@@ -13,8 +13,8 @@ use solana_sdk::{
 use test_case::test_case;
 
 use crate::async_helper_functions::{
-    assert_error_code, get_token_account_amount, helper_mint_to, set_share_balance,
-    set_up_async_vault, set_vault_total_asset_balance,
+    approve_request_args, assert_error_code, get_token_account_amount, helper_mint_to,
+    set_share_balance, set_up_async_vault, set_vault_total_asset_balance,
 };
 
 // NAV: 200_000_000_000 with 9 decimals → shares = assets/200, assets = shares*200
@@ -120,11 +120,18 @@ fn approve_request_with_fee_recipient(
     pending_vault_pubkey: Pubkey,
     fee_recipient_ata: Option<Pubkey>,
 ) -> Result<litesvm::types::TransactionMetadata, litesvm::types::FailedTransactionMetadata> {
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(svm, &request_pubkey);
     let mut builder = ApproveRequestBuilder::new();
     builder
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .request(request_pubkey)
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
         .asset_mint(asset_mint)
         .share_mint(share_mint)
         .vault_token_account(reserve_pubkey)
@@ -499,10 +506,17 @@ fn test_approve_fee_missing_remaining_account_fails(is_deposit: bool) {
             .expect("create redeem request should succeed");
     }
 
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(&svm, &request_keypair.pubkey());
     let ix = ApproveRequestBuilder::new()
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .request(request_keypair.pubkey())
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
         .asset_mint(asset_mint.pubkey())
         .share_mint(share_mint.pubkey())
         .vault_token_account(reserve_pubkey)

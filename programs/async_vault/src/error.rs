@@ -78,6 +78,8 @@ pub enum AsyncVaultError {
     NavIsNotSet,
     #[msg("Redeem shares amount too small.")]
     InsufficientRedeemAmount,
+    #[msg("Approval does not match the live request instance.")]
+    ApprovalRequestMismatch,
 }
 
 impl From<vault_common::VaultMathError> for AsyncVaultError {

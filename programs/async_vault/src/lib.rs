@@ -68,8 +68,11 @@ pub mod async_vault {
 
     /// Approve a pending request, allowing the User to execute the Claim instruction.
     /// This sets the Request's claimable NAV to the Vault's current NAV.
-    pub fn approve_request<'info>(ctx: Context<'info, ApproveRequest<'info>>) -> Result<()> {
-        instructions::approve_request::handler(ctx)
+    pub fn approve_request<'info>(
+        ctx: Context<'info, ApproveRequest<'info>>,
+        args: ApproveRequestArgs,
+    ) -> Result<()> {
+        instructions::approve_request::handler(ctx, args)
     }
 
     /// Reject a pending request. For deposit requests, the deposited assets are
