@@ -1969,6 +1969,11 @@
       "code": 6038,
       "name": "ApprovalRequestMismatch",
       "msg": "Approval does not match the live request instance."
+    },
+    {
+      "code": 6039,
+      "name": "InsufficientDepositAmount",
+      "msg": "Deposit amount too small."
     }
   ],
   "types": [

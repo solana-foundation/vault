@@ -13,7 +13,7 @@ use crate::async_helper_functions::{
 };
 
 #[test_case(1_000_000 ; "reject deposit request refunds user")]
-#[test_case(0 ; "reject zero amount deposit succeeds")]
+#[test_case(1 ; "reject minimum deposit succeeds")]
 #[test_case(500_000_000 ; "reject large deposit refunds full amount")]
 fn test_reject_deposit_request(deposit_amount: u64) {
     let mut svm = LiteSVM::new();

@@ -93,6 +93,8 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         args.amount,
     )?;
 
+    require!(args.amount > 0, AsyncVaultError::InsufficientDepositAmount);
+
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
     // SAFETY: TransferFees are required to be 0, therefore using args.amount is safe.

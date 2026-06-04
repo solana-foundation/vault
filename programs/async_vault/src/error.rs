@@ -80,6 +80,8 @@ pub enum AsyncVaultError {
     InsufficientRedeemAmount,
     #[msg("Approval does not match the live request instance.")]
     ApprovalRequestMismatch,
+    #[msg("Deposit amount too small.")]
+    InsufficientDepositAmount,
 }
 
 impl From<vault_common::VaultMathError> for AsyncVaultError {
