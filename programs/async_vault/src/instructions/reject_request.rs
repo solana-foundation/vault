@@ -13,6 +13,15 @@ use crate::{
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
 };
 
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct RejectRequestArgs {
+    pub owner: Pubkey,
+    pub request_type: RequestType,
+    pub amount: u64,
+    pub created_at: i64,
+    pub nav_update_version: u64,
+}
+
 #[derive(Accounts)]
 pub struct RejectRequest<'info> {
     pub authority: Signer<'info>,
@@ -144,13 +153,23 @@ impl<'info> RejectRequest<'info> {
     }
 }
 
-pub fn handler(ctx: Context<RejectRequest>) -> Result<()> {
+pub fn handler(ctx: Context<RejectRequest>, args: RejectRequestArgs) -> Result<()> {
     require!(
         ctx.accounts
             .request
             .request_state
             .eq(&RequestState::Pending),
         AsyncVaultError::RequestInvalidState
+    );
+
+    let request = &ctx.accounts.request;
+    require!(
+        request.owner == args.owner
+            && request.request_type == args.request_type
+            && request.amount == args.amount
+            && request.created_at == args.created_at
+            && request.nav_update_version == args.nav_update_version,
+        AsyncVaultError::ApprovalRequestMismatch
     );
 
     ctx.accounts.check_fifo_ordering()?;

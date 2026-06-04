@@ -187,12 +187,19 @@ fn reject_redemption_request(
     request_pubkey: Pubkey,
     user_share_account: Pubkey,
 ) -> litesvm::types::TransactionResult {
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(svm, &request_pubkey);
     RejectRequestBuilder::new()
         .authority(authority.pubkey())
         .user(user_pubkey)
         .asset_mint(asset_mint)
         .share_mint(share_mint)
         .request(request_pubkey)
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
         .vault(vault_pubkey)
         .user_token_account(None)
         .asset_pending_vault(None)
