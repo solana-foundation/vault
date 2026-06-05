@@ -69,16 +69,17 @@ pub mod async_vault {
     /// Approve a pending request, allowing the User to execute the Claim instruction.
     /// This sets the Request's claimable NAV to the Vault's current NAV.
     pub fn approve_request<'info>(
-        ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>,
+        ctx: Context<'info, ApproveRequest<'info>>,
+        args: ApproveRequestArgs,
     ) -> Result<()> {
-        instructions::approve_request::handler(ctx)
+        instructions::approve_request::handler(ctx, args)
     }
 
     /// Reject a pending request. For deposit requests, the deposited assets are
     /// refunded to the user. For redeem requests, the shares are minted back to the user.
     /// The request account is closed and its rent is returned to the user.
-    pub fn reject_request(ctx: Context<RejectRequest>) -> Result<()> {
-        instructions::reject_request::handler(ctx)
+    pub fn reject_request(ctx: Context<RejectRequest>, args: RejectRequestArgs) -> Result<()> {
+        instructions::reject_request::handler(ctx, args)
     }
 
     /* EXTENSION INSTRUCTIONS */

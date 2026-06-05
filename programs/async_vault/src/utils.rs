@@ -3,7 +3,6 @@ use anchor_spl::token_2022::spl_token_2022::{
     self,
     extension::{BaseStateWithExtensions, StateWithExtensions},
 };
-use vault_common::VaultProgramError;
 
 use crate::error::AsyncVaultError;
 
@@ -37,6 +36,26 @@ pub fn validate_asset_mint_extensions_from_acct_info(mint_acct: &AccountInfo) ->
     Ok(())
 }
 
+/// Validates the share mint's extensions against the vault's public mint/burn share lifecycle.
+/// Rejects `ConfidentialMintBurn`, under which public `mint_to`/`burn` fail and would brick
+/// claims and redemptions.
+pub fn validate_share_mint_extensions_from_acct_info(mint_acct: &AccountInfo) -> Result<()> {
+    if mint_acct.owner != &spl_token_2022::ID {
+        return Ok(());
+    }
+    let mint_data = mint_acct.try_borrow_data()?;
+    let mint = StateWithExtensions::<spl_token_2022::state::Mint>::unpack(&mint_data)?;
+
+    if mint
+        .get_extension::<spl_token_2022::extension::confidential_mint_burn::ConfidentialMintBurn>()
+        .is_ok()
+    {
+        return Err(AsyncVaultError::InvalidShareMintExtensions.into());
+    }
+
+    Ok(())
+}
+
 /// Read the `owner` Pubkey of a TokenAccount without deserializing the whole account
 /// and validate against an expected owner.
 pub fn validate_token_account_owner(info: &AccountInfo, expected_owner: &Pubkey) -> ProgramResult {
@@ -61,13 +80,13 @@ pub fn validate_token_account_owner(info: &AccountInfo, expected_owner: &Pubkey)
 pub fn calculate_shares(nav: u128, decimals: u8, net_amount: u64) -> Result<u64> {
     let precision = 10u128
         .checked_pow(decimals as u32)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        .ok_or(AsyncVaultError::ArithmeticError)?;
     let shares = u128::from(net_amount)
         .checked_mul(precision)
-        .ok_or(VaultProgramError::ArithmeticError)?
+        .ok_or(AsyncVaultError::ArithmeticError)?
         .checked_div(nav)
-        .ok_or(VaultProgramError::ArithmeticError)?;
-    Ok(u64::try_from(shares).map_err(|_| VaultProgramError::ArithmeticError)?)
+        .ok_or(AsyncVaultError::ArithmeticError)?;
+    Ok(u64::try_from(shares).map_err(|_| AsyncVaultError::ArithmeticError)?)
 }
 
 /// Converts a share amount into assets using the supplied NAV.
@@ -76,16 +95,16 @@ pub fn calculate_shares(nav: u128, decimals: u8, net_amount: u64) -> Result<u64>
 pub fn calculate_assets(nav: u128, decimals: u8, share_amount: u64) -> Result<u64> {
     let precision = 10u128
         .checked_pow(decimals as u32)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        .ok_or(AsyncVaultError::ArithmeticError)?;
     let assets = u128::from(share_amount)
         .checked_mul(nav)
-        .ok_or(VaultProgramError::ArithmeticError)?
+        .ok_or(AsyncVaultError::ArithmeticError)?
         .checked_div(precision)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        .ok_or(AsyncVaultError::ArithmeticError)?;
     if assets.eq(&0u128) {
-        return Err(VaultProgramError::ArithmeticError.into());
+        return Err(AsyncVaultError::ArithmeticError.into());
     }
-    Ok(u64::try_from(assets).map_err(|_| VaultProgramError::ArithmeticError)?)
+    Ok(u64::try_from(assets).map_err(|_| AsyncVaultError::ArithmeticError)?)
 }
 
 #[cfg(test)]

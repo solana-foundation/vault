@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
-use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
@@ -16,9 +15,9 @@ pub struct CancelQueuedDepositRequest<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
-    pub asset_mint: InterfaceAccount<'info, Mint>,
+    pub asset_mint: Box<InterfaceAccount<'info, Mint>>,
 
-    pub share_mint: InterfaceAccount<'info, Mint>,
+    pub share_mint: Box<InterfaceAccount<'info, Mint>>,
 
     #[account(
         mut,
@@ -27,7 +26,7 @@ pub struct CancelQueuedDepositRequest<'info> {
         seeds = [VAULT_CONFIG_SEED, share_mint.key().as_ref()],
         bump = vault.bump
     )]
-    pub vault: Account<'info, Vault>,
+    pub vault: Box<Account<'info, Vault>>,
 
     #[account(
         mut,
@@ -35,14 +34,14 @@ pub struct CancelQueuedDepositRequest<'info> {
         constraint = request.request_type == RequestType::Deposit @ AsyncVaultError::InvalidRequestType,
         has_one = vault,
     )]
-    pub request: Account<'info, Request>,
+    pub request: Box<Account<'info, Request>>,
 
     #[account(
         mut,
         token::mint = asset_mint.key(),
         token::authority = user
     )]
-    pub user_token_account: InterfaceAccount<'info, TokenAccount>,
+    pub user_token_account: Box<InterfaceAccount<'info, TokenAccount>>,
 
     #[account(
         mut,
@@ -51,7 +50,7 @@ pub struct CancelQueuedDepositRequest<'info> {
         token::token_program = asset_token_program,
         constraint = vault.pending_vault.key() == asset_pending_vault.key() @ AsyncVaultError::InvalidPendingVault
     )]
-    pub asset_pending_vault: InterfaceAccount<'info, TokenAccount>,
+    pub asset_pending_vault: Box<InterfaceAccount<'info, TokenAccount>>,
 
     pub asset_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
@@ -70,11 +69,8 @@ impl<'info> CancelQueuedDepositRequest<'info> {
 
         let share_mint = self.share_mint.key();
         let seeds: &[&[&[u8]]] = &[&[VAULT_CONFIG_SEED, share_mint.as_ref(), &[self.vault.bump]]];
-        let cpi_ctx = CpiContext::new_with_signer(
-            self.asset_token_program.to_account_info(),
-            cpi_accounts,
-            seeds,
-        );
+        let cpi_ctx =
+            CpiContext::new_with_signer(self.asset_token_program.key(), cpi_accounts, seeds);
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }
 
@@ -111,7 +107,7 @@ pub fn handler(ctx: Context<CancelQueuedDepositRequest>) -> Result<()> {
         .vault
         .pending_async_requests
         .checked_sub(1)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        .ok_or(AsyncVaultError::ArithmeticError)?;
 
     Ok(())
 }

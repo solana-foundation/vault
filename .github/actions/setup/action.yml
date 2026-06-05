@@ -31,9 +31,9 @@ inputs:
     required: false
     default: 'true'
   solana-version:
-    description: 'Solana CLI version (e.g. v2.2.20)'
+    description: 'Solana CLI version (e.g. v3.1.14)'
     required: false
-    default: 'v2.2.20'
+    default: 'v3.1.14'
   install-anchor:
     description: 'Install Anchor CLI'
     required: false
@@ -41,7 +41,7 @@ inputs:
   anchor-version:
     description: 'Anchor CLI version'
     required: false
-    default: '0.31.1'
+    default: '1.0.2'
   install-just:
     description: 'Install just'
     required: false
@@ -107,23 +107,29 @@ runs:
         mkdir -p ~/.config/solana
         [ -f ~/.config/solana/id.json ] || solana-keygen new --no-bip39-passphrase -o ~/.config/solana/id.json
 
-    - name: Cache Anchor CLI
+    - name: Cache Anchor toolchain (avm)
       if: inputs.install-anchor == 'true'
       id: anchor-cache
       uses: actions/cache@v4
       with:
-        path: ~/.cargo/bin/anchor
-        key: ${{ runner.os }}-anchor-${{ inputs.anchor-version }}
+        path: |
+          ~/.avm
+          ~/.cargo/bin/avm
+          ~/.cargo/bin/anchor
+        key: ${{ runner.os }}-avm-${{ inputs.anchor-version }}
 
-    - name: Install libudev (required by anchor-cli's hidapi dep)
-      if: inputs.install-anchor == 'true' && steps.anchor-cache.outputs.cache-hit != 'true' && runner.os == 'Linux'
-      shell: bash
-      run: sudo apt-get update && sudo apt-get install -y libudev-dev pkg-config
-
-    - name: Install Anchor CLI
+    - name: Install Anchor CLI via avm
       if: inputs.install-anchor == 'true' && steps.anchor-cache.outputs.cache-hit != 'true'
       shell: bash
-      run: cargo install --git https://github.com/coral-xyz/anchor --tag v${{ inputs.anchor-version }} anchor-cli --force
+      run: |
+        cargo install --force --git https://github.com/solana-foundation/anchor --tag v${{ inputs.anchor-version }} avm
+        avm install ${{ inputs.anchor-version }}
+        avm use ${{ inputs.anchor-version }}
+
+    - name: Add Cargo bin to PATH (anchor)
+      if: inputs.install-anchor == 'true'
+      shell: bash
+      run: echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
     - name: Install just
       if: inputs.install-just == 'true'

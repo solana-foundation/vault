@@ -1,7 +1,10 @@
 use anchor_lang::prelude::*;
-use vault_common::{FeeType, VaultProgramError};
+use vault_common::FeeType;
 
-use crate::extensions::{read_vault_extension, ExtensionType};
+use crate::{
+    error::AsyncVaultError,
+    extensions::{read_vault_extension, ExtensionType},
+};
 
 /// Pod-safe representation of a fee stored in TLV:
 ///   byte 0   — discriminant (0 = FixedAmount, 1 = Percentage)
@@ -99,7 +102,10 @@ pub fn get_deposit_fee(vault_info: &AccountInfo, amount: u64) -> Result<u64> {
         .try_borrow()
         .map_err(|_| ProgramError::AccountBorrowFailed)?;
     match read_vault_extension::<DepositFee>(&data)? {
-        Some(ext) => ext.fee_type()?.get_fee(amount),
+        Some(ext) => Ok(ext
+            .fee_type()?
+            .get_fee(amount)
+            .map_err(AsyncVaultError::from)?),
         None => Ok(0),
     }
 }
@@ -110,7 +116,10 @@ pub fn get_withdrawal_fee(vault_info: &AccountInfo, amount: u64) -> Result<u64> 
         .try_borrow()
         .map_err(|_| ProgramError::AccountBorrowFailed)?;
     match read_vault_extension::<WithdrawalFee>(&data)? {
-        Some(ext) => ext.fee_type()?.get_fee(amount),
+        Some(ext) => Ok(ext
+            .fee_type()?
+            .get_fee(amount)
+            .map_err(AsyncVaultError::from)?),
         None => Ok(0),
     }
 }
@@ -119,7 +128,7 @@ pub fn get_deposit_fee_and_net(vault_info: &AccountInfo, amount: u64) -> Result<
     let fee = get_deposit_fee(vault_info, amount)?;
     let net = amount
         .checked_sub(fee)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        .ok_or(AsyncVaultError::ArithmeticError)?;
     Ok((fee, net))
 }
 
@@ -127,6 +136,6 @@ pub fn get_withdrawal_fee_and_net(vault_info: &AccountInfo, amount: u64) -> Resu
     let fee = get_withdrawal_fee(vault_info, amount)?;
     let net = amount
         .checked_sub(fee)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        .ok_or(AsyncVaultError::ArithmeticError)?;
     Ok((fee, net))
 }

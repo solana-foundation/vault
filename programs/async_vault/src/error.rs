@@ -74,4 +74,23 @@ pub enum AsyncVaultError {
     SubscriptionAmountBelowMinimum,
     #[msg("Redemption amount is below the minimum redemption threshold")]
     RedemptionAmountBelowMinimum,
+    #[msg("Nav is not set.")]
+    NavIsNotSet,
+    #[msg("Redeem shares amount too small.")]
+    InsufficientRedeemAmount,
+    #[msg("Approval does not match the live request instance.")]
+    ApprovalRequestMismatch,
+    #[msg("Deposit amount too small.")]
+    InsufficientDepositAmount,
+    #[msg("Share mint has invalid extensions.")]
+    InvalidShareMintExtensions,
+}
+
+impl From<vault_common::VaultMathError> for AsyncVaultError {
+    fn from(err: vault_common::VaultMathError) -> Self {
+        match err {
+            vault_common::VaultMathError::ArithmeticError => AsyncVaultError::ArithmeticError,
+            vault_common::VaultMathError::FeeBpsLimitReached => AsyncVaultError::FeeBpsExceeded,
+        }
+    }
 }

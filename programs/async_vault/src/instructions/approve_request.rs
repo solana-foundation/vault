@@ -1,6 +1,5 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
-use vault_common::VaultProgramError;
 
 use crate::{
     error::AsyncVaultError,
@@ -11,8 +10,20 @@ use crate::{
         subscription_queue::processor::{SubscriptionQueue, SubscriptionQueueRequest},
     },
     state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED},
-    utils::{calculate_assets, calculate_shares, validate_token_account_owner},
+    utils::{
+        calculate_assets, calculate_shares, validate_asset_mint_extensions_from_acct_info,
+        validate_token_account_owner,
+    },
 };
+
+#[derive(AnchorSerialize, AnchorDeserialize)]
+pub struct ApproveRequestArgs {
+    pub owner: Pubkey,
+    pub request_type: RequestType,
+    pub amount: u64,
+    pub created_at: i64,
+    pub nav_update_version: u64,
+}
 
 #[derive(Accounts)]
 pub struct ApproveRequest<'info> {
@@ -73,7 +84,7 @@ impl<'info> ApproveRequest<'info> {
     ) -> Result<()> {
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
-                self.asset_token_program.to_account_info(),
+                self.asset_token_program.key(),
                 TransferChecked {
                     from: self.pending_vault.to_account_info(),
                     mint: self.asset_mint.to_account_info(),
@@ -96,7 +107,7 @@ impl<'info> ApproveRequest<'info> {
     ) -> Result<()> {
         token_interface::transfer_checked(
             CpiContext::new_with_signer(
-                self.asset_token_program.to_account_info(),
+                self.asset_token_program.key(),
                 TransferChecked {
                     from: self.vault_token_account.to_account_info(),
                     mint: self.asset_mint.to_account_info(),
@@ -127,14 +138,30 @@ impl<'info> ApproveRequest<'info> {
     }
 }
 
-pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) -> Result<()> {
+pub fn handler<'info>(
+    ctx: Context<'info, ApproveRequest<'info>>,
+    args: ApproveRequestArgs,
+) -> Result<()> {
     ctx.accounts.vault.assert_unpaused_and_initialized()?;
+
+    validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
     require!(
         matches!(ctx.accounts.request.request_state, RequestState::Pending),
         AsyncVaultError::RequestNotPending
     );
-    require!(ctx.accounts.vault.nav > 0, VaultProgramError::NavIsNotSet);
+
+    let request = &ctx.accounts.request;
+    require!(
+        request.owner == args.owner
+            && request.request_type == args.request_type
+            && request.amount == args.amount
+            && request.created_at == args.created_at
+            && request.nav_update_version == args.nav_update_version,
+        AsyncVaultError::ApprovalRequestMismatch
+    );
+
+    require!(ctx.accounts.vault.nav > 0, AsyncVaultError::NavIsNotSet);
 
     let nav = ctx.accounts.vault.nav;
     let decimals = ctx.accounts.share_mint.decimals;
@@ -168,6 +195,10 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
         // Check for DepositFee Extension and calculate fee owed
         let (deposit_fee, net_deposit) =
             get_deposit_fee_and_net(&ctx.accounts.vault.to_account_info(), original_amount)?;
+        require!(net_deposit > 0, AsyncVaultError::InsufficientDepositAmount);
+        // Shares to be minted, floored (protocol favorable)
+        let shares = calculate_shares(nav, decimals, net_deposit)?;
+        require!(shares > 0, AsyncVaultError::InsufficientDepositAmount);
         if deposit_fee > 0 {
             // Validate and transfer fees to fee_recipient
             let fee_recipient_token_account_info = remaining
@@ -184,8 +215,6 @@ pub fn handler<'info>(ctx: Context<'_, '_, '_, 'info, ApproveRequest<'info>>) ->
             )?;
         }
         ctx.accounts.settle_deposit(seeds, net_deposit)?;
-        // Shares to be minted, floored (protocol favorable)
-        let shares = calculate_shares(nav, decimals, net_deposit)?;
         (shares, net_deposit)
     } else {
         // Assets to be transferred, floored (protocol favorable)

@@ -110,7 +110,16 @@
           "name": "asset_token_program"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "ApproveRequestArgs"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "cancel_queued_deposit_request",
@@ -1108,6 +1117,12 @@
           "signer": true
         },
         {
+          "name": "share_mint",
+          "relations": [
+            "vault"
+          ]
+        },
+        {
           "name": "vault",
           "writable": true
         }
@@ -1294,7 +1309,16 @@
           "address": "11111111111111111111111111111111"
         }
       ],
-      "args": []
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": {
+              "name": "RejectRequestArgs"
+            }
+          }
+        }
+      ]
     },
     {
       "name": "set_operator",
@@ -1945,9 +1969,66 @@
       "code": 6035,
       "name": "RedemptionAmountBelowMinimum",
       "msg": "Redemption amount is below the minimum redemption threshold"
+    },
+    {
+      "code": 6036,
+      "name": "NavIsNotSet",
+      "msg": "Nav is not set."
+    },
+    {
+      "code": 6037,
+      "name": "InsufficientRedeemAmount",
+      "msg": "Redeem shares amount too small."
+    },
+    {
+      "code": 6038,
+      "name": "ApprovalRequestMismatch",
+      "msg": "Approval does not match the live request instance."
+    },
+    {
+      "code": 6039,
+      "name": "InsufficientDepositAmount",
+      "msg": "Deposit amount too small."
+    },
+    {
+      "code": 6040,
+      "name": "InvalidShareMintExtensions",
+      "msg": "Share mint has invalid extensions."
     }
   ],
   "types": [
+    {
+      "name": "ApproveRequestArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "request_type",
+            "type": {
+              "defined": {
+                "name": "RequestType"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "nav_update_version",
+            "type": "u64"
+          }
+        ]
+      }
+    },
     {
       "name": "AsyncVaultArgs",
       "type": {
@@ -2083,6 +2164,38 @@
           {
             "name": "new_authority",
             "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "RejectRequestArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "request_type",
+            "type": {
+              "defined": {
+                "name": "RequestType"
+              }
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "created_at",
+            "type": "i64"
+          },
+          {
+            "name": "nav_update_version",
+            "type": "u64"
           }
         ]
       }

@@ -1,16 +1,17 @@
 [toolchain]
-solana_version = "2.2.20"
 package_manager = "pnpm"
+anchor_version = "1.0.2"
+solana_version = "3.1.14"
 
 [features]
 resolution = true
 skip-lint = false
 
 [programs.localnet]
-async_vault = "7M6pdteAnZmj9SEyzjsqUEqfcc4jqhpgLFF9dULDq1iP"
+async_vault = "2kUpRoU8oGpstygkk3ZE51upGSq9UpkjNoEUiiQ88MMY"
 
-[programs.devnet]
-async_vault = "7M6pdteAnZmj9SEyzjsqUEqfcc4jqhpgLFF9dULDq1iP"
+[registry]
+url = "https://api.apr.dev"
 
 [provider]
 cluster = "localnet"

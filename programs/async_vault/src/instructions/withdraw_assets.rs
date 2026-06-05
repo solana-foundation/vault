@@ -52,11 +52,8 @@ impl<'info> WithdrawAssets<'info> {
             authority: self.vault.to_account_info(),
         };
 
-        let cpi_ctx = CpiContext::new_with_signer(
-            self.asset_token_program.to_account_info(),
-            cpi_accounts,
-            seeds,
-        );
+        let cpi_ctx =
+            CpiContext::new_with_signer(self.asset_token_program.key(), cpi_accounts, seeds);
 
         token_interface::transfer_checked(cpi_ctx, amount, self.asset_mint.decimals)
     }

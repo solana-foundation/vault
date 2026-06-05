@@ -19,6 +19,8 @@ jobs:
         run: |
           just generate-idl
           just generate-clients
+      - name: Typecheck the generated TypeScript client
+        run: pnpm run typecheck
       - name: Check the committed IDL is up to date
         run: |
           if [ -n "$(git status --porcelain idl/)" ]; then

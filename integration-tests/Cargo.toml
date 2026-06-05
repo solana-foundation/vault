@@ -8,6 +8,7 @@ async-vault-client = { path = "../clients/rust/async_vault", features = ["solana
 borsh.workspace = true
 litesvm.workspace = true
 solana-sdk.workspace = true
+solana-system-interface = "3"
 anchor-spl.workspace = true
 test-case.workspace = true
 spl-token.workspace = true

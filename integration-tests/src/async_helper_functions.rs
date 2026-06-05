@@ -5,13 +5,13 @@ use solana_sdk::{
     pubkey::Pubkey,
     signature::Keypair,
     signer::Signer,
-    system_instruction::create_account,
     transaction::Transaction,
 };
+use solana_system_interface::instruction::create_account;
 
 use async_vault_client::{
-    lite::SendTransaction, sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder,
-    Vault as AsyncVault,
+    lite::SendTransaction, sdk::program_id, CreateVaultBuilder as CreateAsyncVaultBuilder, Request,
+    RequestType, Vault as AsyncVault,
 };
 use borsh::BorshSerialize;
 
@@ -26,8 +26,10 @@ use anchor_spl::{
         spl_token_2022::{
             self,
             extension::{
-                transfer_fee::instruction::initialize_transfer_fee_config, ExtensionType,
-                StateWithExtensions,
+                confidential_mint_burn::ConfidentialMintBurn,
+                transfer_fee::instruction::initialize_transfer_fee_config,
+                BaseStateWithExtensionsMut, ExtensionType, StateWithExtensions,
+                StateWithExtensionsMut,
             },
             state::Mint,
         },
@@ -187,6 +189,54 @@ pub fn create_mint_with_transfer_fee(
 
     svm.send_transaction(tx)
         .expect("create_mint_with_transfer_fee transaction failed");
+}
+
+pub fn create_mint_with_confidential_mint_burn(svm: &mut LiteSVM, mint: &Keypair, decimals: u8) {
+    let space =
+        ExtensionType::try_calculate_account_len::<Mint>(&[ExtensionType::ConfidentialMintBurn])
+            .unwrap();
+    let mut data = vec![0u8; space];
+    {
+        let mut state = StateWithExtensionsMut::<Mint>::unpack_uninitialized(&mut data).unwrap();
+        state.init_extension::<ConfidentialMintBurn>(true).unwrap();
+        state.base = Mint {
+            decimals,
+            is_initialized: true,
+            ..Default::default()
+        };
+        state.pack_base();
+        state.init_account_type().unwrap();
+    }
+
+    let rent = svm.minimum_balance_for_rent_exemption(space);
+    svm.set_account(
+        mint.pubkey(),
+        Account {
+            lamports: rent,
+            data,
+            owner: spl_token_2022::id(),
+            executable: false,
+            rent_epoch: 0,
+        },
+    )
+    .unwrap();
+}
+
+pub fn approve_request_args(
+    svm: &LiteSVM,
+    request: &Pubkey,
+) -> (Pubkey, RequestType, u64, i64, u64) {
+    let account = svm
+        .get_account(request)
+        .expect("request account should exist");
+    let req = Request::from_bytes(account.data()).unwrap();
+    (
+        req.owner,
+        req.request_type,
+        req.amount,
+        req.created_at,
+        req.nav_update_version,
+    )
 }
 
 /// gets the amount of a token account, depending on the account owner

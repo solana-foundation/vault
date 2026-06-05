@@ -22,7 +22,7 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
         _payer,
         _mint_authority,
         _asset_mint,
-        _share_mint,
+        share_mint,
         _user,
         _operator,
         _fee_recipient,
@@ -39,6 +39,7 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
 
     if pre_initialize {
         InitializeAsyncVaultBuilder::new()
+            .share_mint(share_mint.pubkey())
             .authority(authority.pubkey())
             .vault(vault_pubkey)
             .instruction()
@@ -57,6 +58,7 @@ fn test_initialize_vault(use_valid_authority: bool, pre_initialize: bool) {
     };
 
     let result = InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(effective_authority.pubkey())
         .vault(vault_pubkey)
         .instruction()

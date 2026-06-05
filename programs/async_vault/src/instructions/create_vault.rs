@@ -7,7 +7,10 @@ use anchor_spl::{
 use crate::{
     error::AsyncVaultError,
     state::{Vault, PENDING_VAULT_SEED, RESERVE_CONFIG_SEED, VAULT_CONFIG_SEED},
-    utils::validate_asset_mint_extensions_from_acct_info,
+    utils::{
+        validate_asset_mint_extensions_from_acct_info,
+        validate_share_mint_extensions_from_acct_info,
+    },
 };
 
 #[derive(AnchorDeserialize, AnchorSerialize)]
@@ -73,7 +76,7 @@ impl<'info> CreateVault<'info> {
             current_authority: self.mint_authority.to_account_info(),
             account_or_mint: self.share_mint.to_account_info(),
         };
-        let cpi_ctx = CpiContext::new(self.share_token_program.to_account_info(), cpi_accounts);
+        let cpi_ctx = CpiContext::new(self.share_token_program.key(), cpi_accounts);
         set_authority(cpi_ctx, AuthorityType::MintTokens, Some(new_authority))
     }
 }
@@ -98,6 +101,7 @@ pub fn handler(ctx: Context<CreateVault>, args: AsyncVaultArgs) -> Result<()> {
     );
 
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
+    validate_share_mint_extensions_from_acct_info(&ctx.accounts.share_mint.to_account_info())?;
 
     ctx.accounts.set_new_authority(ctx.accounts.vault.key())?;
 
