@@ -7,6 +7,7 @@
     "scripts": {
         "build": "cd clients/typescript && tsc",
         "generate-clients": "tsx ./scripts/generate-clients.ts",
+        "generate-ts-client": "tsx ./scripts/generate-ts-client.ts",
         "generate-idl": "anchor build",
         "format": "prettier --write .",
         "format:check": "prettier --check .",
