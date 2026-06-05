@@ -19,6 +19,11 @@ const codama = createFromRoot(rootNodeFromAnchor(idl));
 codama.update(deduplicateIdenticalDefinedTypesVisitor());
 codama.update(updateDefinedTypesVisitor({ RequestArgs: { name: 'CreateRequestArgs' } }));
 
-const jsClientPath = join(projectRoot, 'clients/typescript/src/generated');
-void codama.accept(renderJavaScriptVisitor(jsClientPath));
-console.log('TypeScript client generated at:', jsClientPath);
+const tsPackageFolder = join(projectRoot, 'clients/typescript');
+void codama.accept(
+    renderJavaScriptVisitor(tsPackageFolder, {
+        kitImportStrategy: 'rootOnly',
+        syncPackageJson: false,
+    }),
+);
+console.log('TypeScript client generated at:', join(tsPackageFolder, 'src/generated'));

@@ -211,7 +211,7 @@ export function CreateVaultRoute() {
             if (extensions.redemptionQueue.enabled) {
                 extensionIxs.push(buildInitRedemptionQueueIx({ authority: signer, payer: signer, vault: pdas.vault }));
             }
-            const initVaultIx = buildInitializeVaultIx(signer, pdas.vault);
+            const initVaultIx = buildInitializeVaultIx(signer, shareMint, pdas.vault);
 
             const sig = await send([...shareMintCreate.instructions, createVaultIx, ...extensionIxs, initVaultIx], {
                 action: 'Deploy vault',

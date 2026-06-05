@@ -36,6 +36,7 @@ import {
     getUpdateWithdrawalFeeInstruction,
     getWithdrawAssetsInstruction,
     type FeeTypeArgs,
+    type RequestTypeArgs,
 } from '@solana/vault';
 
 import { PROGRAM_ADDRESS } from './config';
@@ -94,8 +95,17 @@ export function buildCreateVaultIx(p: CreateVaultParams): Promise<Instruction> {
     );
 }
 
-export function buildInitializeVaultIx(authority: TransactionSigner, vault: Address): Instruction {
-    return getInitializeVaultInstruction({ authority, vault }, PROGRAM_CONFIG);
+export function buildInitializeVaultIx(authority: TransactionSigner, shareMint: Address, vault: Address): Instruction {
+    return getInitializeVaultInstruction({ authority, shareMint, vault }, PROGRAM_CONFIG);
+}
+
+/** Request fields the authority must assert when approving/rejecting (audit hardening). */
+export interface RequestAssertion {
+    owner: Address;
+    requestType: RequestTypeArgs;
+    amount: number | bigint;
+    createdAt: number | bigint;
+    navUpdateVersion: number | bigint;
 }
 
 export function buildUpdateVaultIxAsync(args: {
@@ -228,16 +238,22 @@ export interface ApproveRequestParams {
     assetTokenProgram: TokenProgramKind;
     /** Fee recipient's asset token account — required as a remaining account when the vault charges a fee. */
     feeRecipientTokenAccount?: Address;
+    assertion: RequestAssertion;
 }
 
 export function buildApproveRequestIx(p: ApproveRequestParams): Instruction {
     const ix = getApproveRequestInstruction(
         {
+            amount: p.assertion.amount,
             assetMint: p.assetMint,
             assetTokenProgram: tokenProgramAddress(p.assetTokenProgram),
             authority: p.authority,
+            createdAt: p.assertion.createdAt,
+            navUpdateVersion: p.assertion.navUpdateVersion,
+            owner: p.assertion.owner,
             pendingVault: p.pendingVault,
             request: p.request,
+            requestType: p.assertion.requestType,
             shareMint: p.shareMint,
             vault: p.vault,
             vaultTokenAccount: p.vaultTokenAccount,
@@ -264,14 +280,20 @@ export interface RejectRequestParams {
     userShareAccount?: Address;
     assetTokenProgram: TokenProgramKind;
     shareTokenProgram: TokenProgramKind;
+    assertion: RequestAssertion;
 }
 
 export function buildRejectRequestIx(p: RejectRequestParams): Promise<Instruction> {
     return getRejectRequestInstructionAsync(
         {
+            amount: p.assertion.amount,
             assetMint: p.assetMint,
             authority: p.authority,
+            createdAt: p.assertion.createdAt,
+            navUpdateVersion: p.assertion.navUpdateVersion,
+            owner: p.assertion.owner,
             request: p.request,
+            requestType: p.assertion.requestType,
             shareMint: p.shareMint,
             systemProgram: SYSTEM_PROGRAM,
             user: p.user,

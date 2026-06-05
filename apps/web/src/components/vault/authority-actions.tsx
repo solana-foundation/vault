@@ -35,6 +35,16 @@ function requireAddress(value: string, field: string): Address {
     return trimmed;
 }
 
+function requestAssertion(req: VaultRequest) {
+    return {
+        amount: req.raw.amount,
+        createdAt: req.raw.createdAt,
+        navUpdateVersion: req.raw.navUpdateVersion,
+        owner: req.raw.owner,
+        requestType: req.raw.requestType,
+    };
+}
+
 export function AuthorityActions({
     vault,
     requests,
@@ -110,6 +120,7 @@ export function AuthorityActions({
 
             ixs.push(
                 buildApproveRequestIx({
+                    assertion: requestAssertion(req),
                     assetMint: vault.base.assetMint,
                     assetTokenProgram: vault.assetTokenProgram,
                     authority: signer,
@@ -141,6 +152,7 @@ export function AuthorityActions({
                 req.type === 'deposit' ? vault.assetTokenProgram : vault.shareTokenProgram,
             );
             const ix = await buildRejectRequestIx({
+                assertion: requestAssertion(req),
                 assetMint: vault.base.assetMint,
                 assetTokenProgram: vault.assetTokenProgram,
                 authority: signer,
