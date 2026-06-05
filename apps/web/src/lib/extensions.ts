@@ -40,9 +40,11 @@ export const EXTENSION_DESCRIPTIONS: Record<ExtensionTypeValue, string> = {
 
 export const VAULT_BASE_LEN = 272;
 
+export type ParsedFee = { feeKind: 'percentage'; bps: number } | { feeKind: 'fixed'; amount: bigint };
+
 export type ParsedExtension =
-    | { type: typeof ExtensionType.DepositFee; bps: number; lastFee: bigint }
-    | { type: typeof ExtensionType.WithdrawalFee; bps: number; lastFee: bigint }
+    | ({ type: typeof ExtensionType.DepositFee } & ParsedFee)
+    | ({ type: typeof ExtensionType.WithdrawalFee } & ParsedFee)
     | { type: typeof ExtensionType.PausableSubscriptions; paused: boolean }
     | { type: typeof ExtensionType.PausableRedemptions; paused: boolean }
     | { type: typeof ExtensionType.SubscriptionQueue; head: bigint; tail: bigint }
@@ -68,9 +70,13 @@ export function parseExtensions(data: Uint8Array): ParsedExtension[] {
         switch (type) {
             case ExtensionType.DepositFee:
             case ExtensionType.WithdrawalFee: {
-                const bps = vView.getUint8(0);
-                const lastFee = vView.getBigUint64(1, true);
-                out.push({ bps, lastFee, type });
+                // FeeData: byte 0 = discriminant (0 = FixedAmount, 1 = Percentage), bytes 1-8 = value.
+                const discriminant = vView.getUint8(0);
+                if (discriminant === 1) {
+                    out.push({ bps: vView.getUint16(1, true), feeKind: 'percentage', type });
+                } else {
+                    out.push({ amount: vView.getBigUint64(1, true), feeKind: 'fixed', type });
+                }
                 break;
             }
             case ExtensionType.PausableSubscriptions:

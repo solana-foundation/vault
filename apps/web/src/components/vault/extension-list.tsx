@@ -61,13 +61,10 @@ function ExtensionState({
     switch (ext.type) {
         case ExtensionType.DepositFee:
         case ExtensionType.WithdrawalFee:
-            return (
-                <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="secondary">{(ext.bps / 100).toFixed(2)}%</Badge>
-                    <span className="text-xs text-muted-foreground">
-                        last fee {formatTokenAmount(ext.lastFee, assetDecimals)}
-                    </span>
-                </div>
+            return ext.feeKind === 'percentage' ? (
+                <Badge variant="secondary">{(ext.bps / 100).toFixed(2)}%</Badge>
+            ) : (
+                <Badge variant="secondary">{formatTokenAmount(ext.amount, assetDecimals)} flat</Badge>
             );
         case ExtensionType.PausableSubscriptions:
         case ExtensionType.PausableRedemptions:

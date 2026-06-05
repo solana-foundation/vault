@@ -101,11 +101,15 @@ export function AuthorityActions({
         if (!signer) return;
         try {
             const feeExtType = req.type === 'deposit' ? ExtensionType.DepositFee : ExtensionType.WithdrawalFee;
-            const feeExt = vault.extensions.find(e => e.type === feeExtType) as { bps: number } | undefined;
+            const feeExt = vault.extensions.find(e => e.type === feeExtType);
+            const hasFee =
+                !!feeExt &&
+                'feeKind' in feeExt &&
+                (feeExt.feeKind === 'percentage' ? feeExt.bps > 0 : feeExt.amount > 0n);
 
             const ixs = [];
             let feeRecipientTokenAccount: Address | undefined;
-            if (feeExt && feeExt.bps > 0) {
+            if (hasFee) {
                 // Fee is transferred to the fee recipient's asset token account, which must exist
                 // and be supplied to the program as a remaining account.
                 const created = await buildCreateAtaIdempotentIx({
