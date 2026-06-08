@@ -10,8 +10,8 @@ A standard factory program for tokenized vaults on Solana, inspired by [ERC-7540
 
 For demo purposes the program is deployed on devnet.
 
-| Network | Program ID                                     |
-| ------- | ---------------------------------------------- |
+| Network | Program ID                                    |
+| ------- | --------------------------------------------- |
 | Devnet  | `vaLtx8Su1t5P1CZG5GFEMc94sN4K7A4AUUiciadtvUi` |
 
 > Not deployed to mainnet-beta.
