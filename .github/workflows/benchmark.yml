@@ -1,0 +1,41 @@
+name: Benchmark
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  pull-requests: write
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  compute-units:
+    name: Compute Units
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+        with:
+          install-anchor: 'true'
+          rust-cache-key: 'benchmark'
+
+      - name: Build IDL and clients
+        run: |
+          pnpm run generate-idl
+          pnpm run generate-clients
+
+      - name: Run benchmark
+        run: CU_REPORT=1 CU_REPORT_DATE=$(date +%Y-%m-%d) cargo test -p integration-tests
+
+      - name: Report compute units
+        uses: solana-developers/github-actions/cu-benchmark@e846103a578b3170a9a14824bcdf38d5dcf59ac0

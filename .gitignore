@@ -12,6 +12,7 @@ node_modules
 
 # Solana
 test-ledger
+**/cu_report.md
 /keypairs
 .keypairs/
 

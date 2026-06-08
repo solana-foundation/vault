@@ -11,11 +11,13 @@ anchor-idl-build = ["anchor", "anchor-lang/idl-build"]
 fetch = ["dep:solana-account", "dep:solana-rpc-client"]
 serde = ["dep:serde"]
 solana-sdk = ["dep:solana-sdk"]
-litesvm = ["dep:litesvm"]
+litesvm = ["dep:litesvm", "dep:tabled", "dep:dtor"]
 
 [dependencies]
 borsh = { workspace = true, features = ["derive"] }
 litesvm = { workspace = true, optional = true }
+tabled = { version = "0.20", optional = true }
+dtor = { version = "1.0", optional = true }
 solana-address = "2.2"
 solana-account-info = "3"
 solana-cpi = "3"
