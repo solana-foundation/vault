@@ -7,9 +7,6 @@ solana_version = "3.1.14"
 resolution = true
 skip-lint = false
 
-[programs.localnet]
-async_vault = "vaLtx8Su1t5P1CZG5GFEMc94sN4K7A4AUUiciadtvUi"
-
 [programs.devnet]
 async_vault = "vaLtx8Su1t5P1CZG5GFEMc94sN4K7A4AUUiciadtvUi"
 
