@@ -51,7 +51,10 @@ pub mod lite {
 
     /// Maps an instruction's 8-byte Anchor discriminator to a human-readable name
     /// for CU tracking. Returns None for non-vault instructions (e.g. token setup).
-    fn instruction_label(program_id: &Pubkey, data: &[u8]) -> Option<&'static str> {
+    ///
+    /// The `DISCRIMINATORS` table is kept in sync with the program IDL by the
+    /// `cu_discriminator_map_matches_idl` guard test in the integration-tests crate.
+    pub fn instruction_label(program_id: &Pubkey, data: &[u8]) -> Option<&'static str> {
         if *program_id != ASYNC_VAULT_ID || data.len() < 8 {
             return None;
         }

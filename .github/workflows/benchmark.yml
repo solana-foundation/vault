@@ -27,6 +27,7 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           install-anchor: 'true'
+          install-nightly-rustfmt: 'true'
           rust-cache-key: 'benchmark'
 
       - name: Build IDL and clients
