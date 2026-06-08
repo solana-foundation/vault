@@ -1,0 +1,27 @@
+name: Devnet Build and Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      priority_fee:
+        description: 'Priority fee for transactions'
+        required: true
+        default: '30000'
+        type: string
+
+jobs:
+  build:
+    uses: solana-developers/github-workflows/.github/workflows/reusable-build.yaml@v0.3.5
+    with:
+      program: 'async_vault'
+      program-id: 'vaLtx8Su1t5P1CZG5GFEMc94sN4K7A4AUUiciadtvUi'
+      network: 'devnet'
+      deploy: true
+      upload_idl: true
+      verify: false
+      use-squads: false
+      priority-fee: ${{ github.event.inputs.priority_fee }}
+    secrets:
+      DEVNET_SOLANA_DEPLOY_URL: ${{ secrets.DEVNET_SOLANA_DEPLOY_URL }}
+      DEVNET_DEPLOYER_KEYPAIR: ${{ secrets.DEVNET_DEPLOYER_KEYPAIR }}
+      PROGRAM_ADDRESS_KEYPAIR: ${{ secrets.PROGRAM_ADDRESS_KEYPAIR }}
