@@ -11,7 +11,7 @@ use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, s
 use test_case::test_case;
 
 use crate::async_helper_functions::{
-    assert_error_code, helper_mint_to, set_share_balance, set_up_async_vault,
+    approve_request_args, assert_error_code, helper_mint_to, set_share_balance, set_up_async_vault,
     set_vault_total_asset_balance,
 };
 
@@ -69,6 +69,7 @@ fn setup(
     }
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -156,10 +157,17 @@ fn approve_redemption_request(
     share_mint: Pubkey,
     request_pubkey: Pubkey,
 ) -> litesvm::types::TransactionResult {
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(svm, &request_pubkey);
     ApproveRequestBuilder::new()
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .request(request_pubkey)
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
         .asset_mint(asset_mint)
         .share_mint(share_mint)
         .vault_token_account(reserve_pubkey)
@@ -179,12 +187,19 @@ fn reject_redemption_request(
     request_pubkey: Pubkey,
     user_share_account: Pubkey,
 ) -> litesvm::types::TransactionResult {
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(svm, &request_pubkey);
     RejectRequestBuilder::new()
         .authority(authority.pubkey())
         .user(user_pubkey)
         .asset_mint(asset_mint)
         .share_mint(share_mint)
         .request(request_pubkey)
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
         .vault(vault_pubkey)
         .user_token_account(None)
         .asset_pending_vault(None)
@@ -268,7 +283,7 @@ fn test_initialize_redemption_queue_fails(
         _payer,
         _mint_authority,
         _asset_mint,
-        _share_mint,
+        share_mint,
         _user,
         _operator,
         _fee_recipient,
@@ -281,6 +296,7 @@ fn test_initialize_redemption_queue_fails(
 
     if init_vault_first {
         InitializeAsyncVaultBuilder::new()
+            .share_mint(share_mint.pubkey())
             .authority(authority.pubkey())
             .vault(vault_pubkey)
             .instruction()

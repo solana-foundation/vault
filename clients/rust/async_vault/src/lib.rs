@@ -2,7 +2,9 @@ mod generated;
 
 pub mod extensions;
 
-pub use generated::{accounts::*, errors::*, instructions::*, programs::*, shared::*, types::*};
+pub use generated::{
+    accounts::*, errors::*, instructions::*, programs::*, shared, shared::*, types::*,
+};
 
 pub use solana_pubkey::Pubkey;
 

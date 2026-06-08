@@ -10,7 +10,6 @@ use crate::{
 };
 use anchor_lang::prelude::*;
 use anchor_spl::token_interface::{self, Mint, TokenAccount, TokenInterface, TransferChecked};
-use vault_common::VaultProgramError;
 
 use crate::state::{Request, RequestState, RequestType, Vault, VAULT_CONFIG_SEED};
 
@@ -70,7 +69,7 @@ impl<'info> CreateDepositRequest<'info> {
     /// Transfers assets from the User's TokenAccount to the pending vault (aka escrow)
     pub fn transfer_assets_from_user_to_pending_vault(&self, amount: u64) -> Result<()> {
         let cpi_ctx = CpiContext::new(
-            self.asset_token_program.to_account_info(),
+            self.asset_token_program.key(),
             TransferChecked {
                 from: self.user_token_account.to_account_info(),
                 mint: self.asset_mint.to_account_info(),
@@ -93,6 +92,15 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         &ctx.accounts.vault.to_account_info(),
         args.amount,
     )?;
+
+    let deposit_fee = extensions::fee::processor::get_deposit_fee(
+        &ctx.accounts.vault.to_account_info(),
+        args.amount,
+    )?;
+    require!(
+        args.amount > deposit_fee,
+        AsyncVaultError::InsufficientDepositAmount
+    );
 
     validate_asset_mint_extensions_from_acct_info(&ctx.accounts.asset_mint.to_account_info())?;
 
@@ -119,7 +127,7 @@ pub fn handler(ctx: Context<CreateDepositRequest>, args: RequestArgs) -> Result<
         .vault
         .pending_async_requests
         .checked_add(1)
-        .ok_or(VaultProgramError::ArithmeticError)?;
+        .ok_or(AsyncVaultError::ArithmeticError)?;
 
     // Extension: SubscriptionQueue — increment counter and tag the request with its ID.
     if let Some(id) =

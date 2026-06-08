@@ -10,7 +10,7 @@ use litesvm::LiteSVM;
 use solana_sdk::{account::ReadableAccount, pubkey::Pubkey, signature::Keypair, signer::Signer};
 use test_case::test_case;
 
-use crate::async_helper_functions::{assert_error_code, set_up_async_vault};
+use crate::async_helper_functions::{approve_request_args, assert_error_code, set_up_async_vault};
 
 const NAV: u128 = 1_000_000_000;
 
@@ -61,6 +61,7 @@ fn setup(
     }
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -134,10 +135,17 @@ fn approve_deposit_request(
     share_mint: Pubkey,
     request_pubkey: Pubkey,
 ) -> litesvm::types::TransactionResult {
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(svm, &request_pubkey);
     ApproveRequestBuilder::new()
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .request(request_pubkey)
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
         .asset_mint(asset_mint)
         .share_mint(share_mint)
         .vault_token_account(reserve_pubkey)
@@ -158,12 +166,19 @@ fn reject_deposit_request(
     request_pubkey: Pubkey,
     user_token_account: Pubkey,
 ) -> litesvm::types::TransactionResult {
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(svm, &request_pubkey);
     RejectRequestBuilder::new()
         .authority(authority.pubkey())
         .user(user_pubkey)
         .asset_mint(asset_mint)
         .share_mint(share_mint)
         .request(request_pubkey)
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
         .vault(vault_pubkey)
         .user_token_account(Some(user_token_account))
         .asset_pending_vault(Some(pending_vault_pubkey))
@@ -211,7 +226,7 @@ fn test_initialize_subscription_queue_fails(
         _payer,
         _mint_authority,
         _asset_mint,
-        _share_mint,
+        share_mint,
         _user,
         _operator,
         _fee_recipient,
@@ -224,6 +239,7 @@ fn test_initialize_subscription_queue_fails(
 
     if init_vault_first {
         InitializeAsyncVaultBuilder::new()
+            .share_mint(share_mint.pubkey())
             .authority(authority.pubkey())
             .vault(vault_pubkey)
             .instruction()

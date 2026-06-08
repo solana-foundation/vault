@@ -11,3 +11,6 @@ Cargo.lock
 pnpm-lock.yaml
 .remember
 .claude
+**/.next/
+**/.vercel/
+**/next-env.d.ts

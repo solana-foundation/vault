@@ -25,7 +25,7 @@ fn test_withdraw_assets_success(deposit_amount: u64, withdraw_amount: u64) {
         _payer,
         mint_authority,
         asset_mint,
-        _share_mint,
+        share_mint,
         _user,
         _operator,
         _fee_recipient,
@@ -37,6 +37,7 @@ fn test_withdraw_assets_success(deposit_amount: u64, withdraw_amount: u64) {
     ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, user_amount);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -109,6 +110,7 @@ fn test_withdraw_assets_fails(use_wrong_signer: bool, pause_vault: bool) {
     ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 10_000_000);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()

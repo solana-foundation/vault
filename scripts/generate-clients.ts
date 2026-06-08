@@ -19,18 +19,23 @@ const idl = JSON.parse(readFileSync(join(projectRoot, 'idl/async_vault.json'), '
 const codama = createFromRoot(rootNodeFromAnchor(idl));
 codama.update(deduplicateIdenticalDefinedTypesVisitor());
 
-const rustClientPath = join(projectRoot, 'clients/rust/async_vault/src/generated');
+const rustCrateFolder = join(projectRoot, 'clients/rust/async_vault');
 codama.accept(
-    renderRustVisitor(rustClientPath, {
-        crateFolder: join(projectRoot, 'clients/rust'),
+    renderRustVisitor(rustCrateFolder, {
         formatCode: false,
+        syncCargoToml: false,
     }),
 );
 execFileSync('cargo', ['+nightly', 'fmt', '-p', 'async-vault-client'], { cwd: projectRoot, stdio: 'inherit' });
-console.log('Rust client generated at:', rustClientPath);
+console.log('Rust client generated at:', join(rustCrateFolder, 'src/generated'));
 
 codama.update(updateDefinedTypesVisitor({ RequestArgs: { name: 'CreateRequestArgs' } }));
 
-const jsClientPath = join(projectRoot, 'clients/typescript/src/generated');
-void codama.accept(renderJavaScriptVisitor(jsClientPath));
-console.log('TypeScript client generated at:', jsClientPath);
+const tsPackageFolder = join(projectRoot, 'clients/typescript');
+void codama.accept(
+    renderJavaScriptVisitor(tsPackageFolder, {
+        kitImportStrategy: 'rootOnly',
+        syncPackageJson: false,
+    }),
+);
+console.log('TypeScript client generated at:', join(tsPackageFolder, 'src/generated'));

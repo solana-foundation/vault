@@ -19,7 +19,6 @@ use crate::async_helper_functions::{
 
 #[test_case(1_000_000, false ; "deposit request succeeds")]
 #[test_case(1_000_000, true ; "deposit with operator succeeds")]
-#[test_case(0, false ; "zero amount deposit succeeds")]
 fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
@@ -43,6 +42,7 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
     ) = set_up_async_vault(&mut svm, token::ID, Some(0), token::ID, user_amount);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -160,8 +160,13 @@ fn test_create_deposit_request(deposit_amount: u64, with_operator: bool) {
     );
 }
 
-#[test_case(Some(1), 6021 ; "deposit_request_with_nonzero_transfer_fee_fails")]
-fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_error_code: u32) {
+#[test_case(Some(1), 1_000_000, 6021 ; "deposit_request_with_nonzero_transfer_fee_fails")]
+#[test_case(None, 0, 6039 ; "zero_amount_deposit_fails")]
+fn test_create_deposit_request_fails(
+    asset_transfer_fee: Option<u16>,
+    deposit_amount: u64,
+    expected_error_code: u32,
+) {
     let mut svm = LiteSVM::new();
     let program_bytes = include_bytes!("../../../target/deploy/async_vault.so");
     svm.add_program(program_id(), program_bytes).unwrap();
@@ -190,6 +195,7 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
     );
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -248,7 +254,7 @@ fn test_create_deposit_request_fails(asset_transfer_fee: Option<u16>, expected_e
         .pending_vault(pending_vault_pubkey)
         .asset_token_program(token_2022::ID)
         .args(RequestArgs {
-            amount: user_amount,
+            amount: deposit_amount,
             operator: None,
         })
         .instruction();

@@ -10,8 +10,8 @@ use solana_sdk::{pubkey::Pubkey, signature::Keypair, signer::Signer, transaction
 use test_case::test_case;
 
 use crate::async_helper_functions::{
-    assert_error_code, get_mint_supply, get_token_account_amount, helper_mint_to,
-    set_share_balance, set_up_async_vault, set_vault_total_asset_balance,
+    approve_request_args, assert_error_code, get_mint_supply, get_token_account_amount,
+    helper_mint_to, set_share_balance, set_up_async_vault, set_vault_total_asset_balance,
 };
 
 const LITESVM_TX_COST: u64 = 5000;
@@ -49,6 +49,7 @@ fn setup(
     ) = set_up_async_vault(svm, token::ID, None, token::ID, 1_000_000_000);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -131,10 +132,17 @@ fn test_claim_deposit_success(
         .expect("create deposit request should succeed");
 
     // Approve: assets move pending → reserve, request.amount set to shares
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(&svm, &request_keypair.pubkey());
     ApproveRequestBuilder::new()
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .request(request_keypair.pubkey())
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
         .asset_mint(asset_mint.pubkey())
         .share_mint(share_mint.pubkey())
         .vault_token_account(reserve_pubkey)
@@ -263,10 +271,17 @@ fn test_claim_redeem_success(
         .expect("create redeem request should succeed");
 
     // Approve: assets move reserve → pending_vault, request.amount set to assets
+    let (owner, request_type, amount, created_at, nav_update_version) =
+        approve_request_args(&svm, &request_keypair.pubkey());
     ApproveRequestBuilder::new()
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .request(request_keypair.pubkey())
+        .owner(owner)
+        .request_type(request_type)
+        .amount(amount)
+        .created_at(created_at)
+        .nav_update_version(nav_update_version)
         .asset_mint(asset_mint.pubkey())
         .share_mint(share_mint.pubkey())
         .vault_token_account(reserve_pubkey)
@@ -383,10 +398,17 @@ fn test_claim_fails(
         .expect("create deposit request should succeed");
 
     if !skip_approve {
+        let (owner, request_type, amount, created_at, nav_update_version) =
+            approve_request_args(&svm, &request_keypair.pubkey());
         ApproveRequestBuilder::new()
             .authority(authority.pubkey())
             .vault(vault_pubkey)
             .request(request_keypair.pubkey())
+            .owner(owner)
+            .request_type(request_type)
+            .amount(amount)
+            .created_at(created_at)
+            .nav_update_version(nav_update_version)
             .asset_mint(asset_mint.pubkey())
             .share_mint(share_mint.pubkey())
             .vault_token_account(reserve_pubkey)

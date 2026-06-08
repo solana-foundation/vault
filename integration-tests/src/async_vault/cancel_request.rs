@@ -13,7 +13,7 @@ use crate::async_helper_functions::{
 };
 
 #[test_case(1_000_000 ; "cancel deposit request refunds user")]
-#[test_case(0 ; "cancel zero amount deposit succeeds")]
+#[test_case(1 ; "cancel minimum deposit succeeds")]
 #[test_case(500_000_000 ; "cancel large deposit refunds full amount")]
 fn test_cancel_deposit_request(deposit_amount: u64) {
     let mut svm = LiteSVM::new();
@@ -38,6 +38,7 @@ fn test_cancel_deposit_request(deposit_amount: u64) {
     ) = set_up_async_vault(&mut svm, token::ID, Some(0), token::ID, user_amount);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -146,6 +147,7 @@ fn test_cancel_deposit_request_fails(wrong_user: bool) {
     ) = set_up_async_vault(&mut svm, token::ID, Some(0), token::ID, user_amount);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()
@@ -256,6 +258,7 @@ fn test_cancel_redeem_request(share_amount: u64) {
     ) = set_up_async_vault(&mut svm, token::ID, None, token::ID, 0);
 
     InitializeAsyncVaultBuilder::new()
+        .share_mint(share_mint.pubkey())
         .authority(authority.pubkey())
         .vault(vault_pubkey)
         .instruction()

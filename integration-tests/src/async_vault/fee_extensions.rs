@@ -159,7 +159,7 @@ fn test_invalid_bps_init_fails(kind: FeeKind) {
 
     let fee = FeeType::Percentage { bps: 10_001 };
     let result = init_fee(&mut svm, &authority, vault_pubkey, fee, kind);
-    assert_error_code(&result.unwrap_err(), 6000, "FeeBPSLimitReached");
+    assert_error_code(&result.unwrap_err(), 6008, "FeeBpsExceeded");
 }
 
 #[test]

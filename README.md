@@ -6,6 +6,16 @@
 
 A standard factory program for tokenized vaults on Solana, inspired by [ERC-7540](https://eips.ethereum.org/EIPS/eip-7540). It standardizes the subscription (deposit) and redemption (withdrawal) flow so teams can build on a shared, audited primitive instead of deploying bespoke vault programs.
 
+## Deployments
+
+For demo purposes the program is deployed on devnet.
+
+| Network | Program ID                                     |
+| ------- | ---------------------------------------------- |
+| Devnet  | `7M6pdteAnZmj9SEyzjsqUEqfcc4jqhpgLFF9dULDq1iP` |
+
+> Not deployed to mainnet-beta.
+
 ## Overview
 
 Real World Asset (RWA) issuers and other institutions repeatedly build the same vault primitives — deposits and redemptions into a managed strategy, with role-based access control and KYC. Today every team ships its own implementation, increasing integration work and the surface area for vulnerabilities. The Vault Standard Suite provides a shared, customizable vault program so that critical Solana infrastructure can be reused safely while still allowing innovation on top.
@@ -69,6 +79,18 @@ just fmt
 This program has **not yet been audited**. Do not use in production.
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).
+
+## Token-2022 Considerations
+
+The vault assumes exclusive custody of the tokens it holds. Some Token-2022 extensions break that assumption and are **not** rejected by the program — vet both the asset mint and the share mint before use.
+
+Enforced: nonzero `TransferFeeConfig` asset mints are rejected; the share mint's mint authority moves to the vault PDA.
+
+Vet yourself:
+
+- **Asset `PermanentDelegate`** — can drain `reserve`/`pending_vault` directly, leaving `total_asset_balance` stale.
+- **Share `MintCloseAuthority`** — closing the mint at zero supply bricks refund/claim paths.
+- **Freeze authority / default-frozen** — can freeze `reserve`/`pending_vault` and block transfers.
 
 ## Notes
 
