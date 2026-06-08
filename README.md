@@ -12,7 +12,7 @@ For demo purposes the program is deployed on devnet.
 
 | Network | Program ID                                     |
 | ------- | ---------------------------------------------- |
-| Devnet  | `7M6pdteAnZmj9SEyzjsqUEqfcc4jqhpgLFF9dULDq1iP` |
+| Devnet  | `vaLtx8Su1t5P1CZG5GFEMc94sN4K7A4AUUiciadtvUi` |
 
 > Not deployed to mainnet-beta.
 

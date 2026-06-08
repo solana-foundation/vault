@@ -8,7 +8,10 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-async_vault = "2kUpRoU8oGpstygkk3ZE51upGSq9UpkjNoEUiiQ88MMY"
+async_vault = "vaLtx8Su1t5P1CZG5GFEMc94sN4K7A4AUUiciadtvUi"
+
+[programs.devnet]
+async_vault = "vaLtx8Su1t5P1CZG5GFEMc94sN4K7A4AUUiciadtvUi"
 
 [registry]
 url = "https://api.apr.dev"
