@@ -39,4 +39,5 @@ jobs:
         run: CU_REPORT=1 CU_REPORT_DATE=$(date +%Y-%m-%d) cargo test -p integration-tests
 
       - name: Report compute units
+        if: github.event.pull_request.head.repo.full_name == github.repository
         uses: solana-developers/github-actions/cu-benchmark@e846103a578b3170a9a14824bcdf38d5dcf59ac0
