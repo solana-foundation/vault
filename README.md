@@ -6,6 +6,10 @@
 
 A standard factory program for tokenized vaults on Solana, inspired by [ERC-7540](https://eips.ethereum.org/EIPS/eip-7540). It standardizes the subscription (deposit) and redemption (withdrawal) flow so teams can build on a shared, audited primitive instead of deploying bespoke vault programs.
 
+## Design Decisions
+
+See [DESIGN_DECISIONS.md](DESIGN_DECISIONS.md) for the catalog of features requested by ecosystem teams and how each is handled — implemented in the template, spec'd as an extension, integrator-side, or intentionally excluded.
+
 ## Deployments
 
 For demo purposes the program is deployed on devnet.
@@ -38,6 +42,7 @@ The primary implementation, supporting asynchronous deposit and redemption flows
 
 ## Documentation
 
+- [Design Decisions](DESIGN_DECISIONS.md) — requested features and how each is approached
 - [Glossary](GLOSSARY.md) — vault terminology
 - [Sequence Diagrams](programs/async_vault/docs/SEQUENCES.md) — deposit, redeem, and authority withdraw flows
 - [Subscription Queue](programs/async_vault/docs/extensions/SubscriptionQueue.md) — FIFO queue extension mechanics
