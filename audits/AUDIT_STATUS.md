@@ -7,7 +7,7 @@ Last updated: 2026-06-22
 
 ## Current Baseline
 
-- Auditor: Apex
+- Auditor: Cantina (APEX)
 - Report: `audits/apex-scan-june-22-2026.pdf`
 - Audited-through commit: `ce2b5483de53cd015efbbdea70ecec75d976bb08`
 - Compare audited baseline delta: https://github.com/solana-foundation/vault/compare/ce2b5483de53cd015efbbdea70ecec75d976bb08...main
