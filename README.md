@@ -4,6 +4,8 @@
 [![Built with Anchor](https://img.shields.io/badge/Built%20with-Anchor-blue)](https://www.anchor-lang.com/)
 [![Solana](https://img.shields.io/badge/Solana-Localnet-green)](https://solana.com)
 
+> :warning: Reference implementation only - not audited for mainnet use. Review and audit before deploying to production.
+
 A standard factory program for tokenized vaults on Solana, inspired by [ERC-7540](https://eips.ethereum.org/EIPS/eip-7540). It standardizes the subscription (deposit) and redemption (withdrawal) flow so teams can build on a shared, audited primitive instead of deploying bespoke vault programs.
 
 ## Design Decisions
@@ -104,6 +106,10 @@ These programs are unoptimized and written in Anchor simply for the speed of dev
 ## Contributing
 
 To suggest a feature or change, open an issue with a detailed explanation of the request and the reasoning behind it.
+
+## Acknowledgments
+
+Thanks to [Exo Technologies](https://www.exotechnologies.xyz/) for the initial design and implementation of this program.
 
 ---
 
