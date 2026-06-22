@@ -83,7 +83,9 @@ just fmt
 
 ## Security
 
-This program has **not yet been audited**. Do not use in production.
+This program has been reviewed by [Cantina](https://cantina.xyz) (APEX). See the [audit report](audits/apex-scan-june-22-2026.pdf) and [audit status](audits/AUDIT_STATUS.md) for scope and the audited baseline commit.
+
+This remains a **reference implementation and is not audited for mainnet use** — review and audit before deploying to production.
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
