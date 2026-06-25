@@ -21,6 +21,7 @@
         "@solana/kit": "^6.9.0",
         "@solana/vault": "workspace:*",
         "@tanstack/react-query": "^5.90.20",
+        "@vercel/analytics": "^2.0.1",
         "bs58": "^6.0.0",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",

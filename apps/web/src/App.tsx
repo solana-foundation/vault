@@ -1,3 +1,4 @@
+import { Analytics } from '@vercel/analytics/react';
 import { Navigate, Route, Routes } from 'react-router';
 
 import { AppLayout } from '@/components/app-layout';
@@ -45,6 +46,7 @@ export function App() {
                 />
                 <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            <Analytics />
         </AppProviders>
     );
 }
