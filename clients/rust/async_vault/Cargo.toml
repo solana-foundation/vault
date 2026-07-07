@@ -25,7 +25,7 @@ solana-instruction = "3"
 solana-program-error = "3"
 solana-pubkey = { workspace = true }
 solana-account = { version = "4", optional = true }
-solana-rpc-client = { version = "3", optional = true }
+solana-rpc-client = { version = "4", optional = true }
 anchor-lang = { workspace = true, optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 solana-sdk = { workspace = true, optional = true }
