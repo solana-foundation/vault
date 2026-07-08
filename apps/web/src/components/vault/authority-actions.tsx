@@ -75,11 +75,9 @@ export function AuthorityActions({
         vault.base.pendingAuthority.__option === 'Some' && owner === (vault.base.pendingAuthority.value as string);
 
     const subsExt = vault.extensions.find(e => e.type === ExtensionType.PausableSubscriptions) as
-        | { type: typeof ExtensionType.PausableSubscriptions; paused: boolean }
-        | undefined;
+        { type: typeof ExtensionType.PausableSubscriptions; paused: boolean } | undefined;
     const redeemsExt = vault.extensions.find(e => e.type === ExtensionType.PausableRedemptions) as
-        | { type: typeof ExtensionType.PausableRedemptions; paused: boolean }
-        | undefined;
+        { type: typeof ExtensionType.PausableRedemptions; paused: boolean } | undefined;
 
     const handleUpdateNav = async () => {
         const signer = createSigner();
