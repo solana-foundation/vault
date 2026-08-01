@@ -11,7 +11,7 @@ on:
 
 jobs:
   build:
-    uses: solana-foundation/github-workflows/.github/workflows/reusable-build.yaml@1a62a52041b4a9beed9e96843062be1859447f1d
+    uses: solana-foundation/github-workflows/.github/workflows/reusable-build.yaml@36d36ea342343a3b963065e26bc4f8fbce91870e
     with:
       program: 'async_vault'
       program-id: 'vaLtx8Su1t5P1CZG5GFEMc94sN4K7A4AUUiciadtvUi'
