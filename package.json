@@ -16,9 +16,9 @@
         "typecheck": "cd clients/typescript && tsc --noEmit"
     },
     "devDependencies": {
-        "@codama/nodes-from-anchor": "^1.5.2",
+        "@codama/nodes-from-anchor": "^1.5.3",
         "@codama/renderers-js": "^2.2.0",
-        "@codama/renderers-rust": "^3.1.1",
+        "@codama/renderers-rust": "^3.1.3",
         "@eslint/js": "^9.39.5",
         "@solana/eslint-config-solana": "6.0.1",
         "@solana/kit": "^6.10.0",
