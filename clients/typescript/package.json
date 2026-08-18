@@ -46,6 +46,6 @@
         "url": "https://github.com/solana-foundation/vault/issues"
     },
     "peerDependencies": {
-        "@solana/kit": "^6.9.0"
+        "@solana/kit": "^6.10.0"
     }
 }
