@@ -2,5 +2,5 @@ name: vault-codeql
 
 paths-ignore:
   - integration-tests
-  - "**/node_modules"
-  - "**/target"
+  - '**/node_modules'
+  - '**/target'
