@@ -9,6 +9,9 @@ on:
         default: '30000'
         type: string
 
+permissions:
+  contents: read
+
 jobs:
   build:
     uses: solana-foundation/github-workflows/.github/workflows/reusable-build.yaml@36d36ea342343a3b963065e26bc4f8fbce91870e
