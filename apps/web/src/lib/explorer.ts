@@ -1,16 +1,16 @@
-import { CLUSTER_STORAGE_KEY } from './config';
+import { type ClusterId, CLUSTER_STORAGE_KEY, isClusterId } from './config';
 
-const CLUSTER_PARAM: Record<string, string> = {
+const CLUSTER_PARAM: Record<ClusterId, string> = {
     'solana:devnet': 'devnet',
     'solana:localnet': 'custom',
     'solana:mainnet': '',
     'solana:testnet': 'testnet',
 };
 
-function currentClusterId(): string {
+function currentClusterId(): ClusterId {
     if (typeof window === 'undefined') return 'solana:devnet';
     const stored = window.localStorage.getItem(CLUSTER_STORAGE_KEY);
-    return stored && stored in CLUSTER_PARAM ? stored : 'solana:devnet';
+    return isClusterId(stored) ? stored : 'solana:devnet';
 }
 
 export function explorerLink(value: string, kind: 'address' | 'tx' = 'address'): string {

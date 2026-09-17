@@ -22,7 +22,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { CLUSTER_STORAGE_KEY } from '@/lib/config';
+import { CLUSTER_STORAGE_KEY, isClusterId } from '@/lib/config';
 import { ellipsify } from '@/lib/utils';
 
 const viteEnv = import.meta.env as unknown as {
@@ -35,9 +35,7 @@ function defaultClusterId(): SolanaClusterId {
     const stored = localStorage.getItem(CLUSTER_STORAGE_KEY);
     const configured = viteEnv.VITE_DEFAULT_CLUSTER;
     const id = stored || configured || (viteEnv.DEV ? 'solana:localnet' : 'solana:devnet');
-    return id === 'solana:devnet' || id === 'solana:testnet' || id === 'solana:localnet' || id === 'solana:mainnet'
-        ? id
-        : 'solana:devnet';
+    return isClusterId(id) ? id : 'solana:devnet';
 }
 
 function networkFromClusterId(clusterId: SolanaClusterId): 'devnet' | 'localnet' | 'mainnet' | 'testnet' {
