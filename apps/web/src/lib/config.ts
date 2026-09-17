@@ -8,3 +8,11 @@ export const PROGRAM_ID_STRING: string = viteEnv.VITE_PROGRAM_ID ?? 'vaLtx8Su1t5
 export const PROGRAM_ADDRESS = PROGRAM_ID_STRING as Address;
 
 export const CLUSTER_STORAGE_KEY = 'vault-cluster';
+
+export const CLUSTER_IDS = ['solana:devnet', 'solana:localnet', 'solana:mainnet', 'solana:testnet'] as const;
+
+export type ClusterId = (typeof CLUSTER_IDS)[number];
+
+export function isClusterId(value: string | null | undefined): value is ClusterId {
+    return !!value && (CLUSTER_IDS as readonly string[]).includes(value);
+}
