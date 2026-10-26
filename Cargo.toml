@@ -11,8 +11,8 @@ resolver = "2"
 anchor-lang = { version = "=1.0.3", features = ["init-if-needed"] }
 anchor-spl = "=1.0.3"
 borsh = "1.5.7"
-litesvm = "0.12"
-solana-sdk = "3"
+litesvm = "0.18.1"
+solana-sdk = "4.0.1"
 test-case = "3.3.1"
 solana-pubkey = { version = "3", features = ["borsh"] }
 spl-token = "9"
