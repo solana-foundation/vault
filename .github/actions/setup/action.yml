@@ -60,21 +60,21 @@ runs:
   steps:
     - name: Setup Rust
       if: inputs.install-rust == 'true'
-      uses: dtolnay/rust-toolchain@master
+      uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
       with:
         toolchain: ${{ inputs.rust-toolchain }}
         components: ${{ inputs.rust-components }}
 
     - name: Setup nightly rustfmt
       if: inputs.install-nightly-rustfmt == 'true'
-      uses: dtolnay/rust-toolchain@master
+      uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
       with:
         toolchain: nightly
         components: rustfmt
 
     - name: Rust cache
       if: inputs.install-rust == 'true' && inputs.enable-rust-cache == 'true'
-      uses: Swatinem/rust-cache@v2
+      uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
       with:
         workspaces: '. -> target'
         shared-key: ${{ inputs.rust-cache-key }}
@@ -83,7 +83,7 @@ runs:
     - name: Cache Solana CLI
       if: inputs.install-solana == 'true'
       id: solana-cache
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: |
           ~/.local/share/solana
@@ -110,7 +110,7 @@ runs:
     - name: Cache Anchor toolchain (avm)
       if: inputs.install-anchor == 'true'
       id: anchor-cache
-      uses: actions/cache@v4
+      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       with:
         path: |
           ~/.avm
@@ -133,17 +133,17 @@ runs:
 
     - name: Install just
       if: inputs.install-just == 'true'
-      uses: extractions/setup-just@v4
+      uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
       with:
         just-version: '1.51.0'
 
     - name: Install pnpm
       if: inputs.install-pnpm == 'true'
-      uses: pnpm/action-setup@v4
+      uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
     - name: Setup Node.js
       if: inputs.install-pnpm == 'true'
-      uses: actions/setup-node@v6
+      uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
       with:
         node-version-file: '.nvmrc'
 
