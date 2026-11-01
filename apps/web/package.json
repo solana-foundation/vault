@@ -12,7 +12,7 @@
         "typecheck": "tsc -b"
     },
     "dependencies": {
-        "@radix-ui/react-dropdown-menu": "^2.1.24",
+        "@radix-ui/react-dropdown-menu": "^2.1.25",
         "@solana-program/system": "^0.12.0",
         "@solana-program/token": "^0.14.0",
         "@solana-program/token-2022": "^0.12.0",
@@ -26,8 +26,8 @@
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
         "lucide-react": "^1.22.0",
-        "react": "^19.2.8",
-        "react-dom": "^19.2.8",
+        "react": "^19.2.9",
+        "react-dom": "^19.2.9",
         "react-error-boundary": "^6.1.6",
         "react-router": "^8.3.1",
         "sonner": "^2.0.8",
@@ -43,6 +43,6 @@
         "autoprefixer": "^10.5.6",
         "tailwindcss": "^4.3.3",
         "typescript": "^5.9.3",
-        "vite": "^8.1.6"
+        "vite": "^8.3.5"
     }
 }
