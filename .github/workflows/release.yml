@@ -1,0 +1,144 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      network:
+        description: Target network
+        type: choice
+        options: [devnet, mainnet]
+        required: true
+      priority-fee:
+        description: Priority fee (microlamports per CU)
+        type: string
+        default: '100000'
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: release-${{ inputs.network }}
+  cancel-in-progress: false
+
+env:
+  PROGRAM: async_vault
+  PROGRAM_ID: vaLtx8Su1t5P1CZG5GFEMc94sN4K7A4AUUiciadtvUi
+  REPO_URL: https://github.com/solana-foundation/vault
+
+jobs:
+  release:
+    name: Release ${{ inputs.network }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup
+        with:
+          install-anchor: 'true'
+          rust-cache-key: 'release-${{ inputs.network }}'
+
+      - name: Install solana-verify
+        run: cargo install solana-verify --locked
+
+      # Fetch secrets only after all toolchain setup (third-party actions and the
+      # remote Solana installer) has run, so deploy credentials are never present
+      # in the environment while untrusted setup code executes.
+      - name: Load deploy config from Doppler
+        uses: dopplerhq/secrets-fetch-action@451892f16195f9ac360e1a5bcbf0b5fd0e957534 # v2.0.0
+        with:
+          auth-method: oidc
+          doppler-identity-id: ${{ vars.DOPPLER_SERVICE_IDENTITY_ID }}
+          doppler-project: vault
+          doppler-config: ${{ inputs.network == 'mainnet' && 'prd_github' || 'stg_github' }}
+          inject-env-vars: true
+
+      - name: Materialize deployer keypair
+        run: |
+          install -m 600 /dev/null /tmp/deployer.json
+          printf '%s' "$DEPLOYER_KEYPAIR" > /tmp/deployer.json
+
+      - name: Configure Solana CLI
+        run: solana config set --url "$RPC_URL" --keypair "$HOME/.config/solana/id.json" > /dev/null
+
+      - name: Generate IDL
+        run: just generate-idl
+
+      - name: Build verified program
+        uses: solana-foundation/github-actions/build-verified@e6ed2eb93c55eca911dbc711fb08683b42926a28
+        with:
+          program: ${{ env.PROGRAM }}
+
+      - name: Validate Squads config
+        run: |
+          : "${SQUADS_VAULT:?Set SQUADS_VAULT in Doppler}"
+          : "${SQUADS_MULTISIG:?Set SQUADS_MULTISIG in Doppler}"
+
+      - id: prepare-squads-release
+        name: Prepare Squads release buffers
+        uses: solana-foundation/github-actions/prepare-squads-release@e6ed2eb93c55eca911dbc711fb08683b42926a28
+        with:
+          program: ${{ env.PROGRAM }}
+          program-id: ${{ env.PROGRAM_ID }}
+          rpc-url: ${{ env.RPC_URL }}
+          keypair: ${{ env.DEPLOYER_KEYPAIR }}
+          squads-vault: ${{ env.SQUADS_VAULT }}
+          metadata-path: idl/async_vault.json
+          priority-fee: ${{ inputs.priority-fee }}
+
+      - id: export-verify-tx
+        name: Export verify PDA transaction
+        uses: solana-foundation/github-actions/verify-build@e6ed2eb93c55eca911dbc711fb08683b42926a28
+        with:
+          program: ${{ env.PROGRAM }}
+          program-id: ${{ env.PROGRAM_ID }}
+          rpc-url: ${{ env.RPC_URL }}
+          keypair: ${{ env.DEPLOYER_KEYPAIR }}
+          repo-url: ${{ env.REPO_URL }}
+          commit-hash: ${{ github.sha }}
+          network: ${{ inputs.network }}
+          use-squads: 'true'
+          vault-address: ${{ env.SQUADS_VAULT }}
+
+      - id: export-squads-tx
+        name: Export combined Squads transaction
+        uses: solana-foundation/squads-program-action@572754d0b2e582bfc6bf2339f15d6dd2b9588246 # v0.5.1
+        with:
+          rpc: ${{ env.RPC_URL }}
+          program: ${{ env.PROGRAM_ID }}
+          buffer: ${{ steps.prepare-squads-release.outputs.buffer }}
+          metadata-buffer: ${{ steps.prepare-squads-release.outputs.metadata-buffer }}
+          multisig: ${{ env.SQUADS_MULTISIG }}
+          keypair: ${{ env.DEPLOYER_KEYPAIR }}
+          pda-tx: ${{ steps.export-verify-tx.outputs.pda_tx }}
+          export: 'true'
+
+      - name: Cleanup keypair
+        if: always()
+        run: rm -f /tmp/deployer.json
+
+      - name: Summary
+        env:
+          NETWORK: ${{ inputs.network }}
+          BUFFER: ${{ steps.prepare-squads-release.outputs.buffer }}
+          METADATA_BUFFER: ${{ steps.prepare-squads-release.outputs.metadata-buffer }}
+          SQUADS_TX: ${{ steps.export-squads-tx.outputs.tx }}
+        run: |
+          {
+            echo "## Release: $NETWORK"
+            echo ""
+            echo "- Program: \`$PROGRAM_ID\`"
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Buffer: \`$BUFFER\`"
+            echo "- IDL buffer: \`$METADATA_BUFFER\`"
+            echo "- Buffer authority: \`$SQUADS_VAULT\`"
+            echo "- Combined transaction (base58, verify PDA + IDL metadata write + program upgrade in one):"
+            echo '```'
+            echo "$SQUADS_TX"
+            echo '```'
+            echo "- **Action required**: import the combined transaction into the Squads transaction builder, then approve and execute"
+            echo "- CI keypair role: fee payer and buffer writer only; it does not need Squads membership"
+          } >> "$GITHUB_STEP_SUMMARY"
